@@ -3,13 +3,18 @@
 import { useState } from "react";
 
 const LINKS = [
-  { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
-  { label: "Services", href: "#services" },
+  { label: "Home", index: 0 },
+  { label: "About", index: 1 },
+  { label: "Services", index: 2 },
   { label: "Contact", href: "#contact" },
 ];
 
-export function Nav() {
+interface NavProps {
+  active: number;
+  setActive: (index: number) => void;
+}
+
+export function Nav({ active, setActive }: NavProps) {
   const [dark, setDark] = useState(false);
 
   return (
@@ -25,15 +30,32 @@ export function Nav() {
       </div>
 
       <nav className="hidden items-center gap-10 md:flex">
-        {LINKS.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            className="text-sm font-medium text-slate transition-colors hover:text-graphite"
-          >
-            {link.label}
-          </a>
-        ))}
+        {LINKS.map((link) => {
+          if (link.index !== undefined) {
+            const isActive = active === link.index;
+            return (
+              <button
+                key={link.label}
+                onClick={() => setActive(link.index)}
+                className={`text-sm font-semibold transition-colors cursor-pointer focus:outline-none ${
+                  isActive ? "text-graphite border-b-2 border-graphite" : "text-slate hover:text-graphite"
+                }`}
+              >
+                {link.label}
+              </button>
+            );
+          } else {
+            return (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm font-semibold text-slate transition-colors hover:text-graphite"
+              >
+                {link.label}
+              </a>
+            );
+          }
+        })}
       </nav>
 
       <button
