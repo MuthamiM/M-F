@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "../shared/styles/tokens.css";
+@import "../shared/theme/tokens.css";
 
 /* Tailwind v4 — register brand colors + fonts as utilities via @theme */
 @theme inline {
@@ -8,6 +8,8 @@
   --color-fog: #9AA5B1;
   --color-cloud: #F4F6F8;
   --color-silver: #6B7684;
+  --color-mist: #C4CDD5;
+  --color-ash: #E4E7EB;
 
   --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

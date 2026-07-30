@@ -1,0 +1,23 @@
+/* AUTO-GENERATED from src/shared/theme/tokens.ts — do not edit directly.
+   Run `npm run build:tokens` after changing tokens.ts. */
+
+:root {
+  --color-graphite: #1B222C;
+  --color-slate: #3E4C59;
+  --color-fog: #9AA5B1;
+  --color-cloud: #F4F6F8;
+  --color-silver: #6B7684;
+  --color-mist: #C4CDD5;
+  --color-ash: #E4E7EB;
+  --color-white: #FFFFFF;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+  --space-7: 96px;
+}
