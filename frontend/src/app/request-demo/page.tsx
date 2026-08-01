@@ -1,7 +1,21 @@
-import { useState } from "react";
+"use client";
+import { useState, useEffect } from "react";
 
 export default function RequestDemoPage() {
   const [form, setForm] = useState({ name: "", email: "", company: "", message: "" });
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("demoPrefill");
+      if (raw) {
+        const data = JSON.parse(raw);
+        setForm((f) => ({ ...f, ...(data || {}) }));
+        sessionStorage.removeItem("demoPrefill");
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   return (
     <main className="min-h-screen bg-white">

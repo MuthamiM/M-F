@@ -1,7 +1,7 @@
 // src/features/landing/components/Nav.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,7 +30,14 @@ const ABOUT_LIST = [
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("#home");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
   const pathname = usePathname();
+  const aboutMenuRef = useRef<HTMLDivElement | null>(null);
+  const servicesMenuRef = useRef<HTMLDivElement | null>(null);
+
+  
 
   // ── Lock body scroll when drawer is open ──
   useEffect(() => {
@@ -97,7 +104,7 @@ export function Nav() {
 
   return (
     <>
-      <header className="sticky top-0 w-full border-b border-[#9AA5B1]/20 bg-white/95 backdrop-blur-md z-40">
+      <header className="sticky top-0 w-full border-b border-[#9AA5B1]/20 bg-white/95 backdrop-blur-md z-[10001] pointer-events-auto">
         <div className="mx-0 flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -117,10 +124,28 @@ export function Nav() {
               // About and Services render dropdowns on hover
               if (link.label === "About") {
                 return (
-                  <div key={link.label} className="relative group">
+                  <div
+                    key={link.label}
+                    className="relative"
+                    onMouseEnter={() => setOpenMenu("about")}
+                    onMouseLeave={() => setOpenMenu((v) => (v === "about" ? null : v))}
+                    onFocus={() => setOpenMenu("about")}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpenMenu(null);
+                    }}
+                  >
                     <Link
                       href={link.href}
                       onClick={() => handleNav(link.href)}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowDown" || e.key === "Enter") {
+                          e.preventDefault();
+                          setOpenMenu("about");
+                          setTimeout(() => (aboutMenuRef.current?.querySelector('a') as HTMLElement | null)?.focus(), 0);
+                        }
+                      }}
+                      aria-haspopup="true"
+                      aria-expanded={openMenu === "about"}
                       className={`py-1.5 text-sm font-semibold transition-colors hover:text-[#1B222C] cursor-pointer ${
                         active ? "text-[#1B222C] font-bold underline underline-offset-4" : "text-[#3E4C59]"
                       }`}
@@ -128,10 +153,19 @@ export function Nav() {
                       {link.label}
                     </Link>
 
-                    <div className="absolute left-0 top-full mt-2 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 hidden group-hover:block">
+                    <div
+                      ref={aboutMenuRef}
+                      className={`absolute left-0 top-full mt-0 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 ${openMenu === "about" ? "block" : "hidden"}`}>
                       <div className="flex flex-col">
                         {ABOUT_LIST.map((s) => (
-                          <Link key={s.label} href={s.href} onClick={() => handleNav(s.href)} className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]">
+                          <Link
+                            key={s.label}
+                            href={s.href}
+                            onClick={() => handleNav(s.href)}
+                            role="menuitem"
+                            tabIndex={0}
+                            className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]"
+                          >
                             {s.label}
                           </Link>
                         ))}
@@ -143,10 +177,28 @@ export function Nav() {
 
               if (link.label === "Services") {
                 return (
-                  <div key={link.label} className="relative group">
+                  <div
+                    key={link.label}
+                    className="relative"
+                    onMouseEnter={() => setOpenMenu("services")}
+                    onMouseLeave={() => setOpenMenu((v) => (v === "services" ? null : v))}
+                    onFocus={() => setOpenMenu("services")}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpenMenu(null);
+                    }}
+                  >
                     <Link
                       href={link.href}
                       onClick={() => handleNav(link.href)}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowDown" || e.key === "Enter") {
+                          e.preventDefault();
+                          setOpenMenu("services");
+                          setTimeout(() => (servicesMenuRef.current?.querySelector('a') as HTMLElement | null)?.focus(), 0);
+                        }
+                      }}
+                      aria-haspopup="true"
+                      aria-expanded={openMenu === "services"}
                       className={`py-1.5 text-sm font-semibold transition-colors hover:text-[#1B222C] cursor-pointer ${
                         active ? "text-[#1B222C] font-bold underline underline-offset-4" : "text-[#3E4C59]"
                       }`}
@@ -154,10 +206,19 @@ export function Nav() {
                       {link.label}
                     </Link>
 
-                    <div className="absolute left-0 top-full mt-2 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 hidden group-hover:block">
+                    <div
+                      ref={servicesMenuRef}
+                      className={`absolute left-0 top-full mt-0 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 ${openMenu === "services" ? "block" : "hidden"}`}>
                       <div className="flex flex-col">
                         {SERVICES_LIST.map((s) => (
-                          <Link key={s.label} href={s.href} onClick={() => handleNav(s.href)} className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]">
+                          <Link
+                            key={s.label}
+                            href={s.href}
+                            onClick={() => handleNav(s.href)}
+                            role="menuitem"
+                            tabIndex={0}
+                            className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]"
+                          >
                             {s.label}
                           </Link>
                         ))}
@@ -197,14 +258,18 @@ export function Nav() {
           {/* ── Mobile Hamburger Trigger (Phone only) ── */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(true)}
+            onClick={() => setMobileMenuOpen((v) => !v)}
             aria-label="Open menu"
-            className="md:hidden flex items-center justify-center p-2 text-[#1B222C] hover:text-[#3E4C59] focus:outline-none"
+            className="md:hidden flex items-center justify-center p-2 text-[#1B222C] hover:text-[#3E4C59] focus:outline-none relative z-[10002] pointer-events-auto"
           >
             <Menu className="h-6 w-6" />
           </button>
+
+          {/* Debug fixed tap target removed from header (moved outside header) */}
         </div>
       </header>
+
+      {/* debug UI removed */}
 
       {/* ── Mobile Full Screen Overlay Menu ── */}
       {mobileMenuOpen && (
@@ -233,8 +298,71 @@ export function Nav() {
 
           {/* Mobile Nav Links */}
           <nav className="flex flex-col mt-4">
+            {/** Mobile expand state for submenu sections */}
+            {/** local state */}
+            {/* render links, turning About/Services into toggles */}
             {LINKS.map((link) => {
               const active = isActive(link);
+              if (link.label === "Services") {
+                return (
+                  <div key="mobile-services" className="border-b border-[#9AA5B1]/15">
+                    <button
+                      type="button"
+                      onClick={() => setMobileServicesOpen((v) => !v)}
+                      className="w-full text-left text-xl font-semibold py-4 flex items-center justify-between text-[#3E4C59]"
+                    >
+                      <span>Services</span>
+                      <span className="ml-2">{mobileServicesOpen ? "−" : "+"}</span>
+                    </button>
+
+                    {mobileServicesOpen && (
+                      <div className="bg-white">
+                        {SERVICES_LIST.map((s) => (
+                          <Link
+                            key={s.label}
+                            href={s.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="pl-4 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59] block"
+                          >
+                            {s.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (link.label === "About") {
+                return (
+                  <div key="mobile-about" className="border-b border-[#9AA5B1]/15">
+                    <button
+                      type="button"
+                      onClick={() => setMobileAboutOpen((v) => !v)}
+                      className="w-full text-left text-xl font-semibold py-4 flex items-center justify-between text-[#3E4C59]"
+                    >
+                      <span>About</span>
+                      <span className="ml-2">{mobileAboutOpen ? "−" : "+"}</span>
+                    </button>
+
+                    {mobileAboutOpen && (
+                      <div className="bg-white">
+                        {ABOUT_LIST.map((s) => (
+                          <Link
+                            key={s.label}
+                            href={s.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="pl-4 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59] block"
+                          >
+                            {s.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={link.label}
@@ -250,26 +378,8 @@ export function Nav() {
               );
             })}
 
-            {/* Services expanded list */}
-            <div className="mt-2">
-              <div className="text-sm text-[#6B7684] px-2 py-2">Services</div>
-              {SERVICES_LIST.map((s) => (
-                <Link
-                  key={s.label}
-                  href={s.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]"
-                >
-                  {s.label}
-                </Link>
-              ))}
-            </div>
-
-            {/* Extra links */}
+            {/* remaining static extra links */}
             <div className="mt-4">
-              <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]">
-                About
-              </Link>
               <Link href="/where-we-are" onClick={() => setMobileMenuOpen(false)} className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]">
                 Where we are
               </Link>

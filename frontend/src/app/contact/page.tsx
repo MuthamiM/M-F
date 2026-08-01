@@ -1,5 +1,6 @@
 import { ContactForm } from "../../features/landing/components/ContactForm";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import RequestDemoButton from "@/shared/components/RequestDemoButton";
 
 export default function ContactPage() {
@@ -8,6 +9,13 @@ export default function ContactPage() {
       <section className="bg-cloud border-b border-fog/20">
         <div className="w-full px-4 sm:px-6">
           <div className="mx-0 max-w-6xl px-0 py-12 sm:py-20">
+            <div className="mb-4">
+              <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C]">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to Home
+              </Link>
+            </div>
+
             <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl">Contact Us</h1>
             <p className="mt-3 text-sm text-slate max-w-2xl">We'd love to hear from you. Use the form below to get in touch.</p>
           </div>

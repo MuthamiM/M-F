@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/Button";
 import { IsometricDevice } from "./IsometricDevice";
 
@@ -27,6 +28,7 @@ const SLIDES: Slide[] = [
 
 export function Hero() {
   const [active, setActive] = useState(0);
+  const router = useRouter();
 
   // Auto-play slides with automatic interval reset on active change
   useEffect(() => {
@@ -39,10 +41,8 @@ export function Hero() {
   const activeSlide = SLIDES[active];
 
   const handleCTA = () => {
-    const element = document.querySelector("#contact");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
+    // Navigate to the request demo page where the demo flow is implemented
+    router.push("/request-demo");
   };
 
   return (
