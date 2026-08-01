@@ -6,16 +6,20 @@
 import "dotenv/config";
 import { z } from "zod";
 
-
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(4000),
-
-  // Comma-separated list of allowed origins for CORS, e.g. "https://mftechnologies.com,https://docs.mftechnologies.com"
   ALLOWED_ORIGINS: z.string().min(1, "ALLOWED_ORIGINS must be set"),
-
-  // Secrets — no defaults, ever. Boot fails if these are missing.
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: z.string().default("15m"),
+});
 
-// Rate limiting
+const parsed = envSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  console.error("❌ Invalid environment variables:", parsed.error.flatten().fieldErrors);
+  process.exit(1);
+}
+
+export const env = parsed.data;
+export const isProd = env.NODE_ENV === "production";
