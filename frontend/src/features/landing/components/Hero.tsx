@@ -14,15 +14,15 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     title: "Lending Technology",
-    description: "Core lending systems, credit scoring, and secure API infrastructure for banks, credit unions, and lending platforms that can't afford to get this wrong."
+    description: "We engineer core lending systems, credit scoring platforms, and secure API infrastructure purpose-built for banks, credit unions, microfinance institutions, and digital lending platforms operating at institutional scale. Our technology stack powers loan origination, underwriting decisioning, disbursement automation, repayment scheduling, and portfolio-level risk analytics — delivering sub-second transaction processing with full regulatory compliance across multiple jurisdictions."
   },
   {
     title: "About Us",
-    description: "We design, build, and maintain institutional-grade financial modules, automating critical origination, underwriting, and collections workflows."
+    description: "M&F Technologies is an institutional-grade financial software engineering firm. We design, build, deploy, and maintain mission-critical modules that automate origination pipelines, underwriting workflows, collections recovery, and compliance reporting for banks and credit institutions across East Africa and beyond. Our engineering teams operate under bank-level security protocols, delivering auditable, scalable systems with 99.99% uptime SLA commitments."
   },
   {
     title: "Our Services",
-    description: "From custom loan management and compliance engines to portal interfaces, we deploy secure architectures optimized for maximum speed and scale."
+    description: "From custom loan management engines, credit scoring decision trees, and collections automation to borrower-facing web portals, mobile applications, CRM platforms, and document management systems — we deploy secure, horizontally scalable architectures optimized for maximum throughput, regulatory compliance, and operational resilience. Every module integrates seamlessly via our standardized REST and GraphQL API layer."
   }
 ];
 
@@ -47,7 +47,7 @@ export function Hero() {
 
   return (
     <section id="home" className="relative overflow-hidden bg-white pt-6 sm:pt-10">
-      <div className="relative w-full grid grid-cols-1 items-center gap-8 px-4 pb-16 pt-4 sm:px-6 sm:gap-12 sm:pb-24 sm:pt-8 md:grid-cols-2 md:pb-32">
+      <div className="relative w-full grid grid-cols-1 items-center gap-8 px-4 pb-16 pt-4 sm:px-8 lg:px-12 sm:gap-12 sm:pb-24 sm:pt-8 md:grid-cols-2 md:pb-32">
         {/* Text content */}
         <div className="min-h-[220px] sm:min-h-[300px] flex flex-col justify-center order-2 md:order-1">
           {/* Keyed element triggers animation on active slide change */}
@@ -55,7 +55,7 @@ export function Hero() {
             <h1 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-5xl md:text-6xl min-h-[72px] sm:min-h-[120px] animate-fade-in-up">
               {activeSlide.title}
             </h1>
-            <p className="mt-4 sm:mt-6 max-w-md text-sm sm:text-base leading-relaxed text-slate min-h-[80px] sm:min-h-[100px] animate-fade-in-up" style={{ animationDelay: "80ms" }}>
+            <p className="mt-4 sm:mt-6 max-w-xl text-sm sm:text-base leading-relaxed text-slate min-h-[80px] sm:min-h-[100px] animate-fade-in-up" style={{ animationDelay: "80ms" }}>
               {activeSlide.description}
             </p>
           </div>

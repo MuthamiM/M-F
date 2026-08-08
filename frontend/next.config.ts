@@ -7,7 +7,16 @@ const nextConfig: NextConfig = {
     "100.87.92.72",
     "192.168.1.158",
     "192.168.1.247",
+    "*.trycloudflare.com",
   ],
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:4000/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

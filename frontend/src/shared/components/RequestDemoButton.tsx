@@ -22,7 +22,7 @@ export default function RequestDemoButton({ className }: { className?: string })
   function submit() {
     try {
       sessionStorage.setItem("demoPrefill", JSON.stringify(form));
-    } catch (e) {
+    } catch {
       // ignore
     }
     router.push("/request-demo");
@@ -38,7 +38,7 @@ export default function RequestDemoButton({ className }: { className?: string })
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div role="dialog" aria-modal="true" aria-label="Request a demo" className="w-full max-w-lg rounded bg-white p-6">
             <h3 className="text-lg font-semibold">Request a demo</h3>
-            <p className="text-sm text-slate mt-1">Tell us a little about what you'd like to demo.</p>
+            <p className="text-sm text-slate mt-1">Tell us a little about what you&apos;d like to demo.</p>
 
             <div className="mt-4 space-y-3">
               <div>

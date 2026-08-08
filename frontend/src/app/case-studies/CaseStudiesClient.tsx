@@ -10,7 +10,8 @@ interface CaseStudy {
   industry: string;
   title: string;
   metrics: { label: string; value: string }[];
-  summary: string;
+  challenge: string;
+  architecture: string;
   solution: string;
 }
 
@@ -23,12 +24,14 @@ const CASE_STUDIES: CaseStudy[] = [
     metrics: [
       { label: "Underwriting Time", value: "45 Seconds" },
       { label: "Loan Volume Processed", value: "$180M+" },
-      { label: "NPL Reduction", value: "24%" },
+      { label: "NPL Reduction", value: "24.2%" },
     ],
-    summary:
-      "Apex Commercial Union faced bottlenecked manual underwriting processes across 34 regional branches, restricting loan portfolio growth and increasing customer churn.",
+    challenge:
+      "Apex Commercial Union operated with bottlenecked manual underwriting processes across 34 regional branches. Loan application forms required manual verification of bank statement history, alternative score validation, and human risk weighting. This resulted in an average turnaround of 3 business days per application, leading to high consumer churn rates and significant operational overhead in credit evaluation teams.",
+    architecture:
+      "Deploying a dual-region microservice architecture leveraging M&F's Credit Scoring Platform. The stack implements automated OCR parsers for financial statements, REST endpoints connecting directly to regional credit reference bureaus, and dynamic weight tree logic that evaluates applicant debt-to-income (DTI) metrics and history arrays in less than 150 milliseconds.",
     solution:
-      "Integrated M&F's Credit Scoring Platform and Core Lending Engine API, enabling automated risk matrix evaluation, bureau payload aggregation, and instant mobile disbursements.",
+      "Integrated the M&F Credit Scoring Platform and Core Lending Engine API. Apex successfully reduced turnaround time from 3 days to 45 seconds for 88% of qualifying digital loan requests. Furthermore, the alternative score telemetry allowed the union to capture lower-risk portfolios previously missed by manual checks, decreasing Non-Performing Loans (NPL) by 24.2% while processing over $180M in credit disbursements.",
   },
   {
     id: "pan-african-microfinance",
@@ -38,12 +41,14 @@ const CASE_STUDIES: CaseStudy[] = [
     metrics: [
       { label: "Active Borrowers", value: "1.5 Million" },
       { label: "Daily Disbursements", value: "120,000+" },
-      { label: "Platform Uptime", value: "99.99%" },
+      { label: "Ledger Drift", value: "0.00%" },
     ],
-    summary:
-      "Horizon required a scalable financial ledger backend capable of processing high-frequency micro-loans with absolute transaction integrity and zero balance drift.",
+    challenge:
+      "Horizon Micro-Credit struggled with transactional consistency and balance drift in their high-frequency mobile lending systems. Their legacy relational database frequently experienced lock contentions during peak repayment hours, resulting in mismatched ledger balances, manual reconciliation bottlenecks, and database server crashes that directly impacted business revenue.",
+    architecture:
+      "An immutable, event-sourced transaction ledger system using PostgreSQL with logical replica shards. The system writes credit and debit journals in atomic database transactions, producing cryptographic blocks (SHA-256) of prior logs to prevent ledger manipulation. The network handles over 800 write queries per second with zero-lock concurrency control.",
     solution:
-      "Migrated legacy database architecture to M&F's core double-entry transactional ledger engine with sub-100ms API response rates and automated SMS repayment workflows.",
+      "Migrated Horizon's complete database layer to M&F's transaction ledger engine. The migration was achieved with zero service interruption. The new engine successfully processed over 120,000 daily disbursements with 0.00% ledger balance drift. In addition, automated webhook triggers enabled instant, sub-second payment settlement notifications and integrated automated SMS notification workflows for borrowers.",
   },
 ];
 
@@ -52,7 +57,7 @@ export function CaseStudiesClient() {
     <main className="min-h-screen bg-white">
       {/* Hero */}
       <section className="bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
-        <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-20">
+        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C] transition-colors mb-6 sm:mb-8"
@@ -63,36 +68,36 @@ export function CaseStudiesClient() {
 
           <div className="flex items-center gap-3 mb-4">
             <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center text-[#1B222C] border border-[#9AA5B1]/20 shadow-sm">
-              <BookOpen className="h-5 w-5" />
+              <BookOpen className="h-5 w-5 text-[#1B222C]" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-wider text-[#3E4C59]">
               Institutional Impact Reports
             </span>
           </div>
 
-          <h1 className="font-display text-3xl font-bold tracking-tight text-[#1B222C] sm:text-4xl md:text-5xl">
-            Case Studies &amp; Proven Results
+          <h1 className="font-display text-3xl font-bold tracking-tight text-[#1B222C] sm:text-4xl md:text-5xl leading-tight">
+            Case Studies &amp; Architectural Results
           </h1>
-          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-[#3E4C59] max-w-2xl leading-relaxed">
-            See how leading banks, credit unions, and micro-lenders transform loan origination and risk management with M&amp;F Technologies.
+          <p className="mt-4 text-sm sm:text-base text-[#3E4C59] max-w-2xl leading-relaxed">
+            See how leading financial institutions, credit unions, and microfinance organizations implement M&amp;F core technology to optimize underwriting pipelines, secure financial transactions, and improve operational efficiencies.
           </p>
         </div>
       </section>
 
       {/* Case Studies List */}
-      <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
-        <div className="flex flex-col gap-8">
+      <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+        <div className="flex flex-col gap-10">
           {CASE_STUDIES.map((study) => (
             <div
               key={study.id}
-              className="rounded-2xl border border-[#9AA5B1]/25 bg-white p-6 sm:p-10 shadow-sm transition-all hover:border-[#3E4C59]"
+              className="rounded-2xl border border-[#9AA5B1]/25 bg-white p-6 sm:p-10 shadow-sm transition-all duration-300 hover:border-[#1B222C] hover:shadow-md"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6B7684]">
+              <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#6B7684]">
                 <span className="flex items-center gap-1.5 font-bold text-[#1B222C] uppercase tracking-wider">
                   <Building2 className="h-4 w-4 text-[#3E4C59]" />
                   {study.client}
                 </span>
-                <span className="rounded-full bg-[#F4F6F8] px-3 py-1 font-medium text-[#3E4C59] border border-[#9AA5B1]/20">
+                <span className="rounded-full bg-[#F4F6F8] px-3 py-1 font-semibold text-[#3E4C59] border border-[#9AA5B1]/20">
                   {study.industry}
                 </span>
               </div>
@@ -102,27 +107,31 @@ export function CaseStudiesClient() {
               </h2>
 
               {/* Metrics Grid */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-6 p-4 sm:p-5 bg-[#F4F6F8] rounded-xl border border-[#9AA5B1]/20">
+              <div className="grid grid-cols-3 gap-4 mt-6 p-5 bg-[#F4F6F8] rounded-xl border border-[#9AA5B1]/20">
                 {study.metrics.map((m) => (
-                  <div key={m.label}>
-                    <span className="text-[10px] sm:text-xs text-[#6B7684] block font-medium">
+                  <div key={m.label} className="border-l border-[#9AA5B1]/30 pl-3">
+                    <span className="text-[10px] sm:text-xs text-[#6B7684] block font-semibold uppercase tracking-wider">
                       {m.label}
                     </span>
-                    <p className="text-base sm:text-xl font-bold text-[#1B222C] mt-0.5 font-mono">
+                    <p className="text-sm sm:text-xl font-bold text-[#1B222C] mt-1 font-mono tracking-tight">
                       {m.value}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-6 space-y-4 text-sm text-[#3E4C59] leading-relaxed">
+              <div className="mt-8 space-y-6 text-sm text-[#3E4C59] leading-relaxed">
                 <div>
-                  <strong className="text-[#1B222C] font-semibold block mb-1">Challenge:</strong>
-                  {study.summary}
+                  <strong className="text-[#1B222C] font-bold block mb-1 text-xs uppercase tracking-wider">Operational Challenge:</strong>
+                  <p>{study.challenge}</p>
                 </div>
                 <div>
-                  <strong className="text-[#1B222C] font-semibold block mb-1">M&amp;F Solution:</strong>
-                  {study.solution}
+                  <strong className="text-[#1B222C] font-bold block mb-1 text-xs uppercase tracking-wider">Engineering Architecture:</strong>
+                  <p>{study.architecture}</p>
+                </div>
+                <div>
+                  <strong className="text-[#1B222C] font-bold block mb-1 text-xs uppercase tracking-wider">Results &amp; Solution:</strong>
+                  <p>{study.solution}</p>
                 </div>
               </div>
             </div>

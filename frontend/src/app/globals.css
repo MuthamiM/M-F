@@ -36,7 +36,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
-  background-color: #1B222C; /* Matches footer background to prevent white overscroll bounce */
+  color-scheme: light;
   overscroll-behavior-y: none;
 }
 

@@ -3,12 +3,13 @@ import "../shared/theme/tokens.css"; // generated — see scripts/build-tokens.j
 import "./globals.css";
 import type { Viewport } from "next";
 import { CookieBanner } from "@/shared/components/CookieBanner";
+import { ChatWidget } from "@/shared/components/ChatWidget";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#1B222C",
+  themeColor: "#FFFFFF",
 };
 
 export const metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-body text-graphite">
         {children}
         <CookieBanner />
+        <ChatWidget />
       </body>
     </html>
   );

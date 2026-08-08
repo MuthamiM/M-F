@@ -19,7 +19,7 @@ async function findUserByEmail(email: string) {
       id: "user_dev_01",
       email: "admin@mftechnologies.com",
       // bcrypt hash for 'mftech2026'
-      passwordHash: "$2a$10$TqyUf7d7qV9r2yG40GepH.8Lsc1.Yn8zXQ/zY0y.Psh.w/T4cZ.E2",
+      passwordHash: "$2a$10$IVfl4CL/oM5jRxnJ.dezsOCp.n.cGBzyenPZ6fk46BstaOOhGI1tu",
       role: "admin",
     };
   }

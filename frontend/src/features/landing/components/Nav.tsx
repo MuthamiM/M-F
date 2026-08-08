@@ -1,47 +1,44 @@
 // src/features/landing/components/Nav.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Menu, X, ChevronDown, ChevronRight, Shield, Zap, ArrowUpRight, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
-const LINKS = [
+const NAV_LINKS = [
   { label: "Home", href: "/", hash: "#home" },
   { label: "About", href: "/#about", hash: "#about" },
   { label: "Services", href: "/#services", hash: "#services" },
+  { label: "Clients", href: "/our-clients", hash: "" },
   { label: "Careers", href: "/careers", hash: "" },
   { label: "Contact", href: "/contact", hash: "" },
 ];
 
 const SERVICES_LIST = [
-  { label: "Workflow Automation", href: "/services/workflow-automation" },
-  { label: "Docs & API", href: "/docs" },
-  { label: "Security & Compliance", href: "/security" },
-  { label: "Status", href: "/status" },
+  { label: "Workflow Automation", href: "/services/workflow-automation", desc: "Intelligent credit approval pipelines" },
+  { label: "Developer API & Docs", href: "/docs", desc: "REST & GraphQL integration suites" },
+  { label: "Security & Compliance", href: "/security", desc: "Bank-grade AES-256 & SOC 2 audit readiness" },
+  { label: "System Status", href: "/status", desc: "Real-time uptime & latency telemetry" },
 ];
 
 const ABOUT_LIST = [
-  { label: "About", href: "/#about" },
-  { label: "Who we are", href: "/where-we-are" },
-  { label: "Get involved", href: "/get-involved" },
+  { label: "About M&F", href: "/#about", desc: "Institutional lending technology overview" },
+  { label: "Who We Are", href: "/where-we-are", desc: "Our engineering leadership & vision" },
+  { label: "Get Involved", href: "/get-involved", desc: "Partner program & institutional advisory" },
 ];
 
 export function Nav() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("#home");
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
-  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
+  const [aboutExpanded, setAboutExpanded] = useState(true);
+  const [servicesExpanded, setServicesExpanded] = useState(true);
   const pathname = usePathname();
-  const aboutMenuRef = useRef<HTMLDivElement | null>(null);
-  const servicesMenuRef = useRef<HTMLDivElement | null>(null);
 
-  
-
-  // ── Lock body scroll when drawer is open ──
+  // Lock body scroll when drawer is open
   useEffect(() => {
-    if (mobileMenuOpen) {
+    if (menuOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -49,9 +46,9 @@ export function Nav() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [mobileMenuOpen]);
+  }, [menuOpen]);
 
-  // ── Sync hash from URL on mount / route change ──
+  // Sync active hash on mount / hash change
   useEffect(() => {
     const sync = () => {
       if (window.location.hash) {
@@ -65,353 +62,264 @@ export function Nav() {
     return () => window.removeEventListener("hashchange", sync);
   }, [pathname]);
 
-  // ── Handle nav click ──
-  const handleNav = useCallback((href: string) => {
-    setMobileMenuOpen(false);
+  const handleNavClick = useCallback((href: string) => {
+    setMenuOpen(false);
     if (href.startsWith("/#")) {
       const hash = href.replace("/", "");
       setActiveHash(hash);
-      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+      const targetEl = document.querySelector(hash);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth" });
+      }
     }
   }, []);
 
-  // ── Active link detection ──
   const isActive = useCallback(
-    (link: (typeof LINKS)[0]) => {
+    (link: (typeof NAV_LINKS)[0]) => {
       if (!pathname) return false;
+      if (link.href === "/our-clients") return pathname === "/our-clients";
       if (link.href === "/careers") return pathname === "/careers";
-      if (link.label === "Services") {
-        if (pathname.startsWith("/services/")) return true;
-        if (pathname === "/" && activeHash === "#services") {
-          try {
-            const el = document.querySelector("#services");
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              // consider it active only if the section is near the top of viewport
-              return rect.top >= 0 && rect.top < window.innerHeight * 0.6;
-            }
-          } catch (e) {
-            return false;
-          }
-        }
-        return false;
-      }
+      if (link.href === "/contact") return pathname === "/contact";
       if (pathname === "/" && link.hash) return activeHash === link.hash;
       return false;
     },
     [pathname, activeHash]
   );
 
+  const [apiDocsUrl, setApiDocsUrl] = useState("http://localhost:4000/api/docs/sitemap");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setApiDocsUrl(`http://${window.location.hostname}:4000/api/docs/sitemap`);
+    }
+  }, []);
+
   return (
     <>
-      <header className="sticky top-0 w-full border-b border-[#9AA5B1]/20 bg-white/95 backdrop-blur-md z-[10001] pointer-events-auto">
-        <div className="mx-0 flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          {/* ── Logo ── */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center">
-              <span className="absolute h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[#3E4C59]" />
-              <span className="absolute right-0 h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-[#1B222C]" />
+      {/* Sticky Top Header Bar */}
+      <header className="sticky top-0 w-full border-b border-[#9AA5B1]/20 bg-white/95 backdrop-blur-md z-[10001] transition-all">
+        <div className="w-full flex items-center justify-between px-4 sm:px-8 lg:px-12 py-3 sm:py-4">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+            <span className="relative flex h-8 w-8 items-center justify-center">
+              <span className="absolute h-8 w-8 rounded-full bg-[#1B222C] group-hover:scale-105 transition-transform" />
+              <span className="absolute right-0 h-4 w-4 rounded-full bg-white border-2 border-[#1B222C]" />
             </span>
-            <span className="text-base sm:text-lg font-semibold text-[#1B222C]">
+            <span className="text-lg font-bold tracking-tight text-[#1B222C]">
               M&amp;F <span className="font-normal text-[#6B7684]">Technologies</span>
             </span>
           </Link>
 
-          {/* ── Desktop Navigation ── */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            {LINKS.map((link) => {
-              const active = isActive(link);
-              // About and Services render dropdowns on hover
-              if (link.label === "About") {
-                return (
-                  <div
-                    key={link.label}
-                    className="relative"
-                    onMouseEnter={() => setOpenMenu("about")}
-                    onMouseLeave={() => setOpenMenu((v) => (v === "about" ? null : v))}
-                    onFocus={() => setOpenMenu("about")}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpenMenu(null);
-                    }}
-                  >
-                    <Link
-                      href={link.href}
-                      onClick={() => handleNav(link.href)}
-                      onKeyDown={(e) => {
-                        if (e.key === "ArrowDown" || e.key === "Enter") {
-                          e.preventDefault();
-                          setOpenMenu("about");
-                          setTimeout(() => (aboutMenuRef.current?.querySelector('a') as HTMLElement | null)?.focus(), 0);
-                        }
-                      }}
-                      aria-haspopup="true"
-                      aria-expanded={openMenu === "about"}
-                      className={`py-1.5 text-sm font-semibold transition-colors hover:text-[#1B222C] cursor-pointer ${
-                        active ? "text-[#1B222C] font-bold underline underline-offset-4" : "text-[#3E4C59]"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-
-                    <div
-                      ref={aboutMenuRef}
-                      className={`absolute left-0 top-full mt-0 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 ${openMenu === "about" ? "block" : "hidden"}`}>
-                      <div className="flex flex-col">
-                        {ABOUT_LIST.map((s) => (
-                          <Link
-                            key={s.label}
-                            href={s.href}
-                            onClick={() => handleNav(s.href)}
-                            role="menuitem"
-                            tabIndex={0}
-                            className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]"
-                          >
-                            {s.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (link.label === "Services") {
-                return (
-                  <div
-                    key={link.label}
-                    className="relative"
-                    onMouseEnter={() => setOpenMenu("services")}
-                    onMouseLeave={() => setOpenMenu((v) => (v === "services" ? null : v))}
-                    onFocus={() => setOpenMenu("services")}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpenMenu(null);
-                    }}
-                  >
-                    <Link
-                      href={link.href}
-                      onClick={() => handleNav(link.href)}
-                      onKeyDown={(e) => {
-                        if (e.key === "ArrowDown" || e.key === "Enter") {
-                          e.preventDefault();
-                          setOpenMenu("services");
-                          setTimeout(() => (servicesMenuRef.current?.querySelector('a') as HTMLElement | null)?.focus(), 0);
-                        }
-                      }}
-                      aria-haspopup="true"
-                      aria-expanded={openMenu === "services"}
-                      className={`py-1.5 text-sm font-semibold transition-colors hover:text-[#1B222C] cursor-pointer ${
-                        active ? "text-[#1B222C] font-bold underline underline-offset-4" : "text-[#3E4C59]"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-
-                    <div
-                      ref={servicesMenuRef}
-                      className={`absolute left-0 top-full mt-0 w-56 rounded-md bg-white border border-[#E6EDF2] shadow-md z-50 ${openMenu === "services" ? "block" : "hidden"}`}>
-                      <div className="flex flex-col">
-                        {SERVICES_LIST.map((s) => (
-                          <Link
-                            key={s.label}
-                            href={s.href}
-                            onClick={() => handleNav(s.href)}
-                            role="menuitem"
-                            tabIndex={0}
-                            className="px-4 py-3 text-sm text-[#3E4C59] hover:bg-cloud hover:text-[#1B222C]"
-                          >
-                            {s.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => handleNav(link.href)}
-                  className={`py-1.5 text-sm font-semibold transition-colors hover:text-[#1B222C] hover:underline cursor-pointer ${
-                    active ? "text-[#1B222C] font-bold underline underline-offset-4" : "text-[#3E4C59]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* ── Desktop Action ── */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* Header Controls */}
+          <div className="flex items-center gap-3">
+            {/* Desktop API CTA */}
             <a
-              href="http://localhost:4000/api/docs/sitemap"
+              href={apiDocsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md bg-[#1B222C] px-4 py-2 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-[#1B222C] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-colors"
             >
-              API Reference
+              <span>API Reference</span>
+              <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
             </a>
+
+            {/* Hamburger Menu Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open Navigation Menu"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#3E4C59]/30 bg-[#F4F6F8] px-3 py-1.5 text-xs font-semibold text-[#1B222C] hover:bg-[#E4E7EB] hover:border-[#1B222C]/40 transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <Menu className="h-4.5 w-4.5 text-[#1B222C]" />
+              <span className="font-bold tracking-wide uppercase text-[11px]">Menu</span>
+            </button>
           </div>
-
-          {/* ── Mobile Hamburger Trigger (Phone only) ── */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((v) => !v)}
-            aria-label="Open menu"
-            className="md:hidden flex items-center justify-center p-2 text-[#1B222C] hover:text-[#3E4C59] focus:outline-none relative z-[10002] pointer-events-auto"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
-
-          {/* Debug fixed tap target removed from header (moved outside header) */}
         </div>
       </header>
 
-      {/* debug UI removed */}
+      {/* Hamburger Drawer Overlay & Panel */}
+      <AnimatePresence>
+        {menuOpen && (
+          <div className="fixed inset-0 z-[10005] flex justify-end">
+            {/* Soft Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              onClick={() => setMenuOpen(false)}
+              className="fixed inset-0 bg-slate-900/35 backdrop-blur-sm cursor-pointer"
+            />
 
-      {/* ── Mobile Full Screen Overlay Menu ── */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[9999] bg-white flex flex-col w-full h-full min-h-screen overflow-y-auto px-6 py-4 md:hidden">
-          {/* Mobile Header Bar */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#9AA5B1]/20 shrink-0">
-            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
-              <span className="relative flex h-7 w-7 items-center justify-center">
-                <span className="absolute h-7 w-7 rounded-full bg-[#3E4C59]" />
-                <span className="absolute right-0 h-3.5 w-3.5 rounded-full bg-[#1B222C]" />
-              </span>
-              <span className="text-base font-semibold text-[#1B222C]">
-                M&amp;F <span className="font-normal text-[#6B7684]">Technologies</span>
-              </span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-label="Close menu"
-              className="p-2 text-[#1B222C] hover:text-[#3E4C59] focus:outline-none"
+            {/* Sliding Drawer Container */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", ease: [0.16, 1, 0.3, 1], duration: 0.55 }}
+              className="relative w-full max-w-md bg-white text-[#1B222C] h-full shadow-2xl flex flex-col z-10 overflow-y-auto border-l border-[#9AA5B1]/20"
             >
-              <X className="h-6.5 w-6.5" />
-            </button>
-          </div>
-
-          {/* Mobile Nav Links */}
-          <nav className="flex flex-col mt-4">
-            {/** Mobile expand state for submenu sections */}
-            {/** local state */}
-            {/* render links, turning About/Services into toggles */}
-            {LINKS.map((link) => {
-              const active = isActive(link);
-              if (link.label === "Services") {
-                return (
-                  <div key="mobile-services" className="border-b border-[#9AA5B1]/15">
-                    <button
-                      type="button"
-                      onClick={() => setMobileServicesOpen((v) => !v)}
-                      className="w-full text-left text-xl font-semibold py-4 flex items-center justify-between text-[#3E4C59]"
-                    >
-                      <span>Services</span>
-                      <span className="ml-2">{mobileServicesOpen ? "−" : "+"}</span>
-                    </button>
-
-                    {mobileServicesOpen && (
-                      <div className="bg-white">
-                        {SERVICES_LIST.map((s) => (
-                          <Link
-                            key={s.label}
-                            href={s.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="pl-4 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59] block"
-                          >
-                            {s.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              if (link.label === "About") {
-                return (
-                  <div key="mobile-about" className="border-b border-[#9AA5B1]/15">
-                    <button
-                      type="button"
-                      onClick={() => setMobileAboutOpen((v) => !v)}
-                      className="w-full text-left text-xl font-semibold py-4 flex items-center justify-between text-[#3E4C59]"
-                    >
-                      <span>About</span>
-                      <span className="ml-2">{mobileAboutOpen ? "−" : "+"}</span>
-                    </button>
-
-                    {mobileAboutOpen && (
-                      <div className="bg-white">
-                        {ABOUT_LIST.map((s) => (
-                          <Link
-                            key={s.label}
-                            href={s.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="pl-4 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59] block"
-                          >
-                            {s.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => handleNav(link.href)}
-                  className={`text-xl font-semibold py-4 border-b border-[#9AA5B1]/15 flex items-center justify-between ${
-                    active ? "text-[#1B222C]" : "text-[#3E4C59]"
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  {active && <span className="h-2.5 w-2.5 rounded-full bg-[#1B222C]" />}
+              {/* Drawer Header */}
+              <div className="sticky top-0 bg-white z-20 flex items-center justify-between p-5 sm:p-6 border-b border-[#9AA5B1]/20">
+                <Link href="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-2">
+                  <span className="relative flex h-7 w-7 items-center justify-center">
+                    <span className="absolute h-7 w-7 rounded-full bg-[#1B222C]" />
+                    <span className="absolute right-0 h-3.5 w-3.5 rounded-full bg-white border-2 border-[#1B222C]" />
+                  </span>
+                  <span className="text-base font-bold text-[#1B222C]">
+                    M&amp;F <span className="font-normal text-[#6B7684]">Technologies</span>
+                  </span>
                 </Link>
-              );
-            })}
 
-            {/* remaining static extra links */}
-            <div className="mt-4">
-              <Link href="/where-we-are" onClick={() => setMobileMenuOpen(false)} className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]">
-                Where we are
-              </Link>
-              <Link href="/get-involved" onClick={() => setMobileMenuOpen(false)} className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]">
-                Get involved with us
-              </Link>
-              <Link href="/request-demo" onClick={() => setMobileMenuOpen(false)} className="pl-2 text-base py-3 border-b border-[#9AA5B1]/10 text-[#3E4C59]">
-                Request a demo
-              </Link>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="rounded-lg p-2 text-[#6B7684] hover:text-[#1B222C] hover:bg-[#F4F6F8] transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
 
-            {/* Contact CTA */}
-            <div className="mt-6 px-2">
-              <a href="mailto:contact@mftechnologies.co" className="w-full rounded-lg bg-[#1B222C] py-3 text-center text-sm font-semibold text-white block hover:bg-[#3E4C59] transition-colors">
-                Contact Us
-              </a>
-            </div>
-          </nav>
+              {/* Drawer Main Body */}
+              <div className="p-5 sm:p-6 space-y-6 flex-1 bg-[#F8FAFC]">
+                {/* Section 1: Main Quick Links */}
+                <div>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#6B7684] mb-3">
+                    Navigation Overview
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {NAV_LINKS.map((link) => (
+                      <Link
+                        key={link.label}
+                        href={link.href}
+                        onClick={() => handleNavClick(link.href)}
+                        className={`px-3.5 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between transition-all ${
+                          isActive(link)
+                            ? "bg-[#E2E8F0] text-[#1B222C] border-[#9AA5B1]/40 font-bold border-r-4 border-r-[#1B222C]"
+                            : "bg-white text-[#3E4C59] border-[#9AA5B1]/20 hover:bg-[#F1F5F9] hover:text-[#1B222C]"
+                        }`}
+                      >
+                        <span>{link.label}</span>
+                        {isActive(link) && <span className="h-2 w-2 rounded-full bg-[#1B222C]" />}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
 
-          {/* Bottom Action */}
-          <div className="mt-auto pt-8 pb-6 shrink-0">
-            <a
-              href="http://localhost:4000/api/docs/sitemap"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full rounded-lg bg-[#1B222C] py-4 text-center text-sm font-semibold text-white block hover:bg-[#3E4C59] transition-colors"
-            >
-              API Reference
-            </a>
+                {/* Section 2: About Accordion */}
+                <div className="border-t border-[#9AA5B1]/20 pt-5">
+                  <button
+                    type="button"
+                    onClick={() => setAboutExpanded((v) => !v)}
+                    className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#6B7684] hover:text-[#1B222C] transition-colors mb-3 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-[#3E4C59]" />
+                      About M&amp;F
+                    </span>
+                    {aboutExpanded ? <ChevronDown className="h-4 w-4 text-[#6B7684]" /> : <ChevronRight className="h-4 w-4 text-[#6B7684]" />}
+                  </button>
+
+                  <AnimatePresence>
+                    {aboutExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="space-y-2 overflow-hidden"
+                      >
+                        {ABOUT_LIST.map((item) => (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            onClick={() => handleNavClick(item.href)}
+                            className="block p-3 rounded-lg bg-white hover:bg-[#F1F5F9] border border-[#9AA5B1]/20 transition-colors group"
+                          >
+                            <div className="text-xs font-semibold text-[#3E4C59] group-hover:text-[#1B222C] flex items-center justify-between">
+                              <span>{item.label}</span>
+                              <ChevronRight className="h-3.5 w-3.5 text-[#6B7684] group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                            <div className="text-[11px] text-[#6B7684] mt-0.5">{item.desc}</div>
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Section 3: Services Accordion */}
+                <div className="border-t border-[#9AA5B1]/20 pt-5">
+                  <button
+                    type="button"
+                    onClick={() => setServicesExpanded((v) => !v)}
+                    className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#6B7684] hover:text-[#1B222C] transition-colors mb-3 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-[#3E4C59]" />
+                      Services &amp; Architecture
+                    </span>
+                    {servicesExpanded ? <ChevronDown className="h-4 w-4 text-[#6B7684]" /> : <ChevronRight className="h-4 w-4 text-[#6B7684]" />}
+                  </button>
+
+                  <AnimatePresence>
+                    {servicesExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="space-y-2 overflow-hidden"
+                      >
+                        {SERVICES_LIST.map((item) => (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            onClick={() => handleNavClick(item.href)}
+                            className="block p-3 rounded-lg bg-white hover:bg-[#F1F5F9] border border-[#9AA5B1]/20 transition-colors group"
+                          >
+                            <div className="text-xs font-semibold text-[#3E4C59] group-hover:text-[#1B222C] flex items-center justify-between">
+                              <span>{item.label}</span>
+                              <ChevronRight className="h-3.5 w-3.5 text-[#6B7684] group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                            <div className="text-[11px] text-[#6B7684] mt-0.5">{item.desc}</div>
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Section 4: Quick Actions */}
+                <div className="border-t border-[#9AA5B1]/20 pt-5 space-y-2">
+                  <Link
+                    href="/request-demo"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full py-3 px-4 rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-md"
+                  >
+                    <span>Request Institutional Demo</span>
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+
+                  <a
+                    href="mailto:contact@mftechnologies.co"
+                    className="w-full py-2.5 px-4 rounded-lg border border-[#9AA5B1] bg-white text-xs font-semibold text-[#3E4C59] hover:bg-[#F1F5F9] hover:text-[#1B222C] flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    <span>Contact Sales &amp; Support</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-5 border-t border-[#9AA5B1]/20 bg-white text-center text-xs text-[#6B7684]">
+                &copy; {new Date().getFullYear()} M&amp;F Technologies. All rights reserved.
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -10,6 +10,7 @@ import { healthRouter } from "./features/health/health.routes";
 import { authRouter } from "./features/auth/auth.routes";
 import { contactRouter } from "./features/contact/contact.routes";
 import { docsRouter } from "./features/docs/docs.routes";
+import { ticketsRouter } from "./features/tickets/tickets.routes";
 
 export function createApp() {
   const app = express();
@@ -19,11 +20,23 @@ export function createApp() {
   app.use(express.json({ limit: "10kb" }));
   app.use(globalRateLimiter);
 
+  // Request Logging Middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      const { logger } = require("./config/logger");
+      logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+  });
+
   // ── Feature routes ────────────────────────────────────────────────────
   app.use("/api/health", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/contact", contactRouter);
   app.use("/api/docs", docsRouter);
+  app.use("/api/tickets", ticketsRouter);
 
   // ── Error handler (must be last) ──────────────────────────────────────
   app.use(errorHandler);

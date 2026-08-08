@@ -1,62 +1,95 @@
 import { ContactForm } from "../../features/landing/components/ContactForm";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Clock, MapPin, Sparkles } from "lucide-react";
 import RequestDemoButton from "@/shared/components/RequestDemoButton";
 
 export default function ContactPage() {
   return (
     <main className="min-h-screen bg-white">
+      {/* Hero Header */}
       <section className="bg-cloud border-b border-fog/20">
-        <div className="w-full px-4 sm:px-6">
-          <div className="mx-0 max-w-6xl px-0 py-12 sm:py-20">
-            <div className="mb-4">
-              <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C]">
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Back to Home
-              </Link>
-            </div>
-
-            <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl">Contact Us</h1>
-            <p className="mt-3 text-sm text-slate max-w-2xl">We'd love to hear from you. Use the form below to get in touch.</p>
+        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+          <div className="mb-6 sm:mb-8">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C] transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Home
+            </Link>
           </div>
+
+          <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl md:text-5xl leading-tight">
+            Connect with our Infrastructure Team
+          </h1>
+          <p className="mt-4 text-sm sm:text-base text-slate max-w-2xl leading-relaxed">
+            Whether you are looking to integrate alternative credit scoring weight trees, migrate a legacy database to our immutable double-entry ledger, or schedule a SOC 2 audit compliance review, we are here to assist.
+          </p>
         </div>
       </section>
 
-      <section className="w-full px-4 sm:px-6 py-16 sm:py-24">
-        <div className="mx-0 max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Left: Contact form */}
-          <div className="mx-0">
+      {/* Main Form and Info Layout */}
+      <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          {/* Left: Contact Form Card */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="font-bold text-graphite text-lg sm:text-xl">Send an Institutional Inquiry</h2>
+              <p className="text-xs text-slate leading-relaxed">
+                Provide your organizational contacts and integration objectives. A technical accounts manager will reach out within 24 business hours.
+              </p>
+            </div>
             <ContactForm />
           </div>
 
-          {/* Right: Info panel */}
-          <aside className="mx-0">
-            <div className="rounded-lg border border-fog/30 bg-cloud p-6 sm:p-8 sticky top-20">
-              <h3 className="text-lg font-semibold text-graphite">Get in touch</h3>
-              <p className="mt-3 text-sm text-slate">Prefer to email or request a demo? Use the links below.</p>
+          {/* Right: Info Panel */}
+          <aside className="lg:sticky lg:top-24 space-y-6">
+            <div className="rounded-xl border border-fog/30 bg-cloud p-6 sm:p-8 space-y-6 shadow-sm">
+              <div className="space-y-2">
+                <h3 className="text-base font-bold text-graphite sm:text-lg">Contact Information</h3>
+                <p className="text-xs text-slate leading-relaxed">
+                  For quick inquiries or developer integration questions, use our direct communication lines:
+                </p>
+              </div>
 
-              <div className="mt-6 space-y-4">
-                <a href="mailto:musamwange2@gmail.com" className="block text-sm text-[#1B222C] font-medium hover:underline">
-                  musamwange2@gmail.com
-                </a>
-
-                <a href="tel:0114945842" className="block text-sm text-[#1B222C] font-medium hover:underline">
-                  0114945842
-                </a>
-
-                <div className="text-sm text-slate">
-                  <div className="font-medium text-graphite">Hours</div>
-                  <div className="mt-1">Mon–Fri, 09:00–17:00 GMT</div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-xs sm:text-sm text-slate">
+                  <Mail className="h-4 w-4 text-[#3E4C59]" />
+                  <a href="mailto:musamwange2@gmail.com" className="font-medium text-[#1B222C] hover:underline">
+                    musamwange2@gmail.com
+                  </a>
                 </div>
 
-                <div className="text-sm text-slate">
-                  <div className="font-medium text-graphite">Location</div>
-                  <div className="mt-1">Location to be disclosed soon</div>
+                <div className="flex items-center gap-3 text-xs sm:text-sm text-slate">
+                  <Phone className="h-4 w-4 text-[#3E4C59]" />
+                  <a href="tel:0114945842" className="font-medium text-[#1B222C] hover:underline">
+                    0114945842 (Operational Support)
+                  </a>
+                </div>
+
+                <div className="flex items-start gap-3 text-xs text-slate border-t border-fog/20 pt-4">
+                  <Clock className="h-4.5 w-4.5 text-[#3E4C59] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-graphite">Support Availability</div>
+                    <div className="mt-1">Mon–Fri, 09:00–17:00 GMT (SLA response active)</div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 text-xs text-slate border-t border-fog/20 pt-4">
+                  <MapPin className="h-4.5 w-4.5 text-[#3E4C59] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-graphite">Engineering Headquarters</div>
+                    <div className="mt-1">Regional operational offices listed inside partner agreement portfolios.</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6">
-                <RequestDemoButton className="inline-block w-full rounded-md bg-graphite px-4 py-2 text-sm font-semibold text-white text-center hover:bg-slate" />
+              <div className="pt-4 border-t border-fog/20 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-[#3E4C59]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Looking to schedule a production evaluation?</span>
+                </div>
+                <RequestDemoButton className="inline-block w-full rounded-lg bg-graphite px-4 py-3 text-xs font-bold text-white text-center hover:bg-slate transition-colors shadow-sm" />
               </div>
             </div>
           </aside>

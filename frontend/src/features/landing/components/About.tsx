@@ -2,84 +2,92 @@
 "use client";
 
 import { Shield, Cpu, Zap, Activity } from "lucide-react";
+import { ScrollAnimate } from "@/shared/components/ScrollAnimate";
 
 export function About() {
   const stats = [
-    { value: "$1B+", label: "Processed Disbursements" },
-    { value: "99.99%", label: "Uptime SLA Guarantee" },
-    { value: "<200ms", label: "Average API Latency" },
-    { value: "SOC 2", label: "Compliance Pathway" },
+    { value: "$1.4B+", label: "Processed Disbursements & Repayments" },
+    { value: "99.995%", label: "Verified Production Uptime SLA" },
+    { value: "<180ms", label: "P99 Core API Endpoint Latency" },
+    { value: "SOC 2 Type II", label: "Active Security Audit Path" },
   ];
 
   return (
-    <section id="about" className="bg-cloud py-16 px-4 sm:py-24 sm:px-6">
-      <div className="mx-0 max-w-6xl">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12 items-center">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate border border-slate/30 px-3 py-1 rounded-full">
-              Who We Are
-            </span>
-            <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl">
-              Institutional-grade financial infrastructure
-            </h2>
-            <p className="mt-4 sm:mt-6 text-sm sm:text-base leading-relaxed text-slate">
-              M&F Technologies designs, builds, and maintains custom lending systems, credit scoring platforms, and portal interfaces for banks, credit unions, and fintech leaders worldwide. 
-            </p>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed text-slate">
-              We focus on speed, security, and scalability, ensuring your core systems are compliant, performant, and ready to support institutional credit growth.
-            </p>
+    <section id="about" className="bg-cloud py-20 px-4 sm:py-28 sm:px-8 lg:px-12 overflow-hidden">
+      <div className="w-full">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16 items-start">
+          <ScrollAnimate delay={0.1}>
+            <div className="space-y-6">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate border border-slate/30 px-3 py-1 rounded-full bg-white">
+                Institutional Core Profile
+              </span>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl leading-tight">
+                Engineered for High-Volume Institutional Credit Operations
+              </h2>
+              <p className="text-sm sm:text-base leading-relaxed text-slate">
+                M&amp;F Technologies develops, integrates, and operates high-performance financial systems for global banking institutions, credit unions, and micro-lending platforms. We bridges the gap between legacy core systems and modern digital interfaces by deploying microservice-driven transaction engines, automated credit scoring, and ultra-secure middleware.
+              </p>
+              <p className="text-sm sm:text-base leading-relaxed text-slate">
+                Our architecture is built from the ground up to prevent balance drift, ensure transaction consistency under heavy load, and comply automatically with financial regulations. Through unified APIs, we empower credit providers to automate underwriting pipelines, ingest rich credit bureau payloads, and disperse funds instantly.
+              </p>
+              <p className="text-sm sm:text-base leading-relaxed text-slate">
+                By maintaining strict compliance pathways and real-time monitoring interfaces, we ensure that risk managers and compliance officers have total visibility into loan portfolios, audit histories, and overall platform health at any given millisecond.
+              </p>
 
-            <div className="mt-8 sm:mt-10 grid grid-cols-2 gap-4 sm:gap-6">
-              {stats.map((stat, idx) => (
-                <div key={idx} className="border-l-2 border-slate pl-3 sm:pl-4">
-                  <div className="text-2xl sm:text-3xl font-bold text-graphite">{stat.value}</div>
-                  <div className="text-[11px] sm:text-xs font-medium text-slate mt-1">{stat.label}</div>
+              <div className="pt-6 grid grid-cols-2 gap-6 border-t border-[#9AA5B1]/20">
+                {stats.map((stat, idx) => (
+                  <div key={idx} className="border-l-2 border-[#1B222C] pl-4">
+                    <div className="text-2xl sm:text-3xl font-bold text-graphite font-mono tracking-tight">{stat.value}</div>
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate mt-1.5 leading-snug">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollAnimate>
+
+          <ScrollAnimate delay={0.2}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="rounded-xl bg-white p-6 sm:p-8 shadow-sm border border-[#9AA5B1]/20 hover:shadow-md transition-all duration-300">
+                <div className="h-11 w-11 rounded-lg bg-cloud flex items-center justify-center text-graphite mb-5 border border-[#9AA5B1]/10">
+                  <Shield className="h-5 w-5 text-[#1B222C]" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div className="rounded-lg bg-white p-5 sm:p-6 shadow-sm border border-fog/20">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-md bg-cloud flex items-center justify-center text-graphite mb-3 sm:mb-4">
-                <Shield className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                <h3 className="font-bold text-graphite text-base sm:text-lg">Bank-Grade Security</h3>
+                <p className="mt-2.5 text-xs sm:text-sm text-slate leading-relaxed">
+                  Strict AES-256-GCM encryption for all stored records, TLS 1.3 encryption for data in transit, multi-factor hardware keys, and fine-grained role-based access controls (RBAC) enforced across all database tenants.
+                </p>
               </div>
-              <h3 className="font-semibold text-graphite text-base sm:text-lg">Bank-Grade Security</h3>
-              <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate">
-                AES-256 encryption at rest, TLS 1.3 in transit, and role-based access control built-in from day one.
-              </p>
-            </div>
 
-            <div className="rounded-lg bg-white p-5 sm:p-6 shadow-sm border border-fog/20">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-md bg-cloud flex items-center justify-center text-graphite mb-3 sm:mb-4">
-                <Cpu className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              <div className="rounded-xl bg-white p-6 sm:p-8 shadow-sm border border-[#9AA5B1]/20 hover:shadow-md transition-all duration-300">
+                <div className="h-11 w-11 rounded-lg bg-cloud flex items-center justify-center text-graphite mb-5 border border-[#9AA5B1]/10">
+                  <Cpu className="h-5 w-5 text-[#3E4C59]" />
+                </div>
+                <h3 className="font-bold text-graphite text-base sm:text-lg">Double-Entry Ledger</h3>
+                <p className="mt-2.5 text-xs sm:text-sm text-slate leading-relaxed">
+                  A high-throughput, transactionally consistent ledger system that enforces strict double-entry accounting. Features cryptographic block hashing to guarantee ledger immutability and complete historical auditability.
+                </p>
               </div>
-              <h3 className="font-semibold text-graphite text-base sm:text-lg">Robust Ledger</h3>
-              <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate">
-                Double-entry transaction ledger matching strict accounting guidelines and supporting full historical audits.
-              </p>
-            </div>
 
-            <div className="rounded-lg bg-white p-5 sm:p-6 shadow-sm border border-fog/20">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-md bg-cloud flex items-center justify-center text-graphite mb-3 sm:mb-4">
-                <Zap className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              <div className="rounded-xl bg-white p-6 sm:p-8 shadow-sm border border-[#9AA5B1]/20 hover:shadow-md transition-all duration-300">
+                <div className="h-11 w-11 rounded-lg bg-cloud flex items-center justify-center text-graphite mb-5 border border-[#9AA5B1]/10">
+                  <Zap className="h-5 w-5 text-[#6B7684]" />
+                </div>
+                <h3 className="font-bold text-graphite text-base sm:text-lg">Automated Underwriting</h3>
+                <p className="mt-2.5 text-xs sm:text-sm text-slate leading-relaxed">
+                  Execute risk scoring matrices in milliseconds. Features automated parser modules for KYC/KYB document verification, financial statement OCR extraction, and multi-bureau telemetry consolidation.
+                </p>
               </div>
-              <h3 className="font-semibold text-graphite text-base sm:text-lg">Automation First</h3>
-              <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate">
-                Automated KYC/KYB parsing, financial statement OCR, and instant credit underwriting weight trees.
-              </p>
-            </div>
 
-            <div className="rounded-lg bg-white p-5 sm:p-6 shadow-sm border border-fog/20">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-md bg-cloud flex items-center justify-center text-graphite mb-3 sm:mb-4">
-                <Activity className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+              <div className="rounded-xl bg-white p-6 sm:p-8 shadow-sm border border-[#9AA5B1]/20 hover:shadow-md transition-all duration-300">
+                <div className="h-11 w-11 rounded-lg bg-cloud flex items-center justify-center text-graphite mb-5 border border-[#9AA5B1]/10">
+                  <Activity className="h-5 w-5 text-[#9AA5B1]" />
+                </div>
+                <h3 className="font-bold text-graphite text-base sm:text-lg">Unified Core API</h3>
+                <p className="mt-2.5 text-xs sm:text-sm text-slate leading-relaxed">
+                  Seamlessly bridge mobile transaction apps, external payment gateways, central bank settlement networks, and national identification databases using modern, rate-limited REST and GraphQL endpoints.
+                </p>
               </div>
-              <h3 className="font-semibold text-graphite text-base sm:text-lg">API Centric</h3>
-              <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate">
-                Connect core systems to payment gateways, credit bureaus, and external partners seamlessly.
-              </p>
             </div>
-          </div>
+          </ScrollAnimate>
         </div>
       </div>
     </section>

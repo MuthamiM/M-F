@@ -17,8 +17,14 @@ export async function apiFetch<T>(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
 
+  // Dynamically resolve backend API address: use relative path on client (Next.js proxy)
+  let apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  if (typeof window !== "undefined") {
+    apiBase = "";
+  }
+
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${apiBase}${path}`, {
       ...options,
       credentials: "include",
       headers: {
