@@ -63,7 +63,7 @@ if [ -f "$ENV_FILE" ]; then
   JWT_SECRET=$(grep '^JWT_SECRET=' "$ENV_FILE" | cut -d '=' -f2 || true)
   POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$ENV_FILE" | cut -d '=' -f2 || true)
 else
-  read -p "Enter your Domain Name (e.g. mandftechnologies.com): " DOMAIN
+  DOMAIN=${1:-"ec2-18-188-142-27.us-east-2.compute.amazonaws.com"}
   JWT_SECRET=$(openssl rand -hex 32)
   POSTGRES_PASSWORD=$(openssl rand -hex 24)
   
@@ -88,7 +88,7 @@ NGINX_CONF="/etc/nginx/sites-available/mf-technologies"
 cat <<EOF > "$NGINX_CONF"
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name $DOMAIN www.$DOMAIN 18.188.142.27;
 
     # Frontend proxy (Next.js server-side)
     location / {
@@ -130,19 +130,24 @@ systemctl reload nginx
 echo "[+] Nginx site configured and reloaded."
 
 # 7. GENERATE SSL CERTIFICATE VIA CERTBOT
-echo "[+] Obtaining SSL Certificate for $DOMAIN..."
-echo "========================================================"
-echo " Ensure your DNS A Records for $DOMAIN and www.$DOMAIN"
-echo " point to this server's public IP address before proceeding!"
-echo "========================================================"
-read -p "Run Certbot SSL installer? (y/N): " RUN_CERTBOT
-
-if [[ "$RUN_CERTBOT" =~ ^[Yy]$ ]]; then
-  certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --agree-tos --no-eff-email -m "admin@$DOMAIN"
-  systemctl reload nginx
-  echo "[+] SSL Certificates successfully configured."
+if [[ "$DOMAIN" == *".amazonaws.com" || "$DOMAIN" == "18.188.142.27" ]]; then
+  echo "[*] Using default AWS DNS or IP. Skipping Certbot SSL configuration."
 else
-  echo "[*] Certbot SSL step skipped. Remember to run it manually later."
+  echo "[+] Obtaining SSL Certificate for $DOMAIN..."
+  if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
+    certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --agree-tos --no-eff-email -m "admin@$DOMAIN" --non-interactive || true
+  else
+    echo "========================================================"
+    echo " Ensure your DNS A Records for $DOMAIN and www.$DOMAIN"
+    echo " point to this server's public IP address before proceeding!"
+    echo "========================================================"
+    read -p "Run Certbot SSL installer? (y/N): " RUN_CERTBOT
+    if [[ "$RUN_CERTBOT" =~ ^[Yy]$ ]]; then
+      certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --agree-tos --no-eff-email -m "admin@$DOMAIN"
+      systemctl reload nginx
+      echo "[+] SSL Certificates successfully configured."
+    fi
+  fi
 fi
 
 # 8. START CONTAINERS
