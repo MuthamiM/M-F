@@ -1,98 +1,227 @@
-import { Ticket } from "./tickets.schema";
-import { isRedisHealthy, setTicketRaw, delKey, getAllTicketValues } from "../../lib/redisClient";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { Ticket, Note, ChatMessage, CallLog } from "./tickets.schema";
+import { pgPool, initDb } from "../../db/pgClient";
 import { logger } from "../../config/logger";
 
 class TicketStore {
-  private tickets = new Map<string, Ticket>();
-  private readonly persistencePath = join(process.cwd(), "data", "tickets.json");
-  private writeQueue: Promise<void> = Promise.resolve();
+  constructor() {}
 
-  constructor() {
-    this.seed();
-  }
-
-  // Load persisted tickets before accepting traffic. Redis is optional; the local file
-  // keeps the ticket system durable during development and when Redis is unavailable.
+  // Initialize DB tables and seed data if database is empty
   public async initFromPersistence() {
-    if (isRedisHealthy()) {
-      const vals = await getAllTicketValues();
-      if (vals.length > 0) {
-        this.replaceTickets(vals.map((raw) => JSON.parse(raw) as Ticket));
-        return;
-      }
-    }
+    await initDb();
 
     try {
-      const raw = await readFile(this.persistencePath, "utf8");
-      this.replaceTickets(JSON.parse(raw) as Ticket[]);
-      logger.info(`Loaded ${this.tickets.size} ticket(s) from local storage`);
-    } catch (err: unknown) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") {
-        // Persist the initial ticket set so future restarts have a durable file.
-        this.persistToDisk();
+      const countRes = await pgPool.query("SELECT COUNT(*) FROM tickets");
+      const count = parseInt(countRes.rows[0].count, 10);
+      if (count === 0) {
+        logger.info("PostgreSQL database is empty. Seeding initial tickets...");
+        await this.seed();
       } else {
-        logger.warn(`Unable to load local ticket storage: ${(err as Error).message}`);
+        logger.info(`PostgreSQL database online. Loaded ${count} ticket(s) from DB.`);
       }
+    } catch (err: any) {
+      logger.error(`Failed to verify or seed database: ${err.message}`);
     }
   }
 
-  public get(id: string): Ticket | undefined {
-    return this.tickets.get(id);
+  public async get(id: string): Promise<Ticket | undefined> {
+    const ticketRes = await pgPool.query("SELECT * FROM tickets WHERE id = $1", [id]);
+    if (ticketRes.rowCount === 0) return undefined;
+    const row = ticketRes.rows[0];
+
+    const notesRes = await pgPool.query("SELECT * FROM ticket_notes WHERE ticket_id = $1 ORDER BY created_at ASC", [id]);
+    const messagesRes = await pgPool.query("SELECT * FROM ticket_messages WHERE ticket_id = $1 ORDER BY timestamp ASC", [id]);
+    const callsRes = await pgPool.query("SELECT * FROM ticket_call_logs WHERE ticket_id = $1 ORDER BY called_at ASC", [id]);
+
+    return {
+      id: row.id,
+      type: row.type as any,
+      name: row.name,
+      email: row.email,
+      phone: row.phone || undefined,
+      company: row.company || undefined,
+      message: row.message,
+      status: row.status as any,
+      priority: row.priority as any,
+      assignedAgent: row.assigned_agent || undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      notes: notesRes.rows.map((n) => ({
+        id: n.id,
+        text: n.text,
+        createdAt: new Date(n.created_at),
+      })),
+      messages: messagesRes.rows.map((m) => ({
+        id: m.id,
+        sender: m.sender as any,
+        senderName: m.sender_name,
+        text: m.text,
+        timestamp: new Date(m.timestamp),
+      })),
+      callLogs: callsRes.rows.map((c) => ({
+        id: c.id,
+        agentName: c.agent_name,
+        phoneNumber: c.phone_number,
+        outcome: c.outcome as any,
+        durationSeconds: c.duration_seconds !== null ? c.duration_seconds : undefined,
+        notes: c.notes || undefined,
+        calledAt: new Date(c.called_at),
+      })),
+    };
   }
 
-  public getAll(): Ticket[] {
-    return Array.from(this.tickets.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
-  }
+  public async getAll(): Promise<Ticket[]> {
+    const ticketsRes = await pgPool.query("SELECT * FROM tickets ORDER BY created_at DESC");
+    const notesRes = await pgPool.query("SELECT * FROM ticket_notes ORDER BY created_at ASC");
+    const messagesRes = await pgPool.query("SELECT * FROM ticket_messages ORDER BY timestamp ASC");
+    const callsRes = await pgPool.query("SELECT * FROM ticket_call_logs ORDER BY called_at ASC");
 
-  public set(id: string, ticket: Ticket): void {
-    this.tickets.set(id, ticket);
-    void setTicketRaw(`ticket:${id}`, JSON.stringify(ticket));
-    this.persistToDisk();
-  }
-
-  public delete(id: string): boolean {
-    const removed = this.tickets.delete(id);
-    if (removed) {
-      void delKey(`ticket:${id}`);
-      this.persistToDisk();
-    }
-    return removed;
-  }
-
-  private replaceTickets(tickets: Ticket[]) {
-    this.tickets.clear();
-    for (const ticket of tickets) {
-      ticket.createdAt = new Date(ticket.createdAt);
-      ticket.updatedAt = new Date(ticket.updatedAt);
-      ticket.notes = ticket.notes.map((note) => ({ ...note, createdAt: new Date(note.createdAt) }));
-      ticket.messages = ticket.messages.map((message) => ({ ...message, timestamp: new Date(message.timestamp) }));
-      ticket.callLogs = ticket.callLogs.map((call) => ({ ...call, calledAt: new Date(call.calledAt) }));
-      this.tickets.set(ticket.id, ticket);
-    }
-  }
-
-  private persistToDisk() {
-    const snapshot = JSON.stringify(this.getAll(), null, 2);
-    this.writeQueue = this.writeQueue
-      .then(async () => {
-        await mkdir(dirname(this.persistencePath), { recursive: true });
-        const temporaryPath = `${this.persistencePath}.tmp`;
-        await writeFile(temporaryPath, snapshot, "utf8");
-        await rename(temporaryPath, this.persistencePath);
-      })
-      .catch((err: Error) => {
-        logger.error(`Unable to persist tickets locally: ${err.message}`);
+    const notesMap: Record<string, Note[]> = {};
+    for (const n of notesRes.rows) {
+      if (!notesMap[n.ticket_id]) notesMap[n.ticket_id] = [];
+      notesMap[n.ticket_id].push({
+        id: n.id,
+        text: n.text,
+        createdAt: new Date(n.created_at),
       });
+    }
+
+    const messagesMap: Record<string, ChatMessage[]> = {};
+    for (const m of messagesRes.rows) {
+      if (!messagesMap[m.ticket_id]) messagesMap[m.ticket_id] = [];
+      messagesMap[m.ticket_id].push({
+        id: m.id,
+        sender: m.sender as any,
+        senderName: m.sender_name,
+        text: m.text,
+        timestamp: new Date(m.timestamp),
+      });
+    }
+
+    const callsMap: Record<string, CallLog[]> = {};
+    for (const c of callsRes.rows) {
+      if (!callsMap[c.ticket_id]) callsMap[c.ticket_id] = [];
+      callsMap[c.ticket_id].push({
+        id: c.id,
+        agentName: c.agent_name,
+        phoneNumber: c.phone_number,
+        outcome: c.outcome as any,
+        durationSeconds: c.duration_seconds !== null ? c.duration_seconds : undefined,
+        notes: c.notes || undefined,
+        calledAt: new Date(c.called_at),
+      });
+    }
+
+    return ticketsRes.rows.map((row) => ({
+      id: row.id,
+      type: row.type as any,
+      name: row.name,
+      email: row.email,
+      phone: row.phone || undefined,
+      company: row.company || undefined,
+      message: row.message,
+      status: row.status as any,
+      priority: row.priority as any,
+      assignedAgent: row.assigned_agent || undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      notes: notesMap[row.id] || [],
+      messages: messagesMap[row.id] || [],
+      callLogs: callsMap[row.id] || [],
+    }));
   }
 
-  private seed() {
+  public async set(id: string, ticket: Ticket): Promise<void> {
+    const client = await pgPool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // 1. Upsert ticket
+      const ticketQuery = `
+        INSERT INTO tickets (id, type, name, email, phone, company, message, status, priority, assigned_agent, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          priority = EXCLUDED.priority,
+          assigned_agent = EXCLUDED.assigned_agent,
+          updated_at = EXCLUDED.updated_at
+      `;
+      await client.query(ticketQuery, [
+        ticket.id,
+        ticket.type,
+        ticket.name,
+        ticket.email,
+        ticket.phone || null,
+        ticket.company || null,
+        ticket.message,
+        ticket.status,
+        ticket.priority,
+        ticket.assignedAgent || null,
+        ticket.createdAt,
+        ticket.updatedAt,
+      ]);
+
+      // 2. Sync notes
+      if (ticket.notes && ticket.notes.length > 0) {
+        for (const note of ticket.notes) {
+          await client.query(
+            `INSERT INTO ticket_notes (id, ticket_id, text, created_at)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (id) DO NOTHING`,
+            [note.id, ticket.id, note.text, note.createdAt]
+          );
+        }
+      }
+
+      // 3. Sync messages
+      if (ticket.messages && ticket.messages.length > 0) {
+        for (const msg of ticket.messages) {
+          await client.query(
+            `INSERT INTO ticket_messages (id, ticket_id, sender, sender_name, text, timestamp)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO NOTHING`,
+            [msg.id, ticket.id, msg.sender, msg.senderName, msg.text, msg.timestamp]
+          );
+        }
+      }
+
+      // 4. Sync call logs
+      if (ticket.callLogs && ticket.callLogs.length > 0) {
+        for (const call of ticket.callLogs) {
+          await client.query(
+            `INSERT INTO ticket_call_logs (id, ticket_id, agent_name, phone_number, outcome, duration_seconds, notes, called_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO NOTHING`,
+            [
+              call.id,
+              ticket.id,
+              call.agentName,
+              call.phoneNumber,
+              call.outcome,
+              call.durationSeconds || null,
+              call.notes || null,
+              call.calledAt,
+            ]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  public async delete(id: string): Promise<boolean> {
+    const res = await pgPool.query("DELETE FROM tickets WHERE id = $1", [id]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  private async seed() {
     const now = new Date();
-    
+
     const seedData: Ticket[] = [
       {
         id: "TKT-1001",
@@ -108,7 +237,7 @@ class TicketStore {
         notes: [],
         messages: [],
         callLogs: [],
-        createdAt: new Date(now.getTime() - 20 * 60 * 1000), // 20 mins ago
+        createdAt: new Date(now.getTime() - 20 * 60 * 1000),
         updatedAt: new Date(now.getTime() - 20 * 60 * 1000),
       },
       {
@@ -125,7 +254,7 @@ class TicketStore {
         notes: [],
         messages: [],
         callLogs: [],
-        createdAt: new Date(now.getTime() - 4 * 60 * 1000), // 4 mins ago
+        createdAt: new Date(now.getTime() - 4 * 60 * 1000),
         updatedAt: new Date(now.getTime() - 4 * 60 * 1000),
       },
       {
@@ -144,11 +273,11 @@ class TicketStore {
             id: "note-1",
             text: "Emailed Marcus to confirm meeting time. Waiting for confirmation on calendar invite.",
             createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-          }
+          },
         ],
         messages: [],
         callLogs: [],
-        createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000), // 3 hours ago
+        createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
         updatedAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
       },
       {
@@ -167,11 +296,11 @@ class TicketStore {
             id: "note-2",
             text: "Confirmed that we support AWS regional hosting in Cape Town and local Nairobi hybrid nodes.",
             createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
-          }
+          },
         ],
         messages: [],
         callLogs: [],
-        createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000), // 5 hours ago
+        createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
         updatedAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
       },
       {
@@ -188,13 +317,13 @@ class TicketStore {
         notes: [],
         messages: [],
         callLogs: [],
-        createdAt: new Date(now.getTime() - 1 * 60 * 1000), // 1 min ago
+        createdAt: new Date(now.getTime() - 1 * 60 * 1000),
         updatedAt: new Date(now.getTime() - 1 * 60 * 1000),
-      }
+      },
     ];
 
     for (const ticket of seedData) {
-      this.tickets.set(ticket.id, ticket);
+      await this.set(ticket.id, ticket);
     }
   }
 }

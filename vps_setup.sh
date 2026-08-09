@@ -59,18 +59,20 @@ ENV_FILE="$PROJECT_DIR/.env"
 
 if [ -f "$ENV_FILE" ]; then
   echo "[*] Existing .env file found. Reading configuration."
-  # Source config safely without exposing sensitive variables to log outputs
   DOMAIN=$(grep '^DOMAIN=' "$ENV_FILE" | cut -d '=' -f2 || true)
   JWT_SECRET=$(grep '^JWT_SECRET=' "$ENV_FILE" | cut -d '=' -f2 || true)
+  POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$ENV_FILE" | cut -d '=' -f2 || true)
 else
   read -p "Enter your Domain Name (e.g. mandftechnologies.com): " DOMAIN
   JWT_SECRET=$(openssl rand -hex 32)
+  POSTGRES_PASSWORD=$(openssl rand -hex 24)
   
   cat <<EOF > "$ENV_FILE"
 DOMAIN=$DOMAIN
 JWT_SECRET=$JWT_SECRET
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 EOF
-  echo "[+] Generated new .env configuration file with safe JWT_SECRET."
+  echo "[+] Generated new .env configuration file with safe JWT_SECRET and POSTGRES_PASSWORD."
 fi
 
 # Validate domain
@@ -101,7 +103,16 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    # Enable support for static files to bypass Next.js if necessary
+    # Expose Adminer Database Management console
+    location /db/ {
+        proxy_pass http://127.0.0.1:8080/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_redirect off;
+    }
+
     client_max_body_size 20M;
 }
 EOF
@@ -141,5 +152,7 @@ docker compose up -d
 
 echo "========================================================"
 echo " M&F Technologies Platform Setup Completed!"
-echo " Visit: https://$DOMAIN"
+echo " Visit:"
+echo "   Website & Admin Console:  https://$DOMAIN"
+echo "   Database Manager:        https://$DOMAIN/db/"
 echo "========================================================"

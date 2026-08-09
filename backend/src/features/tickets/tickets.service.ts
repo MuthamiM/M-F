@@ -8,7 +8,7 @@ export async function getAllTickets(filters: {
   type?: TicketType;
   search?: string;
 }) {
-  let list = ticketStore.getAll();
+  let list = await ticketStore.getAll();
 
   if (filters.status) {
     list = list.filter((t) => t.status === filters.status);
@@ -34,7 +34,7 @@ export async function getAllTickets(filters: {
 }
 
 export async function getTicketById(id: string) {
-  const ticket = ticketStore.get(id);
+  const ticket = await ticketStore.get(id);
   if (!ticket) {
     throw new AppError(404, `Ticket ${id} not found`);
   }
@@ -49,7 +49,8 @@ export async function createTicket(input: {
   company?: string;
   message: string;
 }) {
-  const nextId = `TKT-${1000 + ticketStore.getAll().length + 1}`;
+  const allTickets = await ticketStore.getAll();
+  const nextId = `TKT-${1000 + allTickets.length + 1}`;
   const now = new Date();
 
   // Dynamically assign priority based on content keywords
@@ -78,7 +79,7 @@ export async function createTicket(input: {
     updatedAt: now,
   };
 
-  ticketStore.set(nextId, newTicket);
+  await ticketStore.set(nextId, newTicket);
   return newTicket;
 }
 
@@ -108,7 +109,7 @@ export async function updateTicket(
   }
 
   ticket.updatedAt = now;
-  ticketStore.set(id, ticket);
+  await ticketStore.set(id, ticket);
   return ticket;
 }
 
@@ -146,7 +147,7 @@ export async function sendMessage(
   }
 
   ticket.updatedAt = now;
-  ticketStore.set(ticketId, ticket);
+  await ticketStore.set(ticketId, ticket);
   return msg;
 }
 
@@ -173,7 +174,7 @@ export async function closeTicket(ticketId: string, note?: string) {
   // Internal note
   ticket.notes.push({ id: `note-close-${Date.now()}`, text: `Ticket closed: ${note || "reason not provided"}`, createdAt: now });
 
-  ticketStore.set(ticketId, ticket);
+  await ticketStore.set(ticketId, ticket);
   return ticket;
 }
 
@@ -235,14 +236,14 @@ export async function logCall(
   });
 
   ticket.updatedAt = now;
-  ticketStore.set(ticketId, ticket);
+  await ticketStore.set(ticketId, ticket);
   return log;
 }
 
 // ── Stats ────────────────────────────────────────────────────────────
 
 export async function getStats() {
-  const all = ticketStore.getAll();
+  const all = await ticketStore.getAll();
   
   const stats = {
     total: all.length,

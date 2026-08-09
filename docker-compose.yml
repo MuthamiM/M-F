@@ -1,6 +1,32 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mf-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=mf_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_secure_password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Expose PostgreSQL on localhost for external DB administration if needed
+      - "127.0.0.1:5432:5432"
+    networks:
+      - mf-network
+
+  adminer:
+    image: adminer:latest
+    container_name: mf-adminer
+    restart: always
+    ports:
+      # Bind Adminer to localhost so Nginx can reverse proxy it securely
+      - "127.0.0.1:8080:8080"
+    networks:
+      - mf-network
+
   redis:
     image: redis:7-alpine
     container_name: mf-redis
@@ -19,16 +45,15 @@ services:
     environment:
       - PORT=4000
       - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/mf_db
       - NODE_ENV=production
-      - ALLOWED_ORIGINS=https://mandftechnologies.com,https://www.mandftechnologies.com,http://localhost:3000
+      - ALLOWED_ORIGINS=https://${DOMAIN:-mandftechnologies.com},https://www.${DOMAIN:-mandftechnologies.com},http://localhost:3000
       - JWT_SECRET=${JWT_SECRET:-production_fallback_secret_please_change}
       - JWT_EXPIRES_IN=7d
-    volumes:
-      - backend-data:/app/data
     ports:
-      # Keep backend port private to the VPS host loopback interface
       - "127.0.0.1:4000:4000"
     depends_on:
+      - postgres
       - redis
     networks:
       - mf-network
@@ -44,7 +69,6 @@ services:
       - BACKEND_INTERNAL_URL=http://backend:4000
       - NODE_ENV=production
     ports:
-      # Bind to localhost so only Nginx reverse proxy on the host can access it
       - "127.0.0.1:3000:3000"
     depends_on:
       - backend
@@ -52,8 +76,8 @@ services:
       - mf-network
 
 volumes:
+  postgres-data:
   redis-data:
-  backend-data:
 
 networks:
   mf-network:
