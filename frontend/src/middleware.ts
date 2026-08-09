@@ -15,17 +15,9 @@ export function middleware(request: NextRequest) {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=()"
   );
-  // Allow backend connections from the requesting host on port 4000
-  const host = request.headers.get("host")?.split(":")[0] || "localhost";
-  const backendOrigins = [
-    `http://${host}:4000`,
-    "http://localhost:4000",
-    "http://127.0.0.1:4000",
-  ].join(" ");
-
   response.headers.set(
     "Content-Security-Policy",
-    `default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' ${backendOrigins} ws: wss:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;`
+    `default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;`
   );
 
   return response;

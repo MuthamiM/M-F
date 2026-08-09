@@ -84,6 +84,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   // Chat fields
   const [newChatMessage, setNewChatMessage] = useState("");
   const [sendingChat, setSendingChat] = useState(false);
+  // Quick-send from admin console
+  const [quickMessage, setQuickMessage] = useState("");
+  const [sendingQuick, setSendingQuick] = useState(false);
   const [prevMsgCount, setPrevMsgCount] = useState<number | null>(null);
 
   // Call logging fields
@@ -127,9 +130,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const token = sessionStorage.getItem("adminToken");
       const headers = { Authorization: `Bearer ${token}` };
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
 
-      const response = await fetch(`http://${host}:4000/api/tickets/${id}`, { headers });
+      const response = await fetch(`/api/tickets/${id}`, { headers });
       const resData = await response.json();
 
       if (response.ok && resData.success) {
@@ -161,10 +163,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setSendingChat(true);
     try {
       const token = sessionStorage.getItem("adminToken");
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
       const agentName = assignedAgent.trim() || "M&F Agent";
 
-      const response = await fetch(`http://${host}:4000/api/tickets/${id}/agent-messages`, {
+      const response = await fetch(`/api/tickets/${id}/agent-messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,10 +198,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setSubmittingCall(true);
     try {
       const token = sessionStorage.getItem("adminToken");
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
       const agentName = assignedAgent.trim() || "M&F Agent";
 
-      const response = await fetch(`http://${host}:4000/api/tickets/${id}/calls`, {
+      const response = await fetch(`/api/tickets/${id}/calls`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -240,8 +240,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
     try {
       const token = sessionStorage.getItem("adminToken");
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const response = await fetch(`http://${host}:4000/api/tickets/${id}`, {
+      const response = await fetch(`/api/tickets/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -268,6 +267,113 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setErrorMsg("Database connection failure.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleQuickSend = async () => {
+    if (!quickMessage.trim()) return;
+
+    setSendingQuick(true);
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const agentName = assignedAgent.trim() || "M&F Agent";
+
+      const response = await fetch(`/api/tickets/${id}/agent-messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text: quickMessage.trim(), senderName: agentName }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        setQuickMessage("");
+        setSuccessMsg("Message sent to client.");
+        fetchDetail();
+      } else {
+        setErrorMsg(resData.error || "Failed to send quick message.");
+      }
+    } catch {
+      setErrorMsg("Failed to deliver quick message.");
+    } finally {
+      setSendingQuick(false);
+    }
+  };
+
+  const handleCloseAndSend = async () => {
+    if (!quickMessage.trim()) return;
+    setSendingQuick(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const agentName = assignedAgent.trim() || "M&F Agent";
+
+      // Send agent message first
+      const resp1 = await fetch(`/api/tickets/${id}/agent-messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text: quickMessage.trim(), senderName: agentName }),
+      });
+      const d1 = await resp1.json();
+      if (!resp1.ok || !d1.success) {
+        setErrorMsg(d1.error || "Failed to send message before closing.");
+        return;
+      }
+
+      // Then close with the same text as reason
+      const resp2 = await fetch(`/api/tickets/${id}/close`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: quickMessage.trim() }),
+      });
+      const d2 = await resp2.json();
+      if (!resp2.ok || !d2.success) {
+        setErrorMsg(d2.error || "Failed to close ticket after sending message.");
+        return;
+      }
+
+      setQuickMessage("");
+      setSuccessMsg("Message sent and ticket closed.");
+      fetchDetail();
+    } catch (err) {
+      setErrorMsg("Failed to close and send message.");
+    } finally {
+      setSendingQuick(false);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const response = await fetch(`/api/tickets/${id}/close`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: "Closed by admin: no response from client" }),
+      });
+
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        setSuccessMsg("Ticket closed.");
+        fetchDetail();
+      } else {
+        setErrorMsg(resData.error || "Failed to close ticket.");
+      }
+    } catch {
+      setErrorMsg("Unable to contact backend to close ticket.");
     }
   };
 
@@ -699,6 +805,51 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   rows={3}
                   className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold resize-none"
                 />
+              </div>
+              {/* Quick send to client */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Quick Send to Client</label>
+                <div className="space-y-2">
+                  <textarea
+                    value={quickMessage}
+                    onChange={(e) => setQuickMessage(e.target.value)}
+                    placeholder="Short message to send to the client..."
+                    rows={2}
+                    className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickSend}
+                      disabled={sendingQuick}
+                      className="flex-1 py-2 bg-[#1B222C] hover:bg-[#3E4C59] text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-75 cursor-pointer"
+                    >
+                      {sendingQuick ? (
+                        <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="h-3.5 w-3.5" />
+                          <span>Quick Send</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseTicket}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow transition-colors"
+                    >
+                      Close Ticket
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseAndSend}
+                      disabled={sendingQuick}
+                      className="px-3 py-2 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-xl shadow transition-colors disabled:opacity-60"
+                    >
+                      {sendingQuick ? "Closing..." : "Close & Send"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

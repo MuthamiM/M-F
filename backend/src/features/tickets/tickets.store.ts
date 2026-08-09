@@ -1,10 +1,42 @@
 import { Ticket } from "./tickets.schema";
+import { isRedisHealthy, setTicketRaw, delKey, getAllTicketValues } from "../../lib/redisClient";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { logger } from "../../config/logger";
 
 class TicketStore {
   private tickets = new Map<string, Ticket>();
+  private readonly persistencePath = join(process.cwd(), "data", "tickets.json");
+  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor() {
     this.seed();
+  }
+
+  // Load persisted tickets before accepting traffic. Redis is optional; the local file
+  // keeps the ticket system durable during development and when Redis is unavailable.
+  public async initFromPersistence() {
+    if (isRedisHealthy()) {
+      const vals = await getAllTicketValues();
+      if (vals.length > 0) {
+        this.replaceTickets(vals.map((raw) => JSON.parse(raw) as Ticket));
+        return;
+      }
+    }
+
+    try {
+      const raw = await readFile(this.persistencePath, "utf8");
+      this.replaceTickets(JSON.parse(raw) as Ticket[]);
+      logger.info(`Loaded ${this.tickets.size} ticket(s) from local storage`);
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
+        // Persist the initial ticket set so future restarts have a durable file.
+        this.persistToDisk();
+      } else {
+        logger.warn(`Unable to load local ticket storage: ${(err as Error).message}`);
+      }
+    }
   }
 
   public get(id: string): Ticket | undefined {
@@ -19,10 +51,43 @@ class TicketStore {
 
   public set(id: string, ticket: Ticket): void {
     this.tickets.set(id, ticket);
+    void setTicketRaw(`ticket:${id}`, JSON.stringify(ticket));
+    this.persistToDisk();
   }
 
   public delete(id: string): boolean {
-    return this.tickets.delete(id);
+    const removed = this.tickets.delete(id);
+    if (removed) {
+      void delKey(`ticket:${id}`);
+      this.persistToDisk();
+    }
+    return removed;
+  }
+
+  private replaceTickets(tickets: Ticket[]) {
+    this.tickets.clear();
+    for (const ticket of tickets) {
+      ticket.createdAt = new Date(ticket.createdAt);
+      ticket.updatedAt = new Date(ticket.updatedAt);
+      ticket.notes = ticket.notes.map((note) => ({ ...note, createdAt: new Date(note.createdAt) }));
+      ticket.messages = ticket.messages.map((message) => ({ ...message, timestamp: new Date(message.timestamp) }));
+      ticket.callLogs = ticket.callLogs.map((call) => ({ ...call, calledAt: new Date(call.calledAt) }));
+      this.tickets.set(ticket.id, ticket);
+    }
+  }
+
+  private persistToDisk() {
+    const snapshot = JSON.stringify(this.getAll(), null, 2);
+    this.writeQueue = this.writeQueue
+      .then(async () => {
+        await mkdir(dirname(this.persistencePath), { recursive: true });
+        const temporaryPath = `${this.persistencePath}.tmp`;
+        await writeFile(temporaryPath, snapshot, "utf8");
+        await rename(temporaryPath, this.persistencePath);
+      })
+      .catch((err: Error) => {
+        logger.error(`Unable to persist tickets locally: ${err.message}`);
+      });
   }
 
   private seed() {

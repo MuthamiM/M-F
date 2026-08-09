@@ -8,6 +8,7 @@ import {
   sendMessageHandler,
   clientSendMessageHandler,
   logCallHandler,
+  closeTicketHandler,
 } from "./tickets.controller";
 import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
@@ -28,5 +29,7 @@ ticketsRouter.get("/:id", getTicketByIdHandler);
 ticketsRouter.patch("/:id", validate(updateTicketSchema), updateTicketHandler);
 ticketsRouter.post("/:id/agent-messages", validate(sendMessageSchema), sendMessageHandler);
 ticketsRouter.post("/:id/calls", validate(logCallSchema), logCallHandler);
+// Admin: explicitly close a ticket (e.g., no response from client)
+ticketsRouter.post("/:id/close", closeTicketHandler);
 
 

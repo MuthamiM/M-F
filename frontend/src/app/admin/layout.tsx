@@ -40,8 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const token = sessionStorage.getItem("adminToken");
         if (!token) return;
 
-        const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-        const res = await fetch(`http://${host}:4000/api/tickets`, {
+        const res = await fetch("/api/tickets", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

@@ -86,13 +86,7 @@ export function Nav() {
     [pathname, activeHash]
   );
 
-  const [apiDocsUrl, setApiDocsUrl] = useState("http://localhost:4000/api/docs/sitemap");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setApiDocsUrl(`http://${window.location.hostname}:4000/api/docs/sitemap`);
-    }
-  }, []);
+  const apiDocsUrl = "/api/docs/sitemap";
 
   return (
     <>

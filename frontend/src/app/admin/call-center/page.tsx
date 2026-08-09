@@ -43,8 +43,7 @@ export default function CallCenterPage() {
       const token = sessionStorage.getItem("adminToken");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const response = await fetch(`http://${host}:4000/api/tickets?type=chatbot&status=open`, { headers });
+      const response = await fetch("/api/tickets?type=chatbot&status=open", { headers });
       const resData = await response.json();
 
       if (response.ok && resData.success) {

@@ -47,11 +47,10 @@ export default function AdminDashboardPage() {
     try {
       const token = sessionStorage.getItem("adminToken");
       const headers = { Authorization: `Bearer ${token}` };
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
 
       const [statsRes, listRes] = await Promise.all([
-        fetch(`http://${host}:4000/api/tickets/stats`, { headers }),
-        fetch(`http://${host}:4000/api/tickets`, { headers }),
+        fetch("/api/tickets/stats", { headers }),
+        fetch("/api/tickets", { headers }),
       ]);
 
       const statsData = await statsRes.json();

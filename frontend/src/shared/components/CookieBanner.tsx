@@ -19,6 +19,11 @@ const DEFAULT_PREFERENCES: CookiePreferences = {
 };
 
 export function CookieBanner() {
+  // Do not render cookie banner inside admin console
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    return null;
+  }
+
   const [bannerVisible, setBannerVisible] = useState(() => {
     try {
       if (typeof window !== "undefined") {

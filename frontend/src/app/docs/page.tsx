@@ -54,7 +54,7 @@ export default function DocsPage() {
             </p>
             <div className="pt-2">
               <a
-                href="http://localhost:4000/api/docs/sitemap"
+                href="/api/docs/sitemap"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-bold text-white bg-[#1B222C] hover:bg-[#3E4C59] py-2 px-3 rounded inline-flex items-center gap-1 transition-all shadow-sm"

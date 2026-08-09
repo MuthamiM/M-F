@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageSquare, X, Send, CheckCircle, User, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { playNotificationBeep } from "@/shared/lib/audioAlert";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -104,6 +105,7 @@ export function ChatWidget() {
   const [liveName, setLiveName] = useState("");
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const knownAgentMessageIdsRef = useRef<Set<string> | null>(null);
 
   // Poll for messages in Live Chat mode
   useEffect(() => {
@@ -115,7 +117,41 @@ export function ChatWidget() {
         const response = await fetch(`${apiHost}/api/tickets/${ticketId}/messages`);
         const resData = await response.json();
         if (response.ok && resData.success) {
+          const messages = resData.data as { id: string; sender: string }[];
+          const agentMessageIds = messages
+            .filter((message) => message.sender === "agent")
+            .map((message) => message.id);
+
+          if (knownAgentMessageIdsRef.current === null) {
+            // First response establishes the baseline without alerting for history.
+            knownAgentMessageIdsRef.current = new Set(agentMessageIds);
+          } else if (agentMessageIds.some((messageId) => !knownAgentMessageIdsRef.current?.has(messageId))) {
+            playNotificationBeep();
+            knownAgentMessageIdsRef.current = new Set(agentMessageIds);
+          }
+
           setLiveMessages(resData.data);
+          // A closed ticket starts a fresh support session without showing the old conversation.
+          if (resData.status === "closed") {
+            setIsLiveMode(false);
+            setTicketId(null);
+            setLiveMessages([]);
+            setFormType(null);
+            setMessages([
+              {
+                id: `ticket-closed-${Date.now()}`,
+                sender: "bot",
+                text: "Your ticket has been closed. If you would like to speak with our team again, choose an option below.",
+                timestamp: new Date(),
+                actions: [
+                  { label: "Main Menu", value: "restart" },
+                  { label: "Talk to a Live Agent", value: "connect_agent" },
+                  { label: "Book a Callback", value: "book_callback" },
+                ],
+              },
+            ]);
+            return;
+          }
         }
       } catch (err) {
         console.error("Failed to sync live chat messages:", err);
@@ -153,6 +189,11 @@ export function ChatWidget() {
     setIsOpen(next);
     if (next) playBeep();
   };
+
+  // Do not render chat widget inside admin pages
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    return null;
+  }
 
   /* ---- scroll to bottom ---- */
   useEffect(() => {
@@ -342,18 +383,20 @@ export function ChatWidget() {
               id: `msg-init-${Date.now()}`,
               sender: "client",
               senderName: clientName,
-              text: userRequest || "Hi, I need live support.",
+              text: [
+                `Name: ${clientName}`,
+                `Email: ${userEmail.trim()}`,
+                userPhone.trim() ? `Phone: ${userPhone.trim()}` : null,
+                userRequest.trim() ? `Request: ${userRequest.trim()}` : "Request: Live support session",
+              ].filter(Boolean).join("\n"),
               timestamp: new Date().toISOString(),
-            }
-          ]);
-
-          setMessages((prev) => [
-            ...prev,
+            },
             {
-              id: `bot-done-${Date.now()}`,
-              sender: "bot",
-              text: `You're connected, ${clientName}! Ticket ID: ${ticketId}. An agent has been notified — you can now chat with them directly in this window.`,
-              timestamp: new Date(),
+              id: `msg-queue-${Date.now()}`,
+              sender: "agent",
+              senderName: "M&F Support",
+              text: `Thanks, ${clientName}. You are in the support queue. An agent will be connected soon — please keep this chat open and allow a few minutes. Your ticket ID is ${ticketId}.`,
+              timestamp: new Date().toISOString(),
             },
           ]);
         }

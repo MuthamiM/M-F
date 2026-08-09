@@ -41,8 +41,7 @@ export default function AdminTicketsPage() {
       if (selectedType !== "all") params.append("type", selectedType);
       if (searchQuery.trim() !== "") params.append("search", searchQuery);
 
-      const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-      const response = await fetch(`http://${host}:4000/api/tickets?${params.toString()}`, { headers });
+      const response = await fetch(`/api/tickets?${params.toString()}`, { headers });
       const resData = await response.json();
 
       if (response.ok && resData.success) {

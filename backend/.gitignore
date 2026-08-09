@@ -13,5 +13,8 @@ dist/
 *.log
 npm-debug.log*
 
+# Local ticket data (contains customer information)
+data/
+
 # misc
 .DS_Store

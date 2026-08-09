@@ -51,7 +51,9 @@ export async function getMessagesHandler(req: Request, res: Response, next: Next
     const { id } = req.params;
     const { since } = req.query;
     const messages = await ticketsService.getMessages(id as string, since as string);
-    res.status(200).json({ success: true, data: messages });
+    // include ticket status for public clients so they can react to closures
+    const ticket = await ticketsService.getTicketById(id as string);
+    res.status(200).json({ success: true, data: messages, status: ticket.status });
   } catch (err) {
     next(err);
   }
@@ -84,6 +86,17 @@ export async function logCallHandler(req: Request, res: Response, next: NextFunc
     const { id } = req.params;
     const log = await ticketsService.logCall(id as string, req.body);
     res.status(201).json({ success: true, data: log });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function closeTicketHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body as { reason?: string };
+    const updated = await ticketsService.closeTicket(id as string, reason);
+    res.status(200).json({ success: true, data: updated });
   } catch (err) {
     next(err);
   }

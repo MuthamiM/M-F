@@ -138,9 +138,43 @@ export async function sendMessage(
     ticket.status = "in_progress";
   }
 
+  // If a client sends a message to a closed ticket, reopen it for agent handling
+  if (sender === "client" && ticket.status === "closed") {
+    ticket.status = "in_progress";
+    // append an internal note indicating the reopen event
+    ticket.notes.push({ id: `note-reopen-${Date.now()}`, text: "Client replied to closed ticket — reopened.", createdAt: now });
+  }
+
   ticket.updatedAt = now;
   ticketStore.set(ticketId, ticket);
   return msg;
+}
+
+// Close ticket and post a client-visible closing message; client can reopen by creating a new message
+export async function closeTicket(ticketId: string, note?: string) {
+  const ticket = await getTicketById(ticketId);
+  const now = new Date();
+
+  ticket.status = "closed";
+  ticket.updatedAt = now;
+
+  // Add a client-visible message indicating closure
+  const closingText = note || "This ticket has been closed by support. Reply to reopen and request an agent.";
+  const closingMsg: ChatMessage = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    sender: "agent",
+    senderName: "System",
+    text: closingText,
+    timestamp: now,
+  };
+
+  ticket.messages.push(closingMsg);
+
+  // Internal note
+  ticket.notes.push({ id: `note-close-${Date.now()}`, text: `Ticket closed: ${note || "reason not provided"}`, createdAt: now });
+
+  ticketStore.set(ticketId, ticket);
+  return ticket;
 }
 
 export async function getMessages(ticketId: string, since?: string) {
