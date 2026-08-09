@@ -45,19 +45,19 @@ class TicketStore {
       assignedAgent: row.assigned_agent || undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
-      notes: notesRes.rows.map((n) => ({
+      notes: notesRes.rows.map((n: any) => ({
         id: n.id,
         text: n.text,
         createdAt: new Date(n.created_at),
       })),
-      messages: messagesRes.rows.map((m) => ({
+      messages: messagesRes.rows.map((m: any) => ({
         id: m.id,
         sender: m.sender as any,
         senderName: m.sender_name,
         text: m.text,
         timestamp: new Date(m.timestamp),
       })),
-      callLogs: callsRes.rows.map((c) => ({
+      callLogs: callsRes.rows.map((c: any) => ({
         id: c.id,
         agentName: c.agent_name,
         phoneNumber: c.phone_number,
@@ -111,7 +111,7 @@ class TicketStore {
       });
     }
 
-    return ticketsRes.rows.map((row) => ({
+    return ticketsRes.rows.map((row: any) => ({
       id: row.id,
       type: row.type as any,
       name: row.name,
@@ -130,7 +130,7 @@ class TicketStore {
     }));
   }
 
-  public async set(id: string, ticket: Ticket): Promise<void> {
+  public async set(_id: string, ticket: Ticket): Promise<void> {
     const client = await pgPool.connect();
     try {
       await client.query("BEGIN");
