@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { WaterBackground } from "@/features/landing/components/WaterBackground";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -102,8 +103,9 @@ export default function AdminLoginPage() {
         }
       `}</style>
 
-      {/* Deep gradient base */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f18] via-[#131b2e] to-[#1a1030]" />
+      {/* Flowing water backdrop, shared with the public landing page. */}
+      <WaterBackground />
+      <div className="absolute inset-0 bg-[#08202d]/60" />
       
       {/* Subtle animated grid overlay */}
       <div className="absolute inset-0 opacity-[0.04]">

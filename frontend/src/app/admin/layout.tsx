@@ -11,10 +11,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Wait for the browser viewport before rendering admin content so a phone
+  // never briefly exposes the console during hydration.
+  const [requiresLaptop, setRequiresLaptop] = useState(false);
+  const [viewportReady, setViewportReady] = useState(false);
 
   const [knownTickets, setKnownTickets] = useState<Set<string> | null>(null);
 
   useEffect(() => {
+    const phoneBreakpoint = window.matchMedia("(max-width: 767px)");
+    const updateViewport = () => {
+      setRequiresLaptop(phoneBreakpoint.matches);
+      setViewportReady(true);
+    };
+
+    updateViewport();
+    phoneBreakpoint.addEventListener("change", updateViewport);
+    return () => phoneBreakpoint.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!viewportReady || requiresLaptop) {
+      return;
+    }
+
+    setLoading(true);
+
     // Skip auth check if on login page
     if (pathname === "/admin/login") {
       setAuthorized(true);
@@ -29,11 +51,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setAuthorized(true);
     }
     setLoading(false);
-  }, [pathname, router]);
+  }, [pathname, requiresLaptop, router, viewportReady]);
 
   // Background polling for new open tickets to trigger beep notifications
   useEffect(() => {
-    if (!authorized || pathname === "/admin/login") return;
+    if (!viewportReady || requiresLaptop || !authorized || pathname === "/admin/login") return;
 
     const checkNewTickets = async () => {
       try {
@@ -87,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkNewTickets();
     const interval = setInterval(checkNewTickets, 6000);
     return () => clearInterval(interval);
-  }, [authorized, pathname]);
+  }, [authorized, pathname, requiresLaptop, viewportReady]);
 
   // Close sidebar on navigation change
   useEffect(() => {
@@ -98,6 +120,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     sessionStorage.removeItem("adminToken");
     router.push("/admin/login");
   };
+
+  if (!viewportReady) {
+    return (
+      <div className="min-h-[100dvh] bg-[#0b1520] flex items-center justify-center font-sans text-white">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="h-8 w-8 rounded-full border-4 border-cyan-100 border-t-transparent animate-spin" />
+          <span className="text-xs font-semibold text-slate-300">Checking device compatibility...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (requiresLaptop) {
+    return (
+      <div className="min-h-[100dvh] bg-[#0b1520] px-5 py-8 flex items-center justify-center font-sans text-white">
+        <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] p-8 text-center shadow-2xl backdrop-blur-xl sm:p-10">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
+          <div className="absolute -left-16 -top-16 h-44 w-44 rounded-full bg-cyan-400/15 blur-3xl" />
+          <div className="absolute -bottom-20 -right-16 h-52 w-52 rounded-full bg-blue-500/15 blur-3xl" />
+
+          <div className="relative mx-auto mb-7 flex h-20 w-24 items-center justify-center">
+            <div className="absolute top-1 h-14 w-20 rounded-lg border-2 border-cyan-100/80 bg-[#142536] shadow-[0_0_28px_rgba(103,232,249,0.18)]">
+              <div className="absolute inset-2 rounded-sm bg-gradient-to-br from-cyan-200/25 to-blue-500/10" />
+            </div>
+            <div className="absolute bottom-2 h-2 w-24 rounded-full bg-cyan-100/80" />
+            <div className="absolute bottom-0 h-1.5 w-14 rounded-b-md bg-cyan-100/60" />
+          </div>
+
+          <div className="relative space-y-4">
+            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-cyan-100/15 bg-cyan-100/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100">
+              <Shield className="h-3.5 w-3.5" />
+              Admin access restricted
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Use a laptop or desktop</h1>
+            <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-300">
+              The M&amp;F Admin Console is not available on phone-sized screens. Please open this page on a laptop or desktop computer.
+            </p>
+            <p className="pt-2 text-xs font-medium text-slate-400">
+              Your phone is protected; no dashboard data is displayed here.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

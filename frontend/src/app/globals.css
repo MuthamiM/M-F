@@ -87,3 +87,157 @@ img, svg, video {
 .animate-stagger-in {
   animation: staggerIn 0.4s ease-out forwards;
 }
+
+/* ── Landing water scene ── */
+.water-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 22%, rgb(255 255 255 / 78%) 0 2px, transparent 3px),
+    radial-gradient(circle at 68% 16%, rgb(255 255 255 / 66%) 0 1px, transparent 2px),
+    linear-gradient(150deg, #e8fbff 0%, #bcebf6 46%, #a5dfeb 100%);
+  background-size: 64px 64px, 92px 92px, auto;
+}
+
+.water-glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(ellipse at 42% 18%, rgb(255 255 255 / 70%), transparent 46%);
+  animation: waterGlow 12s ease-in-out infinite alternate;
+}
+
+.water-wave {
+  position: absolute;
+  bottom: -1px;
+  left: -24%;
+  width: 160%;
+  min-width: 1200px;
+  height: 66%;
+  color: #60bfd4;
+  will-change: transform;
+}
+
+.water-wave--back {
+  bottom: -10%;
+  color: rgb(68 176 202 / 34%);
+  animation: waterDrift 19s linear infinite alternate;
+}
+
+.water-wave--mid {
+  bottom: -20%;
+  color: rgb(41 157 185 / 30%);
+  animation: waterDriftReverse 14s linear infinite alternate;
+}
+
+.water-wave--front {
+  bottom: -33%;
+  color: rgb(31 136 166 / 25%);
+  animation: waterDrift 10s linear infinite alternate;
+}
+
+.water-bubble {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgb(255 255 255 / 68%);
+  border-radius: 999px;
+  box-shadow: inset -2px -2px 3px rgb(44 138 163 / 12%);
+  opacity: 0;
+  animation: waterBubble 7s ease-in infinite;
+}
+
+.water-bubble--one { left: 21%; bottom: 10%; animation-delay: -1s; }
+.water-bubble--two { left: 76%; bottom: 18%; width: 7px; height: 7px; animation-delay: -4s; }
+.water-bubble--three { left: 54%; bottom: 8%; width: 14px; height: 14px; animation-delay: -5s; }
+.water-bubble--four { left: 88%; bottom: 28%; width: 6px; height: 6px; animation-delay: -2s; }
+
+.water-frog {
+  position: absolute;
+  width: clamp(54px, 8vw, 92px);
+  filter: drop-shadow(0 8px 8px rgb(24 104 92 / 22%));
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.water-frog svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.water-frog--left {
+  left: clamp(-28px, -1.5vw, -10px);
+  top: 22%;
+  animation: frogHopLeft 6.5s cubic-bezier(.37, 0, .63, 1) infinite;
+}
+
+.water-frog--right {
+  right: clamp(-30px, -1.8vw, -12px);
+  top: 12%;
+  transform: scaleX(-1);
+  animation: frogHopRight 7.4s cubic-bezier(.37, 0, .63, 1) -2.3s infinite;
+}
+
+.water-frog--left-lower {
+  left: clamp(-22px, 2vw, 28px);
+  bottom: 2%;
+  width: clamp(40px, 6vw, 66px);
+  animation: frogHopLow 8.8s cubic-bezier(.37, 0, .63, 1) -4.5s infinite;
+}
+
+@keyframes waterDrift {
+  from { transform: translate3d(-7%, 0, 0); }
+  to { transform: translate3d(7%, -1.5%, 0); }
+}
+
+@keyframes waterDriftReverse {
+  from { transform: translate3d(6%, 0, 0); }
+  to { transform: translate3d(-8%, 2%, 0); }
+}
+
+@keyframes waterGlow {
+  from { transform: translate3d(-4%, 0, 0) scale(1); }
+  to { transform: translate3d(5%, 3%, 0) scale(1.08); }
+}
+
+@keyframes waterBubble {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) scale(.6); }
+  18% { opacity: .8; }
+  78% { opacity: .45; }
+  100% { opacity: 0; transform: translate3d(18px, -165px, 0) scale(1.2); }
+}
+
+@keyframes frogHopLeft {
+  0%, 12%, 100% { transform: translate3d(0, 0, 0) rotate(-4deg); }
+  4% { transform: translate3d(32px, -52px, 0) rotate(12deg); }
+  8% { transform: translate3d(58px, 0, 0) rotate(-5deg); }
+}
+
+@keyframes frogHopRight {
+  0%, 14%, 100% { transform: scaleX(-1) translate3d(0, 0, 0) rotate(-4deg); }
+  5% { transform: scaleX(-1) translate3d(38px, -60px, 0) rotate(10deg); }
+  10% { transform: scaleX(-1) translate3d(64px, 0, 0) rotate(-5deg); }
+}
+
+@keyframes frogHopLow {
+  0%, 10%, 100% { transform: translate3d(0, 0, 0) rotate(3deg); }
+  4% { transform: translate3d(26px, -42px, 0) rotate(-12deg); }
+  7% { transform: translate3d(44px, 0, 0) rotate(4deg); }
+}
+
+@media (max-width: 640px) {
+  .water-frog--left-lower { display: none; }
+  .water-wave { width: 240%; left: -70%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .water-glow,
+  .water-wave,
+  .water-bubble,
+  .water-frog {
+    animation: none;
+  }
+}
