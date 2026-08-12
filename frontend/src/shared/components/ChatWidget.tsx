@@ -423,7 +423,7 @@ export function ChatWidget() {
   return (
     <>
       {/* ---- Floating toggle ---- */}
-      <div className="fixed bottom-6 right-6 z-[99999]">
+      <div className="fixed right-6 z-[99999]" style={{ bottom: "calc(1.5rem + var(--cookie-banner-h, 0px))" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -443,7 +443,7 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-24 right-6 w-[360px] sm:w-[400px] h-[550px] bg-white border border-[#9AA5B1]/20 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
+            className="fixed right-6 w-[360px] sm:w-[400px] h-[550px] bg-white border border-[#9AA5B1]/20 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden" style={{ bottom: "calc(6rem + var(--cookie-banner-h, 0px))" }}
           >
             {/* ---- Header ---- */}
             <div className="bg-[#1B222C] text-white p-4 flex items-center justify-between">

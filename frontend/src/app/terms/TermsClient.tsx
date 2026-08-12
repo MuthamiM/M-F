@@ -39,7 +39,7 @@ export function TermsClient() {
       {/* Content */}
       <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-20 text-[#3E4C59] leading-relaxed space-y-10 text-sm sm:text-base">
         <div>
-          <p className="max-w-4xl font-medium text-[#1B222C]">
+          <p className="font-medium text-[#1B222C]">
             Please read these Institutional Terms of Service (&quot;Agreement&quot; or &quot;Terms&quot;) carefully. This is a legally binding contract between M&amp;F Technologies Inc. (&quot;M&amp;F&quot;) and the entity accessing our services (&quot;Partner Institution&quot;, &quot;Client&quot;, or &quot;User&quot;).
           </p>
         </div>
@@ -56,7 +56,7 @@ export function TermsClient() {
           <p className="max-w-4xl">
             Subject to continuous compliance with this Agreement and the payment of all applicable licensing fees, M&amp;F grants the Partner Institution a limited, non-exclusive, non-sublicensable, non-transferable, revocable license to query our core lending APIs and leverage our developer resources solely to automate underwriting, ledger audits, and loan disbursements.
           </p>
-          <ul className="list-disc pl-5 mt-4 space-y-3 max-w-4xl text-xs sm:text-sm text-[#3E4C59]">
+          <ul className="list-disc pl-5 mt-4 space-y-3 text-xs sm:text-sm text-[#3E4C59]">
             <li>
               <strong>Credential Protection:</strong> You must secure all administrative API keys and client secrets. Sharing production tokens across unaffiliated corporate bodies is strictly prohibited.
             </li>
@@ -91,7 +91,7 @@ export function TermsClient() {
           <p className="max-w-4xl">
             M&amp;F Technologies is a software infrastructure vendor and does not operate as a licensed bank, deposit-taking institution, or microfinance lender. We design and deliver automated decision tools, analytical pipelines, and accounting ledgers based on configurations provided by the Client.
           </p>
-          <p className="mt-3 max-w-4xl font-bold text-[#1B222C]">
+          <p className="mt-3 font-bold text-[#1B222C]">
             THE FINAL DECISION TO APPROVE LOANS, DISBURSE FUNDS, ENFORCE INTEREST RATES, AND COLLECT REPAYMENTS REMAINS THE SOLE LEGAL, COMPLIANCE, AND OPERATIONAL RESPONSIBILITY OF THE CLIENT. M&amp;F SHALL NOT BE HELD LIABLE FOR LOAN DEFAULT RATES, CREDIT LOSSES, BALANCES INACCURACIES ARISING FROM CLIENT CONFIGURATION ERRORS, OR REGULATORY SANCTIONS IMPOSED UPON THE PARTNER INSTITUTION.
           </p>
         </div>

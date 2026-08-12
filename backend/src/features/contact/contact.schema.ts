@@ -9,6 +9,8 @@ export const contactSchema = z.object({
     company: z.string().trim().max(150).optional(),
     message: z.string().trim().min(10).max(5000),
     website: z.string().max(0).optional(), // honeypot — must be empty
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
   }),
 });
 

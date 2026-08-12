@@ -1,7 +1,7 @@
 // src/shared/components/CookieBanner.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shield, Settings, X, Check, Lock, BarChart3, Sliders, Megaphone } from "lucide-react";
 
 export interface CookiePreferences {
@@ -50,6 +50,17 @@ export function CookieBanner() {
     return DEFAULT_PREFERENCES;
   });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      const h = bannerVisible && bannerRef.current ? bannerRef.current.offsetHeight : 0;
+      document.documentElement.style.setProperty("--cookie-banner-h", `${h}px`);
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [bannerVisible]);
 
   useEffect(() => {
 
@@ -130,7 +141,7 @@ export function CookieBanner() {
     <>
       {/* Bottom Floating Consent Banner (Minimal Inline Straight Line with White Background) */}
       {bannerVisible && !modalOpen && (
-        <div className="fixed bottom-0 left-0 right-0 z-[9000] border-t border-[#9AA5B1]/20 bg-white text-[#3E4C59] px-4 py-4 sm:px-8 lg:px-12 shadow-2xl">
+        <div ref={bannerRef} className="fixed bottom-0 left-0 right-0 z-[9000] border-t border-[#9AA5B1]/20 bg-white text-[#3E4C59] px-4 py-4 sm:px-8 lg:px-12 shadow-2xl">
           <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
             <div className="flex items-start md:items-center gap-3 text-[#3E4C59]">
               <Shield className="h-5 w-5 text-[#3E4C59] shrink-0 mt-0.5 md:mt-0" />

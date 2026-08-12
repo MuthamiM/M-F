@@ -5,7 +5,7 @@ import { useContactForm } from "../hooks/useContactForm";
 import { Button } from "@/shared/components/Button";
 
 export function ContactForm() {
-  const { form, update, submit, status, error } = useContactForm();
+  const { form, update, submit, status, error, locationPermission, requestLocation } = useContactForm();
 
   if (status === "success") {
     return (
@@ -65,6 +65,20 @@ export function ContactForm() {
         aria-hidden="true"
         className="absolute left-[-9999px]"
       />
+
+      {locationPermission !== "granted" && (
+        <button
+          type="button"
+          onClick={requestLocation}
+          disabled={locationPermission === "requesting"}
+          className="text-xs text-slate underline text-left disabled:opacity-60"
+        >
+          {locationPermission === "requesting" ? "Locating…" : "Share my location (optional, helps us respond faster)"}
+        </button>
+      )}
+      {locationPermission === "denied" && (
+        <p className="text-xs text-slate">No problem — you can still send your message without it.</p>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

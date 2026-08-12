@@ -1,6 +1,7 @@
 import { About } from "../../features/landing/components/About";
 import Link from "next/link";
 import { ArrowLeft, Compass, Globe2, Building2 } from "lucide-react";
+import { NearestOffice } from "../../features/landing/components/NearestOffice";
 
 export default function WhereWeAre() {
   return (
@@ -76,6 +77,8 @@ export default function WhereWeAre() {
             </div>
           </div>
         </div>
+
+        <NearestOffice />
       </section>
     </main>
   );

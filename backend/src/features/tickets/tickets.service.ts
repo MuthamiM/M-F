@@ -48,6 +48,8 @@ export async function createTicket(input: {
   phone?: string;
   company?: string;
   message: string;
+  latitude?: number;
+  longitude?: number;
 }) {
   const allTickets = await ticketStore.getAll();
   const nextId = `TKT-${1000 + allTickets.length + 1}`;
@@ -70,6 +72,8 @@ export async function createTicket(input: {
     phone: input.phone,
     company: input.company || "General Inquiry",
     message: input.message,
+    latitude: input.latitude,
+    longitude: input.longitude,
     status: "open",
     priority,
     notes: [],

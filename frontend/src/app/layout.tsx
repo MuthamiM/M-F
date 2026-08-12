@@ -4,6 +4,8 @@ import "./globals.css";
 import type { Viewport } from "next";
 import { CookieBanner } from "@/shared/components/CookieBanner";
 import { ChatWidget } from "@/shared/components/ChatWidget";
+import { ServiceWorkerRegister } from "@/shared/components/ServiceWorkerRegister";
+import { InstallBanner } from "@/shared/components/InstallBanner";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -15,6 +17,7 @@ export const viewport: Viewport = {
 export const metadata = {
   title: "M&F Technologies",
   description: "Lending technology for banks and credit unions.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -33,6 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <CookieBanner />
         <ChatWidget />
+        <ServiceWorkerRegister />
+        <InstallBanner />
       </body>
     </html>
   );

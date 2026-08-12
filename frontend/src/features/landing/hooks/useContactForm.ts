@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { apiFetch, ApiError } from "@/shared/lib/apiClient";
+import { useGeolocation } from "./useGeolocation";
 
 interface ContactForm {
   name: string;
@@ -26,6 +27,7 @@ export function useContactForm() {
   const [form, setForm] = useState<ContactForm>(initialState);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const { coords, permission: locationPermission, request: requestLocation } = useGeolocation();
 
   function update<K extends keyof ContactForm>(field: K, value: ContactForm[K]) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -42,9 +44,14 @@ export function useContactForm() {
     }
 
     try {
+      const payload =
+        locationPermission === "granted" && coords
+          ? { ...form, latitude: coords.latitude, longitude: coords.longitude }
+          : form;
+
       await apiFetch("/api/contact", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       setStatus("success");
       setForm(initialState);
@@ -54,5 +61,5 @@ export function useContactForm() {
     }
   }
 
-  return { form, update, submit, status, error };
+  return { form, update, submit, status, error, locationPermission, requestLocation };
 }

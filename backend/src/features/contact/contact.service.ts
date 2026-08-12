@@ -31,6 +31,8 @@ export async function submitContactForm(input: ContactInput) {
     phone: input.phone || input.message.match(/Phone:\s*([^\n]+)/)?.[1] || undefined,
     company: input.company,
     message: input.message,
+    latitude: input.latitude,
+    longitude: input.longitude,
   });
 
   // Keep the submitted details in the ticket conversation as well as the

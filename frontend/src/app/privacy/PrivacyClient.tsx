@@ -39,7 +39,7 @@ export function PrivacyClient() {
       {/* Content */}
       <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-20 text-[#3E4C59] leading-relaxed space-y-10 text-sm sm:text-base">
         <div>
-          <p className="max-w-4xl font-medium text-[#1B222C]">
+          <p className="font-medium text-[#1B222C]">
             M&amp;F Technologies is committed to maintaining the confidentiality, integrity, and security of personal, financial, and telemetry data processed across our systems. This Privacy Policy details our operational data practices as a data processor for banking clients, credit unions, and microfinance institutions.
           </p>
         </div>
@@ -49,7 +49,7 @@ export function PrivacyClient() {
           <p className="max-w-4xl">
             Depending on your interface with M&amp;F Technologies (as a developer integrating our APIs, an administrator of a partner banking portal, or a customer of a partner institution), we collect and process data across several broad categories:
           </p>
-          <ul className="list-disc pl-5 mt-4 space-y-3 max-w-4xl text-xs sm:text-sm text-[#3E4C59]">
+          <ul className="list-disc pl-5 mt-4 space-y-3 text-xs sm:text-sm text-[#3E4C59]">
             <li>
               <strong>Technical Network Telemetry:</strong> To guarantee API availability, protect endpoints from distributed denial-of-service (DDoS) attacks, and enforce rate limits, we log accessing IP addresses, geographical routing metadata, User-Agent strings, HTTP response codes, and system latency measurements.
             </li>
@@ -65,12 +65,20 @@ export function PrivacyClient() {
           </ul>
         </div>
 
+        
         <div className="border-t border-[#9AA5B1]/20 pt-8">
+          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">Geolocation Data</h2>
+          <p>
+            When you use our office finder or submit a callback request, we may ask for permission to access your device's approximate location. Sharing your location is entirely optional and declining it never affects your ability to reach us. If granted, coordinates may be attached to your callback ticket to help route it appropriately, and are protected under the same security controls described elsewhere in this policy.
+          </p>
+        </div>
+
+<div className="border-t border-[#9AA5B1]/20 pt-8">
           <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">2. Processing Rationale &amp; Legal Bases</h2>
           <p className="max-w-4xl">
             We process telemetry and account information under GDPR Article 6 guidelines and equivalent national central bank regulatory mandates:
           </p>
-          <ul className="list-disc pl-5 mt-4 space-y-3 max-w-4xl text-xs sm:text-sm text-[#3E4C59]">
+          <ul className="list-disc pl-5 mt-4 space-y-3 text-xs sm:text-sm text-[#3E4C59]">
             <li>
               <strong>Contractual Fulfillment:</strong> To deliver operational access to high-volume lending systems, verify active developer sessions, and compute API transaction invoices for partner financial institutions.
             </li>
@@ -95,7 +103,7 @@ export function PrivacyClient() {
           <p className="max-w-4xl">
             M&amp;F Technologies does not sell, lease, trade, or distribute credit histories, telemetry records, or admin profiles to third-party advertising companies. Data disclosures are restricted to:
           </p>
-          <ul className="list-disc pl-5 mt-4 space-y-3 max-w-4xl text-xs sm:text-sm text-[#3E4C59]">
+          <ul className="list-disc pl-5 mt-4 space-y-3 text-xs sm:text-sm text-[#3E4C59]">
             <li>Accredited cloud hosting partners hosting regional server instances under strict business associate agreements.</li>
             <li>Regulatory agencies or central banking auditors, exclusively when presented with a valid legal mandate, subpoena, or compliance audit order.</li>
             <li>Integration providers (e.g., identity verification databases, regional credit bureaus) as explicitly configured and authorized by the partner banking client.</li>

@@ -36,6 +36,8 @@ export const ticketSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   message: z.string(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   status: ticketStatusSchema,
   priority: ticketPrioritySchema,
   assignedAgent: z.string().optional(),
