@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/Button";
 import { IsometricDevice } from "./IsometricDevice";
-import { WaterBackground } from "./WaterBackground";
 
 interface Slide {
   title: string;
@@ -47,9 +46,8 @@ export function Hero() {
   };
 
   return (
-    <section id="home" className="relative isolate overflow-hidden bg-[#e7f8fd] pt-6 sm:pt-10">
-      <WaterBackground />
-      <div className="relative z-10 w-full grid grid-cols-1 items-center gap-8 px-4 pb-16 pt-4 sm:px-8 lg:px-12 sm:gap-12 sm:pb-24 sm:pt-8 md:grid-cols-2 md:pb-32">
+    <section id="home" className="relative overflow-hidden bg-white pt-6 sm:pt-10">
+      <div className="relative w-full grid grid-cols-1 items-center gap-8 px-4 pb-16 pt-4 sm:px-8 lg:px-12 sm:gap-12 sm:pb-24 sm:pt-8 md:grid-cols-2 md:pb-32">
         {/* Text content */}
         <div className="min-h-[220px] sm:min-h-[300px] flex flex-col justify-center order-2 md:order-1">
           {/* Keyed element triggers animation on active slide change */}
@@ -84,10 +82,10 @@ export function Hero() {
         {/* Illustration */}
           <div className="relative order-1 md:order-2">
           <div
-            className="absolute -right-16 -top-16 z-0 h-[130%] w-[130%] bg-white/35 sm:-right-24 sm:-top-24 sm:h-[140%] sm:w-[140%]"
+            className="absolute -right-16 -top-16 -z-10 h-[130%] w-[130%] bg-cloud sm:-right-24 sm:-top-24 sm:h-[140%] sm:w-[140%]"
             style={{ clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%)" }}
           />
-          <div className="relative z-10 max-w-[280px] mx-auto sm:max-w-[360px] md:max-w-lg">
+          <div className="max-w-[280px] mx-auto sm:max-w-[360px] md:max-w-lg">
             <IsometricDevice />
           </div>
         </div>
