@@ -1,6 +1,7 @@
 import { logger } from "../../config/logger";
 import { ContactInput } from "./contact.schema";
 import { createTicket, sendMessage } from "../tickets/tickets.service";
+import { sendMail } from "../../lib/mailer";
 
 export async function submitContactForm(input: ContactInput) {
   // Honeypot tripped → pretend success, drop silently
@@ -14,6 +15,18 @@ export async function submitContactForm(input: ContactInput) {
     name: input.name,
     email: input.email,
     company: input.company,
+  });
+
+  // Fire-and-forget: a failed email must never block ticket creation
+  sendMail({
+    subject: `New contact form submission from ${input.name}`,
+    text: [
+      `Name: ${input.name}`,
+      `Email: ${input.email}`,
+      input.phone ? `Phone: ${input.phone}` : null,
+      input.company ? `Company: ${input.company}` : null,
+      `Message: ${input.message}`,
+    ].filter(Boolean).join("\n"),
   });
 
   // Create internal ticket
