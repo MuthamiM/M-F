@@ -36,20 +36,22 @@ export function InstallBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed top-20 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm sm:w-96 z-[10002] bg-[#1B222C] text-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-3">
-      <Download className="h-5 w-5 shrink-0" />
-      <div className="flex-1 text-sm">
-        <p className="font-semibold">Install M&F Technologies</p>
-        <p className="text-white/70 text-xs">Add to your home screen for quick access.</p>
+    <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-md z-[10002] bg-[#1B222C]/95 backdrop-blur-md text-white border border-white/15 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300">
+      <div className="p-2 rounded-xl bg-white/10 shrink-0">
+        <Download className="h-5 w-5 text-white" />
+      </div>
+      <div className="flex-1 text-xs sm:text-sm">
+        <p className="font-bold leading-snug">Install M&F Technologies to your home screen</p>
+        <p className="text-white/70 text-[11px] mt-0.5">Quick access for micro-lending & system audit tools.</p>
       </div>
       <button
         onClick={handleInstall}
-        className="text-xs font-semibold bg-white text-[#1B222C] px-3 py-1.5 rounded-lg shrink-0"
+        className="text-xs font-bold bg-white text-[#1B222C] hover:bg-white/90 px-3.5 py-2 rounded-xl shrink-0 transition-all cursor-pointer shadow-md active:scale-95"
       >
         Install
       </button>
-      <button onClick={handleClose} aria-label="Dismiss" className="shrink-0">
-        <X className="h-4 w-4 text-white/70" />
+      <button onClick={handleClose} aria-label="Dismiss" className="shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
+        <X className="h-4 w-4 text-white/70 hover:text-white" />
       </button>
     </div>
   );
