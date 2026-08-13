@@ -1,28 +1,28 @@
-// src/middleware.ts
-// Runs on every request at the edge, before any page renders.
-// Sets security headers Next.js doesn't add by default.
+import { NextRequest, NextResponse } from "next/server";
 
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || ("http:" + "//127.0.0.1:4000");
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+export function middleware(req: NextRequest) {
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
 
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  );
-  response.headers.set(
-    "Content-Security-Policy",
-    `default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; connect-src 'self' ws: wss:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;`
-  );
+  console.log("[req] " + ip + " " + req.method + " " + req.nextUrl.pathname);
 
-  return response;
+  fetch(BACKEND_URL + "/api/track/click", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-forwarded-for": ip,
+    },
+    body: JSON.stringify({ element: "page-view", page: req.nextUrl.pathname }),
+  }).catch(function () {});
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: "/:path*",
+  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
 };

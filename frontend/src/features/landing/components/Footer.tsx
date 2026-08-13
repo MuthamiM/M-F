@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { Clock } from "lucide-react";
 
 export function Footer() {
   return (
@@ -19,8 +20,17 @@ export function Footer() {
           </span>
         </Link>
 
-        {/* Links: Starts from left edge to middle (max-w-3xl), right side is blank */}
-        <div className="w-full flex flex-wrap justify-start gap-x-8 gap-y-3 text-xs font-medium max-w-3xl mr-auto">
+        {/* Operating Hours Display */}
+        <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-[#9AA5B1]">
+          <Clock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          <span className="font-medium text-white">Operating Hours:</span>
+          <span>Mon–Fri 08:00–17:00 (EACT)</span>
+          <span className="text-[#6B7684]">•</span>
+          <span className="text-emerald-400 font-medium">24/7 SLA &amp; API Monitoring Active</span>
+        </div>
+
+        {/* Links */}
+        <div className="w-full flex flex-wrap justify-center sm:justify-start gap-x-8 gap-y-3 text-xs font-medium max-w-4xl">
           <Link href="/news" className="hover:text-white transition-colors py-1">
             News
           </Link>
@@ -43,6 +53,10 @@ export function Footer() {
 
           <Link href="/careers" className="hover:text-white transition-colors py-1">
             Careers
+          </Link>
+
+          <Link href="/where-we-are" className="hover:text-white transition-colors py-1">
+            Where We Are
           </Link>
 
           <Link

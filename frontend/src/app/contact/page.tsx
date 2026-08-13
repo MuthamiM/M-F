@@ -55,15 +55,15 @@ export default function ContactPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-xs sm:text-sm text-slate">
                   <Mail className="h-4 w-4 text-[#3E4C59]" />
-                  <a href="mailto:musamwange2@gmail.com" className="font-medium text-[#1B222C] hover:underline">
-                    musamwange2@gmail.com
+                  <a href="mailto:info@mftechnologies.org" className="font-medium text-[#1B222C] hover:underline">
+                    info@mftechnologies.org
                   </a>
                 </div>
 
                 <div className="flex items-center gap-3 text-xs sm:text-sm text-slate">
                   <Phone className="h-4 w-4 text-[#3E4C59]" />
-                  <a href="tel:0114945842" className="font-medium text-[#1B222C] hover:underline">
-                    0114945842 (Operational Support)
+                  <a href="tel:0748329410" className="font-medium text-[#1B222C] hover:underline">
+                    0748329410 (Operational Support)
                   </a>
                 </div>
 

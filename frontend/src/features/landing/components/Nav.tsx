@@ -297,7 +297,7 @@ export function Nav() {
                   </Link>
 
                   <a
-                    href="mailto:contact@mftechnologies.co"
+                    href="mailto:info@mftechnologies.org"
                     className="w-full py-2.5 px-4 rounded-lg border border-[#9AA5B1] bg-white text-xs font-semibold text-[#3E4C59] hover:bg-[#F1F5F9] hover:text-[#1B222C] flex items-center justify-center gap-2 transition-colors"
                   >
                     <HelpCircle className="h-3.5 w-3.5" />

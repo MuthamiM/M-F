@@ -3,27 +3,38 @@
 
 import Link from "next/link";
 import { ArrowLeft, Briefcase, Mail, Terminal, Coins, Globe, Heart, Shield, Cpu } from "lucide-react";
+import { IsometricDevice } from "@/features/landing/components/IsometricDevice";
 
 export function CareersClient() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero */}
-      <section className="bg-cloud border-b border-fog/20">
-        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-graphite transition-colors mb-6 sm:mb-8"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Home
-          </Link>
+      <section className="bg-cloud border-b border-fog/20 relative overflow-hidden">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 items-center gap-8 px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+          {/* Left side text */}
+          <div className="space-y-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-graphite transition-colors mb-2"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Home
+            </Link>
 
-          <h1 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl animate-fade-in-up">
-            Join M&amp;F Technologies
-          </h1>
-          <p className="mt-4 text-base sm:text-lg text-slate max-w-3xl leading-relaxed animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-            We design, build, and scale high-performance banking infrastructure, credit scoring frameworks, and secure transactional middleware that process billions in micro-lending disbursements worldwide.
-          </p>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl animate-fade-in-up">
+              Join M&amp;F Technologies
+            </h1>
+            <p className="mt-4 text-base sm:text-lg text-slate max-w-xl leading-relaxed animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+              We design, build, and scale high-performance banking infrastructure, credit scoring frameworks, and secure transactional middleware that process billions in micro-lending disbursements worldwide.
+            </p>
+          </div>
+
+          {/* Right side illustration */}
+          <div className="relative flex justify-center lg:justify-end animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+            <div className="max-w-[280px] sm:max-w-[360px] md:max-w-md w-full">
+              <IsometricDevice />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -79,14 +90,142 @@ export function CareersClient() {
           </div>
         </div>
 
-        {/* Potential Roles */}
+        {/* Active Openings */}
+        <div className="border-t border-fog/20 pt-16 space-y-8">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-xs font-semibold mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              We're Hiring
+            </div>
+            <h3 className="font-display text-xl font-bold text-graphite sm:text-2xl">
+              Active Job Openings
+            </h3>
+            <p className="text-sm text-slate mt-2 max-w-2xl leading-relaxed">
+              We are expanding our engineering team. Explore our active openings and apply below.
+            </p>
+          </div>
+
+          <div className="border border-fog/30 rounded-xl bg-cloud overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-5 w-5 text-graphite" />
+                    <h4 className="font-bold text-graphite text-lg sm:text-xl">Junior Python Developer</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#1B222C]/5 text-graphite">Remote</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#1B222C]/5 text-graphite">Full-Time</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#1B222C]/5 text-graphite">Engineering</span>
+                  </div>
+                </div>
+                <a
+                  href="mailto:info@mftechnologies.org?subject=Application%20for%20Junior%20Python%20Developer%20Role"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] px-5 py-2.5 text-xs font-semibold text-white transition-colors shadow-sm"
+                >
+                  <Mail className="h-4 w-4 text-white" />
+                  Apply Now
+                </a>
+              </div>
+
+              <div className="border-t border-fog/20 pt-6 space-y-8">
+                {/* Detailed Description */}
+                <div className="space-y-4">
+                  <h5 className="font-bold text-graphite text-sm sm:text-base">Role Overview</h5>
+                  <p className="text-xs sm:text-sm text-slate leading-relaxed">
+                    We are seeking a junior, detail-oriented Python Developer to help build and maintain custom plugins, third-party integrations, and secure data processing pipelines for our institutional-grade lending platforms. In this role, you will assist in designing, developing, and implementing robust data models, index structures, and storage strategies. 
+                  </p>
+                  <p className="text-xs sm:text-sm text-slate leading-relaxed">
+                    You will work on ingestion and indexing processes, transforming and normalizing transaction logs and credit scoring data using tools like Elasticsearch, and integrating services with REST and SOAP APIs across multiple banking applications. This is a 100% remote position offering hands-on mentorship from senior backend and infrastructure security engineers.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Responsibilities */}
+                  <div className="space-y-4">
+                    <h5 className="font-bold text-graphite text-sm sm:text-base">Key Responsibilities</h5>
+                    <ul className="list-disc pl-4 space-y-2 text-xs sm:text-sm text-slate leading-relaxed">
+                      <li>Design, write, and maintain custom Python scripts and backend plugins to integrate third-party APIs and fintech data providers.</li>
+                      <li>Develop and implement data models, indexes, and storage schemas for high-performance transaction logging and audit trails.</li>
+                      <li>Build ingestion pipelines that transform, normalize, and enrich transaction log streams and financial event records.</li>
+                      <li>Create and optimize queries against databases to extract analytics and support real-time credit scoring runs.</li>
+                      <li>Participate in system design reviews, code reviews, and automate tests using CI/CD pipelines.</li>
+                    </ul>
+                  </div>
+
+                  {/* Requirements & Skills */}
+                  <div className="space-y-4">
+                    <h5 className="font-bold text-graphite text-sm sm:text-base">Education & Core Requirements</h5>
+                    <ul className="list-disc pl-4 space-y-2 text-xs sm:text-sm text-slate leading-relaxed">
+                      <li><strong>Education:</strong> Degree in Computer Science, Software Engineering, or any IT/STEM related field.</li>
+                      <li><strong>Application Documents:</strong> Submission of an Application Letter (Cover Letter) and a detailed CV.</li>
+                      <li>Solid understanding of Python programming (either through professional experience or significant academic/personal projects).</li>
+                      <li>Experience using or building REST and/or SOAP APIs to query and update data.</li>
+                      <li>Familiarity with Git version control, branch workflows, and basic CI/CD concepts.</li>
+                      <li>Strong logical thinking, problem-solving, and written communication skills.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Nice to haves */}
+                <div className="border-t border-fog/20 pt-6 space-y-4">
+                  <h5 className="font-bold text-graphite text-sm sm:text-base">Nice to Have (Bonus Skills)</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs sm:text-sm text-slate leading-relaxed">
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Experience with Elasticsearch, Logstash, Kibana (ELK stack), or log aggregation systems.</li>
+                      <li>Database modeling experience (relational like PostgreSQL, or non-relational like MongoDB).</li>
+                      <li>Familiarity with container services like Docker and Kubernetes.</li>
+                    </ul>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Basic cloud infrastructure experience (especially AWS or Azure).</li>
+                      <li>Exposure to configuration management tools (Ansible, Terraform).</li>
+                      <li>Basic Linux administration and bash scripting knowledge.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-fog/20 pt-6 space-y-4 bg-white/50 -mx-6 -mb-6 p-6 sm:-mx-8 sm:-mb-8 sm:p-8">
+                <h5 className="font-bold text-graphite text-sm sm:text-base">How to Apply</h5>
+                <p className="text-xs sm:text-sm text-slate leading-relaxed">
+                  Interested candidates who meet the requirements should submit the following application documents:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div className="flex items-start gap-3 rounded-lg border border-fog/20 p-4 bg-white">
+                    <div className="p-2 rounded bg-cloud text-graphite">
+                      <Briefcase className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h6 className="font-bold text-graphite text-xs">1. Curriculum Vitae (CV)</h6>
+                      <p className="text-[11px] text-slate mt-0.5">Updated resume highlighting your skills, education, and any projects you have worked on.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-lg border border-fog/20 p-4 bg-white">
+                    <div className="p-2 rounded bg-cloud text-graphite">
+                      <Mail className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h6 className="font-bold text-graphite text-xs">2. Application Letter</h6>
+                      <p className="text-[11px] text-slate mt-0.5">A cover letter explaining your suitability and interest in joining M&amp;F Technologies.</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate pt-2 leading-relaxed">
+                  Please send both documents to <a href="mailto:info@mftechnologies.org?subject=Application%20for%20Junior%20Python%20Developer%20Role" className="font-semibold text-graphite hover:underline">info@mftechnologies.org</a> with the subject line <strong>"Application: Junior Python Developer"</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Future Opportunities & Core Disciplines */}
         <div className="border-t border-fog/20 pt-16 space-y-8">
           <div>
             <h3 className="font-display text-xl font-bold text-graphite sm:text-2xl">
               Future Opportunities &amp; Core Disciplines
             </h3>
             <p className="text-sm text-slate mt-2 max-w-2xl leading-relaxed">
-              While we are currently fully staffed and have no active hiring requisitions, we are always on the lookout for talented team members in the following areas:
+              In addition to our active hiring, we are always on the lookout for talented team members in the following areas:
             </p>
           </div>
 
@@ -113,29 +252,29 @@ export function CareersClient() {
           </div>
         </div>
 
-        {/* No Active Openings Announcement */}
+        {/* General Application & Future Roles */}
         <div className="border-t border-fog/20 pt-16 flex flex-col items-center text-center space-y-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cloud border border-fog/20">
-            <Briefcase className="h-6 w-6 text-slate" />
+            <Heart className="h-6 w-6 text-slate" />
           </div>
 
           <div className="space-y-2">
             <h3 className="font-display text-xl font-bold text-graphite sm:text-2xl">
-              No Open Requisitions at the Moment
+              Don't See the Right Fit?
             </h3>
             <p className="max-w-md text-xs sm:text-sm text-slate leading-relaxed">
-              We are currently in a period of team stability and are not interviewing. However, if you are an exceptional engineer passionate about lending technology, you can send us a message.
+              If you are an exceptional engineer passionate about lending technology but don't see an open role that matches your profile, you can still submit a general application.
             </p>
           </div>
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
             <a
-              href="mailto:careers@mftechnologies.co"
+              href="mailto:info@mftechnologies.org?subject=General%20Application%20for%20Future%20Roles"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] px-6 py-3 text-xs font-semibold text-white transition-colors w-full sm:w-auto shadow-sm"
             >
               <Mail className="h-4 w-4 text-white" />
-              Submit Resume for Future Openings
+              Submit General Resume
             </a>
             <Link
               href="/"
