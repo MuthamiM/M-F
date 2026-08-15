@@ -174,11 +174,6 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          {/* Credentials Info Badge */}
-          <div className="bg-blue-500/10 border border-blue-500/20 text-blue-200 text-[11px] px-3.5 py-2.5 rounded-xl flex items-center justify-between font-mono">
-            <span>Admin Email: <strong className="text-white">admin@mftechnologies.org</strong></span>
-            <span>Pass: <strong className="text-white">mftech2026</strong></span>
-          </div>
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
