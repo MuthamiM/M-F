@@ -110,21 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             "opens": "08:00",
             "closes": "17:00"
           }
-        ],
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "24",
-          "bestRating": "5",
-          "worstRating": "1",
-          "itemReviewed": {
-            "@type": "FinancialService",
-            "name": "M&F Technologies",
-            "url": "https://mftechnologies.org",
-            "image": "https://mftechnologies.org/icon-v2-512.png",
-            "telephone": "+254748329410"
-          }
-        }
+        ]
       }
     ]
   };
