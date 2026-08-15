@@ -26,6 +26,9 @@ export const metadata: import("next").Metadata = {
     icon: [
       { url: "/favicon.ico?v=2", sizes: "any" },
       { url: "/favicon.svg?v=2", type: "image/svg+xml" },
+      { url: "/icon-48.png?v=2", sizes: "48x48", type: "image/png" },
+      { url: "/icon-96.png?v=2", sizes: "96x96", type: "image/png" },
+      { url: "/icon-144.png?v=2", sizes: "144x144", type: "image/png" },
       { url: "/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
     ],
@@ -123,6 +126,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ></script>
         <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
         <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
+        <link rel="icon" sizes="48x48" href="/icon-48.png?v=2" type="image/png" />
+        <link rel="icon" sizes="96x96" href="/icon-96.png?v=2" type="image/png" />
+        <link rel="icon" sizes="144x144" href="/icon-144.png?v=2" type="image/png" />
         <link rel="icon" sizes="192x192" href="/icon-192.png?v=2" type="image/png" />
         <link rel="icon" sizes="512x512" href="/icon-512.png?v=2" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
