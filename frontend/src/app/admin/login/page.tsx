@@ -174,6 +174,12 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          {/* Credentials Info Badge */}
+          <div className="bg-blue-500/10 border border-blue-500/20 text-blue-200 text-[11px] px-3.5 py-2.5 rounded-xl flex items-center justify-between font-mono">
+            <span>Admin Email: <strong className="text-white">admin@mftechnologies.org</strong></span>
+            <span>Pass: <strong className="text-white">mftech2026</strong></span>
+          </div>
+
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -181,11 +187,11 @@ export default function AdminLoginPage() {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@mftechnologies.com"
+                  placeholder="admin@mftechnologies.org"
                   className="w-full text-xs pl-10 pr-4 py-3 bg-white/[0.05] border border-white/[0.08] rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-blue-400/40 focus:bg-white/[0.08] focus:shadow-[0_0_20px_2px_rgba(96,165,250,0.08)] transition-all"
                 />
               </div>

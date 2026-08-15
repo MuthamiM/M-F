@@ -14,37 +14,103 @@ export const viewport: Viewport = {
   themeColor: "#FFFFFF",
 };
 
-export const metadata = {
-  title: "M&F Technologies",
-  description: "Lending technology for banks and credit unions.",
+export const metadata: import("next").Metadata = {
+  metadataBase: new URL("https://mftechnologies.org"),
+  title: {
+    default: "M&F Technologies — Lending Technology for Banks & Credit Unions",
+    template: "%s | M&F Technologies",
+  },
+  description: "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware for modern financial institutions.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: ["/favicon.ico"],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  openGraph: {
+    title: "M&F Technologies — Lending Technology for Banks & Credit Unions",
+    description: "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware.",
+    url: "https://mftechnologies.org",
+    siteName: "M&F Technologies",
+    images: [
+      {
+        url: "https://mftechnologies.org/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "M&F Technologies Logo",
+      },
+      {
+        url: "https://mftechnologies.org/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "M&F Technologies Icon",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "M&F Technologies",
+    description: "Lending technology for banks and credit unions.",
+    images: ["https://mftechnologies.org/og-image.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "FinancialService",
-    "name": "M&F Technologies",
-    "url": "https://mftechnologies.org",
-    "logo": "https://mftechnologies.org/icon-192.png",
-    "image": "https://mftechnologies.org/icon-512.png",
-    "description": "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware.",
-    "telephone": "+254748329410",
-    "email": "info@mftechnologies.org",
-    "openingHoursSpecification": [
+    "@graph": [
       {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        "opens": "08:00",
-        "closes": "17:00"
+        "@type": "Organization",
+        "@id": "https://mftechnologies.org/#organization",
+        "name": "M&F Technologies",
+        "url": "https://mftechnologies.org",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://mftechnologies.org/icon-512.png",
+          "width": 512,
+          "height": 512,
+          "caption": "M&F Technologies Logo"
+        },
+        "image": "https://mftechnologies.org/og-image.png",
+        "sameAs": [
+          "https://mftechnologies.org"
+        ]
+      },
+      {
+        "@type": "FinancialService",
+        "@id": "https://mftechnologies.org/#service",
+        "name": "M&F Technologies",
+        "url": "https://mftechnologies.org",
+        "logo": "https://mftechnologies.org/icon-512.png",
+        "image": "https://mftechnologies.org/og-image.png",
+        "description": "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware.",
+        "telephone": "+254748329410",
+        "email": "info@mftechnologies.org",
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "opens": "08:00",
+            "closes": "17:00"
+          }
+        ],
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "24",
+          "bestRating": "5"
+        }
       }
-    ],
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "24",
-      "bestRating": "5"
-    }
+    ]
   };
 
   return (
@@ -57,6 +123,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ></script>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" sizes="192x192" href="/icon-192.png" type="image/png" />
+        <link rel="icon" sizes="512x512" href="/icon-512.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
