@@ -16,6 +16,10 @@ import { trackingRouter } from "./features/tracking/tracking.routes";
 export function createApp() {
   const app = express();
 
+  // Behind Cloudflare Tunnel → trust one proxy hop so express-rate-limit
+  // can read X-Forwarded-For without throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+  app.set("trust proxy", 1);
+
   // ── Global middleware ─────────────────────────────────────────────────
   applySecurityMiddleware(app);
   app.use(express.json({ limit: "10kb" }));
