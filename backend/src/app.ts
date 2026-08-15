@@ -23,6 +23,9 @@ export function createApp() {
   // ── Global middleware ─────────────────────────────────────────────────
   applySecurityMiddleware(app);
   app.use(express.json({ limit: "10kb" }));
+  // Health check route (unlimited for monitoring/uptime probes)
+  app.use("/api/health", healthRouter);
+
   app.use(globalRateLimiter);
 
   // Request Logging Middleware
@@ -59,7 +62,6 @@ export function createApp() {
   });
 
   // ── Feature routes ────────────────────────────────────────────────────
-  app.use("/api/health", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/contact", contactRouter);
   app.use("/api/docs", docsRouter);
