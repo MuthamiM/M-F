@@ -2,6 +2,7 @@
 import type { Request, Response } from "express";
 import https from "https";
 import { logger } from "../../config/logger";
+import { ticketStore } from "../tickets/tickets.store";
 
 /* ------------------------------------------------------------------ */
 /*  Ticket Counters                                                    */
@@ -21,10 +22,10 @@ function generateTicketNumber(prefix: "CB" | "LIVE"): string {
 
   if (prefix === "CB") {
     cbCounter++;
-    return `MFT-CB-${dateStr}-${String(cbCounter).padStart(4, "0")}`;
+    return `TKT-CB-${dateStr}-${String(cbCounter).padStart(3, "0")}`;
   } else {
     liveCounter++;
-    return `MFT-LIVE-${dateStr}-${String(liveCounter).padStart(4, "0")}`;
+    return `TKT-LIVE-${dateStr}-${String(liveCounter).padStart(3, "0")}`;
   }
 }
 
@@ -192,19 +193,56 @@ export async function startChatHandler(_req: Request, res: Response) {
 /*  POST /api/chatbot/message                                          */
 /* ------------------------------------------------------------------ */
 export async function sendMessageHandler(req: Request, res: Response) {
-  const { mode, message, history, name, phone, email, reason, issue } = req.body;
+  const { mode, message, history, name, phone, email, reason, issue, ticket } = req.body;
 
-  // Handle Callback Request
+  // Handle Callback Request -> Save directly to PostgreSQL Database!
   if (mode === "request_callback") {
-    const ticket = generateTicketNumber("CB");
-    logger.info(`Callback request: ${ticket} for ${name || "Client"}`);
+    const ticketId = generateTicketNumber("CB");
+    const now = new Date();
 
-    const response = `Thank you ${name || "Client"}. Your callback request has been logged under Callback Ticket ${ticket}.\n\nDetails:\n- Phone: ${phone}\n- Email: ${email || "Not provided"}\n- Reason: ${reason || "General Callback"}\n\nOur engineering support team will call you within 1 business day.`;
+    const response = `Thank you ${name || "Client"}. Your callback request has been logged under Callback Ticket ${ticketId}.\n\nDetails:\n- Phone: ${phone}\n- Email: ${email || "Not provided"}\n- Reason: ${reason || "General Callback"}\n\nOur engineering support team will call you within 1 business day.`;
+
+    try {
+      await ticketStore.set(ticketId, {
+        id: ticketId,
+        type: "chatbot",
+        name: name || "Website Visitor",
+        email: email || "callback@mftechnologies.org",
+        phone: phone || undefined,
+        company: "ChatBot — Callback Request",
+        message: `Callback requested. Phone: ${phone}. Reason: ${reason || "General Inquiries"}`,
+        status: "open",
+        priority: "high",
+        createdAt: now,
+        updatedAt: now,
+        notes: [],
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            sender: "client",
+            senderName: name || "Website Visitor",
+            text: `Callback Requested: ${phone} (${reason})`,
+            timestamp: now,
+          },
+          {
+            id: `msg-${Date.now() + 1}`,
+            sender: "agent",
+            senderName: "M&F System",
+            text: response,
+            timestamp: new Date(now.getTime() + 500),
+          },
+        ],
+        callLogs: [],
+      });
+      logger.info(`Persisted Callback Ticket ${ticketId} to database.`);
+    } catch (err: any) {
+      logger.error(`Failed to save callback ticket to database: ${err.message}`);
+    }
 
     res.json({
       success: true,
       data: {
-        ticket,
+        ticket: ticketId,
         response,
         provider: "Internal System",
       },
@@ -212,17 +250,53 @@ export async function sendMessageHandler(req: Request, res: Response) {
     return;
   }
 
-  // Handle Live Support Ticket Request
+  // Handle Live Support Ticket Request -> Save directly to PostgreSQL Database!
   if (mode === "request_live_agent") {
-    const ticket = generateTicketNumber("LIVE");
-    logger.info(`Live support ticket: ${ticket} for ${name || "Client"}`);
+    const ticketId = generateTicketNumber("LIVE");
+    const now = new Date();
 
-    const response = `Live Support Ticket ${ticket} created for ${name || "Client"}.\n\nIssue: ${issue || "Support Request"}\n\nYou are now connected to live support queue. An agent will join this session shortly. You may type your message below.`;
+    const response = `Live Support Ticket ${ticketId} created for ${name || "Client"}.\n\nIssue: ${issue || "Support Request"}\n\nYou are now connected to live support queue. An agent will join this session shortly. You may type your message below.`;
+
+    try {
+      await ticketStore.set(ticketId, {
+        id: ticketId,
+        type: "chatbot",
+        name: name || "Website Visitor",
+        email: email || "support@mftechnologies.org",
+        company: "ChatBot — Live Agent Queue",
+        message: `Live support session requested. Issue: ${issue || "Technical Assistance"}`,
+        status: "open",
+        priority: "high",
+        createdAt: now,
+        updatedAt: now,
+        notes: [],
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            sender: "client",
+            senderName: name || "Website Visitor",
+            text: `Live Support Requested: ${issue}`,
+            timestamp: now,
+          },
+          {
+            id: `msg-${Date.now() + 1}`,
+            sender: "agent",
+            senderName: "M&F System",
+            text: response,
+            timestamp: new Date(now.getTime() + 500),
+          },
+        ],
+        callLogs: [],
+      });
+      logger.info(`Persisted Live Agent Ticket ${ticketId} to database.`);
+    } catch (err: any) {
+      logger.error(`Failed to save live agent ticket to database: ${err.message}`);
+    }
 
     res.json({
       success: true,
       data: {
-        ticket,
+        ticket: ticketId,
         response,
         provider: "Internal System",
       },
@@ -265,10 +339,40 @@ export async function sendMessageHandler(req: Request, res: Response) {
     }
   }
 
+  const cleanedResponse = cleanText(responseText);
+
+  // If active ticket ID is provided, append message to PostgreSQL database!
+  if (ticket) {
+    try {
+      const existingTicket = await ticketStore.get(ticket);
+      if (existingTicket) {
+        existingTicket.messages.push({
+          id: `msg-${Date.now()}`,
+          sender: "client",
+          senderName: existingTicket.name,
+          text: cleanText(message),
+          timestamp: new Date(),
+        });
+        existingTicket.messages.push({
+          id: `msg-${Date.now() + 1}`,
+          sender: "agent",
+          senderName: usedProvider === "Groq" || usedProvider === "Gemini" ? "AI Assistant" : "Support Agent",
+          text: cleanedResponse,
+          timestamp: new Date(),
+        });
+        existingTicket.updatedAt = new Date();
+        await ticketStore.set(ticket, existingTicket);
+        logger.info(`Appended chat message turn to DB ticket ${ticket}.`);
+      }
+    } catch (err: any) {
+      logger.error(`Failed to update ticket ${ticket} in DB: ${err.message}`);
+    }
+  }
+
   res.json({
     success: true,
     data: {
-      response: cleanText(responseText),
+      response: cleanedResponse,
       provider: usedProvider,
     },
   });

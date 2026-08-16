@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { MessageSquare, X, Send, User, PhoneCall, HelpCircle, UserCheck, ArrowLeft, CheckCircle2, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,6 +20,7 @@ interface ChatSession {
   messages: Message[];
   liveTicket?: string | null;
   ticketClosed?: boolean;
+  popCount?: number;
 }
 
 interface IosNotification {
@@ -87,8 +89,9 @@ function cleanText(text: string): string {
 /* ------------------------------------------------------------------ */
 /*  Session Storage                                                    */
 /* ------------------------------------------------------------------ */
-const STORAGE_KEY = "mf_chat_session_v5";
+const STORAGE_KEY = "mf_chat_session_v6";
 const INACTIVITY_LIMIT_MS = 4 * 60 * 1000; // 4 minutes
+const MAX_AUTO_POPS = 5;
 
 function loadSession(): ChatSession | null {
   try {
@@ -115,13 +118,14 @@ function clearSessionData() {
 /*  ChatWidget Component                                               */
 /* ------------------------------------------------------------------ */
 export function ChatWidget() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [liveTicket, setLiveTicket] = useState<string | null>(null);
   const [ticketClosed, setTicketClosed] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [hasAutoPopped, setHasAutoPopped] = useState(false);
+  const [popCount, setPopCount] = useState<number>(0);
   const [promptState, setPromptState] = useState<"waiting" | "visible" | "dismissed">("waiting");
   
   // iOS Push Banner state
@@ -142,7 +146,7 @@ export function ChatWidget() {
   const lastActivityRef = useRef<number>(Date.now());
 
   // Do not render inside admin pages
-  if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+  if (typeof window !== "undefined" && pathname?.startsWith("/admin")) {
     return null;
   }
 
@@ -152,20 +156,77 @@ export function ChatWidget() {
 
   /* ---- Show iOS Push Notification Banner ---- */
   const triggerIosNotification = (title: string, body: string) => {
-    const timeStr = "now";
     setIosBanner({
       id: "ios-notif-" + Date.now(),
       title,
       body,
-      time: timeStr,
+      time: "now",
     });
     playIosNotificationSound();
 
-    // Auto-dismiss iOS banner after 5 seconds if not clicked
     setTimeout(() => {
       setIosBanner((current) => (current?.title === title ? null : current));
     }, 5000);
   };
+
+  /* ---- Trigger Pop-Up Prompt with iPhone sound ---- */
+  const triggerPopUpPrompt = useCallback(() => {
+    if (isOpen || popCount >= MAX_AUTO_POPS) return;
+
+    setPromptState("visible");
+    playIosNotificationSound();
+    setPopCount((prev) => prev + 1);
+  }, [isOpen, popCount]);
+
+  /* ---- Restore Session ---- */
+  useEffect(() => {
+    const saved = loadSession();
+    if (saved) {
+      if (saved.messages && saved.messages.length > 0) {
+        setMessages(saved.messages);
+      }
+      setLiveTicket(saved.liveTicket || null);
+      setTicketClosed(saved.ticketClosed || false);
+      if (typeof saved.popCount === "number") {
+        setPopCount(saved.popCount);
+      }
+    }
+  }, []);
+
+  /* ---- Save Session ---- */
+  useEffect(() => {
+    saveSession({ messages, liveTicket, ticketClosed, popCount });
+  }, [messages, liveTicket, ticketClosed, popCount]);
+
+  /* ---- Initial Pop-Up after 3s on site load ---- */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (popCount === 0 && !isOpen) {
+        triggerPopUpPrompt();
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [popCount, isOpen, triggerPopUpPrompt]);
+
+  /* ---- Route Navigation Pop-Up Trigger (up to 5 times as user navigates) ---- */
+  useEffect(() => {
+    if (popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
+      const timer = setTimeout(() => {
+        triggerPopUpPrompt();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname]);
+
+  /* ---- Interval Pop-Up Trigger (every 30s if idle & not open up to 5 times) ---- */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
+        triggerPopUpPrompt();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [popCount, isOpen, promptState, triggerPopUpPrompt]);
 
   /* ---- Inactivity 4-minute check ---- */
   useEffect(() => {
@@ -179,29 +240,12 @@ export function ChatWidget() {
         setIsOpen(false);
         setPromptState("dismissed");
         setIosBanner(null);
+        setPopCount(0);
       }
     }, 10000);
 
     return () => clearInterval(interval);
   }, []);
-
-  /* ---- Restore Session ---- */
-  useEffect(() => {
-    const saved = loadSession();
-    if (saved && saved.messages.length > 0) {
-      setMessages(saved.messages);
-      setLiveTicket(saved.liveTicket || null);
-      setTicketClosed(saved.ticketClosed || false);
-      setPromptState("dismissed");
-    }
-  }, []);
-
-  /* ---- Save Session ---- */
-  useEffect(() => {
-    if (messages.length > 0) {
-      saveSession({ messages, liveTicket, ticketClosed });
-    }
-  }, [messages, liveTicket, ticketClosed]);
 
   /* ---- Auto-scroll ---- */
   useEffect(() => {
@@ -214,23 +258,6 @@ export function ChatWidget() {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen, activeForm]);
-
-  /* ---- Auto-pop prompt after 3s ---- */
-  useEffect(() => {
-    if (hasAutoPopped) return;
-    const saved = loadSession();
-    if (saved && saved.messages.length > 0) {
-      setPromptState("dismissed");
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setHasAutoPopped(true);
-      setPromptState("visible");
-      playIosNotificationSound();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [hasAutoPopped]);
 
   /* ---- Start Chat ---- */
   const initChat = useCallback(() => {
@@ -314,7 +341,6 @@ export function ChatWidget() {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      // If chat is minimized or backgrounded, fire iOS push banner!
       if (!isOpen) {
         triggerIosNotification("Callback Logged", botText);
       }
@@ -367,7 +393,7 @@ export function ChatWidget() {
       });
 
       const data = await res.json();
-      const tId = data.success && data.data.ticket ? data.data.ticket : "MFT-LIVE-SESSION";
+      const tId = data.success && data.data.ticket ? data.data.ticket : "TKT-LIVE-SESSION";
 
       setLiveTicket(tId);
       setTicketClosed(false);
@@ -385,7 +411,6 @@ export function ChatWidget() {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      // Fire iOS push banner!
       triggerIosNotification("Support Ticket Created", `${tId} — Agent will join shortly`);
     } catch {
       setMessages((prev) => [
@@ -471,7 +496,6 @@ export function ChatWidget() {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      // Trigger iOS push notification banner if chat is closed or when support agent replies!
       if (!isOpen || liveTicket) {
         triggerIosNotification(liveTicket ? "Support Agent Reply" : "M&F Support", botText);
       }
@@ -523,7 +547,6 @@ export function ChatWidget() {
             className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-[360px] z-[100000] cursor-pointer"
           >
             <div className="bg-[#111827]/90 backdrop-blur-xl text-white rounded-[22px] p-3.5 shadow-2xl border border-white/15 flex flex-col gap-1.5 select-none hover:bg-[#111827]/95 transition-colors">
-              {/* iOS Banner Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded-md bg-[#1B222C] border border-white/20 flex items-center justify-center p-0.5">
@@ -547,7 +570,6 @@ export function ChatWidget() {
                 </div>
               </div>
 
-              {/* iOS Banner Body */}
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Bell className="h-3 w-3 text-blue-400" />
@@ -562,7 +584,7 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* ---- Pop-up Prompt Bubble ---- */}
+      {/* Pop-up Prompt Bubble */}
       <AnimatePresence>
         {promptState === "visible" && !isOpen && !iosBanner && (
           <motion.div
@@ -616,7 +638,7 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* ---- Compact Floating Round Toggle Button (FAB) ---- */}
+      {/* Floating Round Toggle Button (FAB) */}
       <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: "calc(1.25rem + var(--cookie-banner-h, 0px))" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -635,7 +657,7 @@ export function ChatWidget() {
         </motion.button>
       </div>
 
-      {/* ---- Compact Expanded Chat Panel ---- */}
+      {/* Compact Expanded Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
