@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MessageSquare, X, Send, User, PhoneCall, HelpCircle, UserCheck, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { MessageSquare, X, Send, User, PhoneCall, HelpCircle, UserCheck, ArrowLeft, CheckCircle2, Bell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ------------------------------------------------------------------ */
@@ -21,8 +21,15 @@ interface ChatSession {
   ticketClosed?: boolean;
 }
 
+interface IosNotification {
+  id: string;
+  title: string;
+  body: string;
+  time: string;
+}
+
 /* ------------------------------------------------------------------ */
-/*  M&F Logo                                                           */
+/*  M&F Institutional Logo                                              */
 /* ------------------------------------------------------------------ */
 function MfLogo({ size = 22 }: { size?: number }) {
   const inner = Math.round(size * 0.5);
@@ -35,9 +42,9 @@ function MfLogo({ size = 22 }: { size?: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Notification Sound                                                 */
+/*  iOS Chime Sound via Web Audio API                                  */
 /* ------------------------------------------------------------------ */
-function playNotificationSound() {
+function playIosNotificationSound() {
   try {
     const Ctx = window.AudioContext || (window as any).webkitAudioContext;
     if (!Ctx) return;
@@ -47,7 +54,7 @@ function playNotificationSound() {
       const gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.12, start);
+      gain.gain.setValueAtTime(0.18, start);
       gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -55,8 +62,10 @@ function playNotificationSound() {
       osc.stop(start + dur);
     };
     const now = ctx.currentTime;
-    playTone(880, now, 0.12);
-    playTone(1174.66, now + 0.15, 0.18);
+    // Classic iOS Note Chime (C6 -> E6 -> G6)
+    playTone(1046.5, now, 0.12);
+    playTone(1318.51, now + 0.08, 0.12);
+    playTone(1567.98, now + 0.16, 0.25);
   } catch {}
 }
 
@@ -78,7 +87,7 @@ function cleanText(text: string): string {
 /* ------------------------------------------------------------------ */
 /*  Session Storage                                                    */
 /* ------------------------------------------------------------------ */
-const STORAGE_KEY = "mf_chat_session_v4";
+const STORAGE_KEY = "mf_chat_session_v5";
 const INACTIVITY_LIMIT_MS = 4 * 60 * 1000; // 4 minutes
 
 function loadSession(): ChatSession | null {
@@ -114,6 +123,9 @@ export function ChatWidget() {
   const [isTyping, setIsTyping] = useState(false);
   const [hasAutoPopped, setHasAutoPopped] = useState(false);
   const [promptState, setPromptState] = useState<"waiting" | "visible" | "dismissed">("waiting");
+  
+  // iOS Push Banner state
+  const [iosBanner, setIosBanner] = useState<IosNotification | null>(null);
 
   // Active Form Mode: null | "callback" | "live_agent"
   const [activeForm, setActiveForm] = useState<null | "callback" | "live_agent">(null);
@@ -134,12 +146,28 @@ export function ChatWidget() {
     return null;
   }
 
-  // Update activity timestamp on user interactions
   const touchActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
   }, []);
 
-  /* ---- Clear session on 4-minute inactivity ---- */
+  /* ---- Show iOS Push Notification Banner ---- */
+  const triggerIosNotification = (title: string, body: string) => {
+    const timeStr = "now";
+    setIosBanner({
+      id: "ios-notif-" + Date.now(),
+      title,
+      body,
+      time: timeStr,
+    });
+    playIosNotificationSound();
+
+    // Auto-dismiss iOS banner after 5 seconds if not clicked
+    setTimeout(() => {
+      setIosBanner((current) => (current?.title === title ? null : current));
+    }, 5000);
+  };
+
+  /* ---- Inactivity 4-minute check ---- */
   useEffect(() => {
     const interval = setInterval(() => {
       if (Date.now() - lastActivityRef.current >= INACTIVITY_LIMIT_MS) {
@@ -150,8 +178,9 @@ export function ChatWidget() {
         setActiveForm(null);
         setIsOpen(false);
         setPromptState("dismissed");
+        setIosBanner(null);
       }
-    }, 10000); // Check every 10s
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -198,7 +227,7 @@ export function ChatWidget() {
     const timer = setTimeout(() => {
       setHasAutoPopped(true);
       setPromptState("visible");
-      playNotificationSound();
+      playIosNotificationSound();
     }, 3000);
     return () => clearTimeout(timer);
   }, [hasAutoPopped]);
@@ -218,6 +247,7 @@ export function ChatWidget() {
   const handleOpenChat = () => {
     touchActivity();
     setPromptState("dismissed");
+    setIosBanner(null);
     setIsOpen(true);
     initChat();
   };
@@ -271,14 +301,23 @@ export function ChatWidget() {
       });
 
       const data = await res.json();
+      const botText = data.success
+        ? cleanText(data.data.response)
+        : "Your callback request has been logged. Our team will contact you shortly.";
+
       const botMsg: Message = {
         id: "bot-" + Date.now(),
         role: "bot",
-        text: data.success ? cleanText(data.data.response) : "Your callback request has been logged. Our team will contact you shortly.",
+        text: botText,
         timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, botMsg]);
+
+      // If chat is minimized or backgrounded, fire iOS push banner!
+      if (!isOpen) {
+        triggerIosNotification("Callback Logged", botText);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -333,14 +372,21 @@ export function ChatWidget() {
       setLiveTicket(tId);
       setTicketClosed(false);
 
+      const botText = data.success
+        ? cleanText(data.data.response)
+        : "Live support ticket created. An agent will join this session shortly.";
+
       const botMsg: Message = {
         id: "bot-" + Date.now(),
         role: "bot",
-        text: data.success ? cleanText(data.data.response) : "Live support ticket created. An agent will join this session shortly.",
+        text: botText,
         timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, botMsg]);
+
+      // Fire iOS push banner!
+      triggerIosNotification("Support Ticket Created", `${tId} — Agent will join shortly`);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -358,7 +404,7 @@ export function ChatWidget() {
     }
   };
 
-  /* ---- End/Close Live Ticket (User or Admin action) ---- */
+  /* ---- End Live Support Ticket Session ---- */
   const handleEndLiveTicket = () => {
     touchActivity();
     if (!liveTicket) return;
@@ -371,6 +417,8 @@ export function ChatWidget() {
     };
     setMessages((prev) => [...prev, closeMsg]);
     setTicketClosed(true);
+
+    triggerIosNotification("Support Session Ended", `Ticket ${liveTicket} closed at ${closedTime}`);
   };
 
   const resetFormFields = () => {
@@ -410,16 +458,23 @@ export function ChatWidget() {
       });
 
       const data = await res.json();
+      const botText = data.success
+        ? cleanText(data.data.response)
+        : "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.";
+
       const botMsg: Message = {
         id: "bot-" + Date.now(),
         role: "bot",
-        text: data.success
-          ? cleanText(data.data.response)
-          : "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.",
+        text: botText,
         timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, botMsg]);
+
+      // Trigger iOS push notification banner if chat is closed or when support agent replies!
+      if (!isOpen || liveTicket) {
+        triggerIosNotification(liveTicket ? "Support Agent Reply" : "M&F Support", botText);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -453,9 +508,63 @@ export function ChatWidget() {
 
   return (
     <>
+      {/* iOS NOTIFICATION BANNER (Top-Center / Top-Right Push Style) */}
+      <AnimatePresence>
+        {iosBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            onClick={() => {
+              setIosBanner(null);
+              handleOpenChat();
+            }}
+            className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-[360px] z-[100000] cursor-pointer"
+          >
+            <div className="bg-[#111827]/90 backdrop-blur-xl text-white rounded-[22px] p-3.5 shadow-2xl border border-white/15 flex flex-col gap-1.5 select-none hover:bg-[#111827]/95 transition-colors">
+              {/* iOS Banner Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded-md bg-[#1B222C] border border-white/20 flex items-center justify-center p-0.5">
+                    <MfLogo size={14} />
+                  </div>
+                  <span className="text-[10px] font-bold tracking-wider text-slate-300 uppercase">
+                    M&amp;F SUPPORT
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 font-medium">{iosBanner.time}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIosBanner(null);
+                    }}
+                    className="text-slate-400 hover:text-white p-0.5 rounded-full"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* iOS Banner Body */}
+              <div>
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Bell className="h-3 w-3 text-blue-400" />
+                  {iosBanner.title}
+                </h4>
+                <p className="text-xs text-slate-300 font-normal line-clamp-2 leading-tight mt-0.5">
+                  {iosBanner.body}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ---- Pop-up Prompt Bubble ---- */}
       <AnimatePresence>
-        {promptState === "visible" && !isOpen && (
+        {promptState === "visible" && !isOpen && !iosBanner && (
           <motion.div
             initial={{ opacity: 0, y: 15, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -526,7 +635,7 @@ export function ChatWidget() {
         </motion.button>
       </div>
 
-      {/* ---- Compact Expanded Chat Panel (Fits Lower Right Corner) ---- */}
+      {/* ---- Compact Expanded Chat Panel ---- */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
