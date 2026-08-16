@@ -198,13 +198,13 @@ export function ChatWidget() {
     saveSession({ messages, liveTicket, ticketClosed, popCount });
   }, [messages, liveTicket, ticketClosed, popCount]);
 
-  /* ---- Initial Pop-Up after 3s on site load ---- */
+  /* ---- Initial Immediate Pop-Up (600ms) on site load ---- */
   useEffect(() => {
     const timer = setTimeout(() => {
       if (popCount === 0 && !isOpen) {
         triggerPopUpPrompt();
       }
-    }, 3000);
+    }, 600);
     return () => clearTimeout(timer);
   }, [popCount, isOpen, triggerPopUpPrompt]);
 
@@ -213,7 +213,7 @@ export function ChatWidget() {
     if (popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
       const timer = setTimeout(() => {
         triggerPopUpPrompt();
-      }, 4000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [pathname]);
