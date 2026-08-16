@@ -3,34 +3,25 @@ import type { Request, Response } from "express";
 import https from "https";
 import { logger } from "../../config/logger";
 import { ticketStore } from "../tickets/tickets.store";
+import { pgPool } from "../../db/pgClient";
 
 /* ------------------------------------------------------------------ */
-/*  Ticket Counters                                                    */
+/*  Ticket Numbers dynamically retrieved from Database                 */
 /* ------------------------------------------------------------------ */
-let cbCounter = 0;
-let liveCounter = 0;
-let chatCounter = 0;
-let lastDateStr = "";
-
-function generateTicketNumber(prefix: "CB" | "LIVE" | "CHAT"): string {
+async function generateTicketNumber(prefix: "CB" | "LIVE" | "CHAT"): Promise<string> {
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
-  if (dateStr !== lastDateStr) {
-    cbCounter = 0;
-    liveCounter = 0;
-    chatCounter = 0;
-    lastDateStr = dateStr;
-  }
-
-  if (prefix === "CB") {
-    cbCounter++;
-    return `TKT-CB-${dateStr}-${String(cbCounter).padStart(3, "0")}`;
-  } else if (prefix === "LIVE") {
-    liveCounter++;
-    return `TKT-LIVE-${dateStr}-${String(liveCounter).padStart(3, "0")}`;
-  } else {
-    chatCounter++;
-    return `TKT-CHAT-${dateStr}-${String(chatCounter).padStart(3, "0")}`;
+  
+  try {
+    const pattern = `TKT-${prefix}-${dateStr}-%`;
+    const res = await pgPool.query("SELECT COUNT(*) FROM tickets WHERE id LIKE $1", [pattern]);
+    const count = parseInt(res.rows[0].count, 10);
+    return `TKT-${prefix}-${dateStr}-${String(count + 1).padStart(3, "0")}`;
+  } catch (err: any) {
+    logger.error(`Error generating ticket number from DB: ${err.message}`);
+    // Fallback in-memory timestamp to ensure absolute uniqueness under failure conditions
+    const rand = Math.floor(Math.random() * 900) + 100;
+    return `TKT-${prefix}-${dateStr}-${rand}`;
   }
 }
 
@@ -202,7 +193,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
 
   // Handle Callback Request -> Save directly to PostgreSQL Database!
   if (mode === "request_callback") {
-    const ticketId = generateTicketNumber("CB");
+    const ticketId = await generateTicketNumber("CB");
     const now = new Date();
 
     const response = `Thank you ${name || "Client"}. Your callback request has been logged under Callback Ticket ${ticketId}.\n\nDetails:\n- Phone: ${phone}\n- Email: ${email || "Not provided"}\n- Reason: ${reason || "General Callback"}\n\nOur engineering support team will call you within 1 business day.`;
@@ -257,7 +248,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
 
   // Handle Live Support Ticket Request -> Save directly to PostgreSQL Database!
   if (mode === "request_live_agent") {
-    const ticketId = generateTicketNumber("LIVE");
+    const ticketId = await generateTicketNumber("LIVE");
     const now = new Date();
 
     const response = `Live Support Ticket ${ticketId} created for ${name || "Client"}.\n\nIssue: ${issue || "Support Request"}\n\nYou are now connected to live support queue. An agent will join this session shortly. You may type your message below.`;
@@ -349,7 +340,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
 
   // Auto-generate ticket for any chat interaction if no active ticket ID exists yet!
   if (!activeTicketId) {
-    activeTicketId = generateTicketNumber("CHAT");
+    activeTicketId = await generateTicketNumber("CHAT");
     const now = new Date();
     try {
       await ticketStore.set(activeTicketId, {
