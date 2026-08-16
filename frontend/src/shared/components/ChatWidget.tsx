@@ -198,6 +198,8 @@ export function ChatWidget() {
     saveSession({ messages, liveTicket, ticketClosed, popCount });
   }, [messages, liveTicket, ticketClosed, popCount]);
 
+  const isServicesPage = pathname?.startsWith("/services");
+
   /* ---- Initial Immediate Pop-Up (600ms) on site load ---- */
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -208,25 +210,33 @@ export function ChatWidget() {
     return () => clearTimeout(timer);
   }, [popCount, isOpen, triggerPopUpPrompt]);
 
+  /* ---- Services Page Special Behavior: Always present prompt ---- */
+  useEffect(() => {
+    if (isServicesPage && !isOpen && promptState !== "visible") {
+      setPromptState("visible");
+      playIosNotificationSound();
+    }
+  }, [pathname, isServicesPage, isOpen]);
+
   /* ---- Route Navigation Pop-Up Trigger (up to 5 times as user navigates) ---- */
   useEffect(() => {
-    if (popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
+    if (!isServicesPage && popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
       const timer = setTimeout(() => {
         triggerPopUpPrompt();
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [pathname]);
+  }, [pathname, isServicesPage]);
 
-  /* ---- Interval Pop-Up Trigger (every 30s if idle & not open up to 5 times) ---- */
+  /* ---- 30-Second Interval Pop-Up Trigger (every 30s up to 5 times) ---- */
   useEffect(() => {
     const interval = setInterval(() => {
-      if (popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
+      if (!isServicesPage && popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
         triggerPopUpPrompt();
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [popCount, isOpen, promptState, triggerPopUpPrompt]);
+  }, [popCount, isOpen, promptState, triggerPopUpPrompt, isServicesPage]);
 
   /* ---- Inactivity 4-minute check ---- */
   useEffect(() => {
