@@ -58,30 +58,46 @@ function initWidgetAudioContext() {
   }
 }
 
-function playIosNotificationSound() {
+function playIosNotificationSound(onPlay?: () => void) {
   try {
     initWidgetAudioContext();
-    if (!sharedWidgetAudioCtx) return;
+    if (!sharedWidgetAudioCtx) {
+      if (onPlay) onPlay();
+      return;
+    }
 
     const ctx = sharedWidgetAudioCtx;
-    const playTone = (freq: number, start: number, dur: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.18, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + dur);
+    const triggerTones = () => {
+      const playTone = (freq: number, start: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.18, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + dur);
+      };
+      const now = ctx.currentTime;
+      // Classic iOS Note Chime (C6 -> E6 -> G6)
+      playTone(1046.5, now, 0.12);
+      playTone(1318.51, now + 0.08, 0.12);
+      playTone(1567.98, now + 0.16, 0.25);
+      if (onPlay) onPlay();
     };
-    const now = ctx.currentTime;
-    // Classic iOS Note Chime (C6 -> E6 -> G6)
-    playTone(1046.5, now, 0.12);
-    playTone(1318.51, now + 0.08, 0.12);
-    playTone(1567.98, now + 0.16, 0.25);
-  } catch {}
+
+    if (ctx.state === "suspended") {
+      ctx.resume().then(triggerTones).catch(() => {
+        if (onPlay) onPlay();
+      });
+    } else {
+      triggerTones();
+    }
+  } catch {
+    if (onPlay) onPlay();
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -169,26 +185,31 @@ export function ChatWidget() {
 
   /* ---- Show iOS Push Notification Banner ---- */
   const triggerIosNotification = (title: string, body: string) => {
-    setIosBanner({
-      id: "ios-notif-" + Date.now(),
-      title,
-      body,
-      time: "now",
-    });
-    playIosNotificationSound();
+    const showBanner = () => {
+      setIosBanner({
+        id: "ios-notif-" + Date.now(),
+        title,
+        body,
+        time: "now",
+      });
+      setTimeout(() => {
+        setIosBanner((current) => (current?.title === title ? null : current));
+      }, 5000);
+    };
 
-    setTimeout(() => {
-      setIosBanner((current) => (current?.title === title ? null : current));
-    }, 5000);
+    playIosNotificationSound(showBanner);
   };
 
   /* ---- Trigger Pop-Up Prompt with iPhone sound ---- */
   const triggerPopUpPrompt = useCallback(() => {
     if (isOpen || popCount >= MAX_AUTO_POPS) return;
 
-    setPromptState("visible");
-    playIosNotificationSound();
-    setPopCount((prev) => prev + 1);
+    const showPrompt = () => {
+      setPromptState("visible");
+      setPopCount((prev) => prev + 1);
+    };
+
+    playIosNotificationSound(showPrompt);
   }, [isOpen, popCount]);
 
   /* ---- Restore Session ---- */
