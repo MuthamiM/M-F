@@ -120,7 +120,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996168943533702"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1759034301918367"
           crossOrigin="anonymous"
         ></script>
         <link rel="icon" href="/favicon-v2.ico" sizes="any" />

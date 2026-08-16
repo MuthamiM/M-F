@@ -12,6 +12,7 @@ import { contactRouter } from "./features/contact/contact.routes";
 import { docsRouter } from "./features/docs/docs.routes";
 import { ticketsRouter } from "./features/tickets/tickets.routes";
 import { trackingRouter } from "./features/tracking/tracking.routes";
+import { chatbotRouter } from "./features/chatbot/chatbot.routes";
 
 export function createApp() {
   const app = express();
@@ -67,6 +68,7 @@ export function createApp() {
   app.use("/api/docs", docsRouter);
   app.use("/api/tickets", ticketsRouter);
   app.use("/api/track", trackingRouter);
+  app.use("/api/chatbot", chatbotRouter);
 
   // ── Error handler (must be last) ──────────────────────────────────────
   app.use(errorHandler);

@@ -50,11 +50,14 @@ start_frontend() {
 
 # --- Start Tailscale Funnel ---
 start_funnel() {
-    echo "🌐 Starting Tailscale Funnel (exposing port 3000 to the internet)..."
-    # Reset any existing funnel config
-    sudo tailscale funnel reset 2>/dev/null || true
-    # Start funnel in background mode - this creates a public HTTPS URL
-    sudo tailscale funnel --bg 3000
+    echo "🌐 Starting Tailscale Funnel (exposing Frontend port 3000 and Backend port 4000)..."
+    tailscale serve reset 2>/dev/null || true
+    tailscale serve --bg --set-path=/ http://127.0.0.1:3000
+    tailscale serve --bg --set-path=/api http://127.0.0.1:4000/api
+    tailscale funnel --bg 443 2>/dev/null || true
+    tailscale serve --bg --https=8443 --set-path=/ http://127.0.0.1:3000 2>/dev/null || true
+    tailscale serve --bg --https=8443 --set-path=/api http://127.0.0.1:4000/api 2>/dev/null || true
+    tailscale funnel --bg 8443 2>/dev/null || true
     echo "   ✅ Tailscale Funnel active!"
 }
 
@@ -101,11 +104,15 @@ echo "======================================="
 echo "🎉 ALL SERVICES RUNNING!"
 echo "======================================="
 echo ""
-echo "📱 PUBLIC URL (share this!): https://technoblade.tail953a25.ts.net"
+echo "📱 PUBLIC TAILSCALE URLS:"
+echo "   Main Platform:  https://technoblade.tail953a25.ts.net"
+echo "   Admin Login:    https://technoblade.tail953a25.ts.net/admin/login"
+echo "   Alt Port (8443):https://technoblade.tail953a25.ts.net:8443/admin/login"
 echo ""
-echo "🔗 Local URLs:"
-echo "   Frontend:  http://localhost:3000"
-echo "   Backend:   http://localhost:4000"
+echo "🔗 LOCAL URLS:"
+echo "   Frontend:       http://localhost:3000"
+echo "   Admin Login:    http://localhost:3000/admin/login"
+echo "   Backend API:    http://localhost:4000/api"
 echo ""
 echo "📄 Logs:"
 echo "   Backend:   tail -f $LOG_DIR/backend.log"
