@@ -8,7 +8,6 @@ import {
   Clock, 
   TrendingUp, 
   User, 
-  Building,
   Mail,
   ArrowUpRight,
   Play,
@@ -41,18 +40,24 @@ export default function CallCenterPage() {
   const fetchCallbacks = async () => {
     try {
       const token = sessionStorage.getItem("adminToken");
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await fetch("/api/tickets?type=chatbot&status=open", { headers });
+      const response = await fetch("/api/tickets?type=chatbot", { headers });
       const resData = await response.json();
 
-      if (response.ok && resData.success) {
+      if (response.ok && resData.success && Array.isArray(resData.data)) {
+        setErrorMsg("");
         setCallbacks(resData.data);
         if (resData.data.length > 0 && !selectedCall) {
           setSelectedCall(resData.data[0]); // Default to first caller
         }
       } else {
-        setErrorMsg("Failed to retrieve callbacks queue.");
+        // Handle unauthenticated or server error
+        if (response.status === 401 || response.status === 403) {
+          setErrorMsg("Admin session expired. Please log in again.");
+        } else {
+          setErrorMsg("Could not fetch callbacks queue.");
+        }
       }
     } catch {
       setErrorMsg("Failed to contact the backend service.");
@@ -63,7 +68,7 @@ export default function CallCenterPage() {
 
   useEffect(() => {
     fetchCallbacks();
-    const interval = setInterval(fetchCallbacks, 8000); // Poll every 8 seconds
+    const interval = setInterval(fetchCallbacks, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -77,7 +82,7 @@ export default function CallCenterPage() {
             <div className="p-2 rounded-lg bg-red-50"><Phone className="h-4 w-4 text-red-600 animate-bounce" /></div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-red-600">{callbacks.length}</div>
+            <div className="text-2xl font-bold text-red-600">{callbacks.filter(c => c.status === "open").length}</div>
             <span className="text-[10px] text-slate-400 font-medium">Awaiting voice response</span>
           </div>
         </div>
@@ -89,7 +94,7 @@ export default function CallCenterPage() {
           </div>
           <div>
             <div className="text-2xl font-bold">12</div>
-            <span className="text-[10px] text-slate-400 font-medium">Managers active now</span>
+            <span className="text-[10px] text-slate-400 font-medium font-semibold">Managers active now</span>
           </div>
         </div>
 
@@ -100,7 +105,7 @@ export default function CallCenterPage() {
           </div>
           <div>
             <div className="text-2xl font-bold">1.8 Min</div>
-            <span className="text-[10px] text-slate-400 font-medium">Standard SLA response</span>
+            <span className="text-[10px] text-slate-400 font-medium font-semibold">Standard SLA response</span>
           </div>
         </div>
 
@@ -111,7 +116,7 @@ export default function CallCenterPage() {
           </div>
           <div>
             <div className="text-2xl font-bold">+40%</div>
-            <span className="text-[10px] text-slate-400 font-medium">Inbound growth this week</span>
+            <span className="text-[10px] text-slate-400 font-medium font-semibold">Inbound growth this week</span>
           </div>
         </div>
       </div>
@@ -124,7 +129,7 @@ export default function CallCenterPage() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Live Callback Queue</h3>
             <button 
               onClick={() => { setLoading(true); fetchCallbacks(); }}
-              className="text-xs font-bold text-[#1B222C] hover:underline"
+              className="text-xs font-bold text-[#1B222C] hover:underline cursor-pointer"
             >
               Force Sync
             </button>
@@ -132,7 +137,7 @@ export default function CallCenterPage() {
 
           {errorMsg && (
             <div className="mx-6 mt-4 bg-red-50 text-red-700 text-xs px-4 py-3 rounded-xl flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -241,14 +246,13 @@ export default function CallCenterPage() {
                 </p>
               </div>
 
-              {/* Interactive Call Recording & Waves UI */}
+              {/* Pre-call Simulator */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pre-call Simulator</span>
                   <span className="text-[9px] text-slate-400 font-medium">Channel Ready</span>
                 </div>
                 
-                {/* Wave animation simulator */}
                 <div className="h-10 flex items-center justify-center gap-1 bg-white rounded-lg border border-slate-100 overflow-hidden px-4">
                   {[...Array(20)].map((_, i) => (
                     <span 
@@ -279,7 +283,7 @@ export default function CallCenterPage() {
               {/* Manage Alone Link */}
               <Link
                 href={`/admin/tickets/${selectedCall.id}`}
-                className="w-full py-2.5 border border-[#E4E7EB] hover:border-[#1B222C] text-[#3E4C59] hover:text-[#1B222C] font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-[#1B222C] hover:bg-[#3E4C59] !text-white"
+                className="w-full py-2.5 border border-[#E4E7EB] hover:border-[#1B222C] text-white bg-[#1B222C] hover:bg-[#3E4C59] font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <span>Open Live Chat &amp; Call Console</span>
                 <ArrowUpRight className="h-4 w-4" />
