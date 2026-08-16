@@ -9,23 +9,28 @@ import { ticketStore } from "../tickets/tickets.store";
 /* ------------------------------------------------------------------ */
 let cbCounter = 0;
 let liveCounter = 0;
+let chatCounter = 0;
 let lastDateStr = "";
 
-function generateTicketNumber(prefix: "CB" | "LIVE"): string {
+function generateTicketNumber(prefix: "CB" | "LIVE" | "CHAT"): string {
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
   if (dateStr !== lastDateStr) {
     cbCounter = 0;
     liveCounter = 0;
+    chatCounter = 0;
     lastDateStr = dateStr;
   }
 
   if (prefix === "CB") {
     cbCounter++;
     return `TKT-CB-${dateStr}-${String(cbCounter).padStart(3, "0")}`;
-  } else {
+  } else if (prefix === "LIVE") {
     liveCounter++;
     return `TKT-LIVE-${dateStr}-${String(liveCounter).padStart(3, "0")}`;
+  } else {
+    chatCounter++;
+    return `TKT-CHAT-${dateStr}-${String(chatCounter).padStart(3, "0")}`;
   }
 }
 
@@ -340,16 +345,56 @@ export async function sendMessageHandler(req: Request, res: Response) {
   }
 
   const cleanedResponse = cleanText(responseText);
+  let activeTicketId = ticket;
 
-  // If active ticket ID is provided, append message to PostgreSQL database!
-  if (ticket) {
+  // Auto-generate ticket for any chat interaction if no active ticket ID exists yet!
+  if (!activeTicketId) {
+    activeTicketId = generateTicketNumber("CHAT");
+    const now = new Date();
     try {
-      const existingTicket = await ticketStore.get(ticket);
+      await ticketStore.set(activeTicketId, {
+        id: activeTicketId,
+        type: "chatbot",
+        name: "Website Visitor",
+        email: "chatbot@mftechnologies.org",
+        company: "ChatBot — Live Inquiry",
+        message: cleanText(message),
+        status: "open",
+        priority: "medium",
+        createdAt: now,
+        updatedAt: now,
+        notes: [],
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            sender: "client",
+            senderName: "Website Visitor",
+            text: cleanText(message),
+            timestamp: now,
+          },
+          {
+            id: `msg-${Date.now() + 1}`,
+            sender: "agent",
+            senderName: usedProvider === "Groq" || usedProvider === "Gemini" ? "AI Assistant" : "Support Agent",
+            text: cleanedResponse,
+            timestamp: new Date(now.getTime() + 200),
+          },
+        ],
+        callLogs: [],
+      });
+      logger.info(`Auto-created ticket ${activeTicketId} in DB for initial chat message.`);
+    } catch (err: any) {
+      logger.error(`Failed to auto-create ticket in DB: ${err.message}`);
+    }
+  } else {
+    // Append message to existing ticket in PostgreSQL
+    try {
+      const existingTicket = await ticketStore.get(activeTicketId);
       if (existingTicket) {
         existingTicket.messages.push({
           id: `msg-${Date.now()}`,
           sender: "client",
-          senderName: existingTicket.name,
+          senderName: existingTicket.name || "Website Visitor",
           text: cleanText(message),
           timestamp: new Date(),
         });
@@ -361,17 +406,18 @@ export async function sendMessageHandler(req: Request, res: Response) {
           timestamp: new Date(),
         });
         existingTicket.updatedAt = new Date();
-        await ticketStore.set(ticket, existingTicket);
-        logger.info(`Appended chat message turn to DB ticket ${ticket}.`);
+        await ticketStore.set(activeTicketId, existingTicket);
+        logger.info(`Appended chat message turn to DB ticket ${activeTicketId}.`);
       }
     } catch (err: any) {
-      logger.error(`Failed to update ticket ${ticket} in DB: ${err.message}`);
+      logger.error(`Failed to update ticket ${activeTicketId} in DB: ${err.message}`);
     }
   }
 
   res.json({
     success: true,
     data: {
+      ticket: activeTicketId,
       response: cleanedResponse,
       provider: usedProvider,
     },

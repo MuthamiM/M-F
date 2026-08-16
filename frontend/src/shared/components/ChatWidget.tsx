@@ -483,6 +483,10 @@ export function ChatWidget() {
       });
 
       const data = await res.json();
+      if (data.success && data.data?.ticket && !liveTicket) {
+        setLiveTicket(data.data.ticket);
+      }
+
       const botText = data.success
         ? cleanText(data.data.response)
         : "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.";
