@@ -43,14 +43,27 @@ function MfLogo({ size = 22 }: { size?: number }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  iOS Chime Sound via Web Audio API                                  */
-/* ------------------------------------------------------------------ */
+let sharedWidgetAudioCtx: AudioContext | null = null;
+
+function initWidgetAudioContext() {
+  if (typeof window === "undefined") return;
+  if (!sharedWidgetAudioCtx) {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (Ctx) {
+      sharedWidgetAudioCtx = new Ctx();
+    }
+  }
+  if (sharedWidgetAudioCtx && sharedWidgetAudioCtx.state === "suspended") {
+    sharedWidgetAudioCtx.resume().catch(() => {});
+  }
+}
+
 function playIosNotificationSound() {
   try {
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
+    initWidgetAudioContext();
+    if (!sharedWidgetAudioCtx) return;
+
+    const ctx = sharedWidgetAudioCtx;
     const playTone = (freq: number, start: number, dur: number) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -200,43 +213,149 @@ export function ChatWidget() {
 
   const isServicesPage = pathname?.startsWith("/services");
 
+  // Unlock Chat AudioContext on user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      initWidgetAudioContext();
+    };
+    window.addEventListener("click", handleInteraction);
+    window.addEventListener("keydown", handleInteraction);
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+    };
+  }, []);
+
   /* ---- Initial Immediate Pop-Up (600ms) on site load ---- */
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (popCount === 0 && !isOpen) {
+      if (popCount === 0 && !isOpen && !liveTicket) {
         triggerPopUpPrompt();
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [popCount, isOpen, triggerPopUpPrompt]);
+  }, [popCount, isOpen, triggerPopUpPrompt, liveTicket]);
 
   /* ---- Services Page Special Behavior: Always present prompt ---- */
   useEffect(() => {
-    if (isServicesPage && !isOpen && promptState !== "visible") {
+    if (isServicesPage && !isOpen && !liveTicket && promptState !== "visible") {
       setPromptState("visible");
       playIosNotificationSound();
     }
-  }, [pathname, isServicesPage, isOpen]);
+  }, [pathname, isServicesPage, isOpen, liveTicket]);
 
   /* ---- Route Navigation Pop-Up Trigger (up to 5 times as user navigates) ---- */
   useEffect(() => {
-    if (!isServicesPage && popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
+    if (!isServicesPage && !liveTicket && popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
       const timer = setTimeout(() => {
         triggerPopUpPrompt();
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [pathname, isServicesPage]);
+  }, [pathname, isServicesPage, liveTicket]);
 
   /* ---- 30-Second Interval Pop-Up Trigger (every 30s up to 5 times) ---- */
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isServicesPage && popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
+      if (!isServicesPage && !liveTicket && popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
         triggerPopUpPrompt();
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [popCount, isOpen, promptState, triggerPopUpPrompt, isServicesPage]);
+  }, [popCount, isOpen, promptState, triggerPopUpPrompt, isServicesPage, liveTicket]);
+
+  /* ---- Active Support Ticket Polling (every 4s) ---- */
+  useEffect(() => {
+    if (!liveTicket || ticketClosed) return;
+
+    let pollInterval: NodeJS.Timeout;
+    let isFetching = false;
+
+    const pollMessages = async () => {
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
+        const res = await fetch(`${apiHost}/api/tickets/${liveTicket}/messages`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            // Update ticket status dynamically (e.g. if admin closed it on their end)
+            if (data.status === "closed" && !ticketClosed) {
+              setTicketClosed(true);
+              const closedTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: "sys-" + Date.now(),
+                  role: "system",
+                  text: `Support Session for ${liveTicket} was ended at ${closedTime}.`,
+                  timestamp: new Date().toISOString(),
+                },
+              ]);
+              triggerIosNotification("Support Session Ended", `Ticket ${liveTicket} closed`);
+              return;
+            }
+
+            // Map API messages to client messages
+            const mapped: Message[] = data.data.map((m: any) => ({
+              id: m.id || `msg-${new Date(m.timestamp).getTime()}`,
+              role: m.sender === "client" ? "user" : "bot",
+              text: m.text,
+              timestamp: m.timestamp,
+            }));
+
+            // Check if there are new messages
+            setMessages((prev) => {
+              const prevFiltered = prev.filter((m) => m.role !== "system");
+              const hasNew = mapped.length > prevFiltered.length;
+
+              if (hasNew) {
+                // Find the newest message
+                const newMsgs = mapped.filter(
+                  (m) => !prev.some((p) => p.text === m.text && Math.abs(new Date(p.timestamp).getTime() - new Date(m.timestamp).getTime()) < 5000)
+                );
+
+                if (newMsgs.length > 0) {
+                  // If any new message is from the agent, play sound!
+                  const hasAgentMsg = newMsgs.some((m) => m.role === "bot");
+                  if (hasAgentMsg) {
+                    playIosNotificationSound();
+                    // If chat panel is closed or minimized, trigger the iOS banner alert!
+                    if (!isOpen) {
+                      const latestAgentMsg = newMsgs.filter((m) => m.role === "bot").pop();
+                      if (latestAgentMsg) {
+                        triggerIosNotification("Support Agent Reply", latestAgentMsg.text);
+                      }
+                    }
+                  }
+
+                  // Reconstruct the message list combining system and mapped messages
+                  const systemMsgs = prev.filter((m) => m.role === "system");
+                  const combined = [...mapped];
+                  for (const sys of systemMsgs) {
+                    combined.push(sys);
+                  }
+                  combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                  return combined;
+                }
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to poll live agent messages:", err);
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    pollMessages();
+    pollInterval = setInterval(pollMessages, 4000);
+
+    return () => clearInterval(pollInterval);
+  }, [liveTicket, ticketClosed, isOpen]);
 
   /* ---- Inactivity 4-minute check ---- */
   useEffect(() => {
