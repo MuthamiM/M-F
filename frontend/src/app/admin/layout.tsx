@@ -14,11 +14,27 @@ interface AdminNotification {
   time: string;
 }
 
+let sharedAudioCtx: AudioContext | null = null;
+
+function initAudioContext() {
+  if (typeof window === "undefined") return;
+  if (!sharedAudioCtx) {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (Ctx) {
+      sharedAudioCtx = new Ctx();
+    }
+  }
+  if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+}
+
 function playAdminNotificationSound() {
   try {
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
+    initAudioContext();
+    if (!sharedAudioCtx) return;
+
+    const ctx = sharedAudioCtx;
     const playTone = (freq: number, start: number, dur: number) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -65,6 +81,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     setLoading(false);
   }, [pathname, router]);
+
+  // Unlock AudioContext on first click or keypress
+  useEffect(() => {
+    const handleInteraction = () => {
+      initAudioContext();
+    };
+    window.addEventListener("click", handleInteraction);
+    window.addEventListener("keydown", handleInteraction);
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+    };
+  }, []);
 
   // Background polling for new tickets / client messages to trigger sound + iOS banner
   useEffect(() => {
