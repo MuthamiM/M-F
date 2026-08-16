@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MessageSquare, X, Send, User, PhoneCall, HelpCircle, UserCheck, ArrowLeft } from "lucide-react";
+import { MessageSquare, X, Send, User, PhoneCall, HelpCircle, UserCheck, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ------------------------------------------------------------------ */
@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 /* ------------------------------------------------------------------ */
 interface Message {
   id: string;
-  role: "bot" | "user";
+  role: "bot" | "user" | "system";
   text: string;
   timestamp: string;
 }
@@ -18,12 +18,13 @@ interface Message {
 interface ChatSession {
   messages: Message[];
   liveTicket?: string | null;
+  ticketClosed?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
-/*  M&F Institutional Logo                                              */
+/*  M&F Logo                                                           */
 /* ------------------------------------------------------------------ */
-function MfLogo({ size = 24 }: { size?: number }) {
+function MfLogo({ size = 22 }: { size?: number }) {
   const inner = Math.round(size * 0.5);
   return (
     <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
@@ -34,7 +35,7 @@ function MfLogo({ size = 24 }: { size?: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Notification sound via Web Audio API                               */
+/*  Notification Sound                                                 */
 /* ------------------------------------------------------------------ */
 function playNotificationSound() {
   try {
@@ -60,7 +61,7 @@ function playNotificationSound() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Clean Text helper                                                   */
+/*  Clean Text Helper                                                  */
 /* ------------------------------------------------------------------ */
 function cleanText(text: string): string {
   return text
@@ -77,7 +78,8 @@ function cleanText(text: string): string {
 /* ------------------------------------------------------------------ */
 /*  Session Storage                                                    */
 /* ------------------------------------------------------------------ */
-const STORAGE_KEY = "mf_chat_session_v3";
+const STORAGE_KEY = "mf_chat_session_v4";
+const INACTIVITY_LIMIT_MS = 4 * 60 * 1000; // 4 minutes
 
 function loadSession(): ChatSession | null {
   try {
@@ -94,6 +96,12 @@ function saveSession(session: ChatSession) {
   } catch {}
 }
 
+function clearSessionData() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
+
 /* ------------------------------------------------------------------ */
 /*  ChatWidget Component                                               */
 /* ------------------------------------------------------------------ */
@@ -101,15 +109,16 @@ export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [liveTicket, setLiveTicket] = useState<string | null>(null);
+  const [ticketClosed, setTicketClosed] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [hasAutoPopped, setHasAutoPopped] = useState(false);
   const [promptState, setPromptState] = useState<"waiting" | "visible" | "dismissed">("waiting");
-  
+
   // Active Form Mode: null | "callback" | "live_agent"
   const [activeForm, setActiveForm] = useState<null | "callback" | "live_agent">(null);
 
-  // Form Fields
+  // Form fields
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -118,11 +127,34 @@ export function ChatWidget() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Do not render inside admin pages
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
     return null;
   }
+
+  // Update activity timestamp on user interactions
+  const touchActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
+  /* ---- Clear session on 4-minute inactivity ---- */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Date.now() - lastActivityRef.current >= INACTIVITY_LIMIT_MS) {
+        clearSessionData();
+        setMessages([]);
+        setLiveTicket(null);
+        setTicketClosed(false);
+        setActiveForm(null);
+        setIsOpen(false);
+        setPromptState("dismissed");
+      }
+    }, 10000); // Check every 10s
+
+    return () => clearInterval(interval);
+  }, []);
 
   /* ---- Restore Session ---- */
   useEffect(() => {
@@ -130,6 +162,7 @@ export function ChatWidget() {
     if (saved && saved.messages.length > 0) {
       setMessages(saved.messages);
       setLiveTicket(saved.liveTicket || null);
+      setTicketClosed(saved.ticketClosed || false);
       setPromptState("dismissed");
     }
   }, []);
@@ -137,9 +170,9 @@ export function ChatWidget() {
   /* ---- Save Session ---- */
   useEffect(() => {
     if (messages.length > 0) {
-      saveSession({ messages, liveTicket });
+      saveSession({ messages, liveTicket, ticketClosed });
     }
-  }, [messages, liveTicket]);
+  }, [messages, liveTicket, ticketClosed]);
 
   /* ---- Auto-scroll ---- */
   useEffect(() => {
@@ -183,27 +216,32 @@ export function ChatWidget() {
   }, [messages]);
 
   const handleOpenChat = () => {
+    touchActivity();
     setPromptState("dismissed");
     setIsOpen(true);
     initChat();
   };
 
   const handleMinimize = () => {
+    touchActivity();
     setIsOpen(false);
   };
 
   const handleDismissPrompt = () => {
+    touchActivity();
     setPromptState("dismissed");
   };
 
   /* ---- Quick Menu Actions ---- */
   const handleWhatWeDo = () => {
+    touchActivity();
     sendUserQuery("What core solutions and services does M&F Technologies provide?");
   };
 
   /* ---- Submit Callback Form ---- */
   const handleCallbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    touchActivity();
     if (!formName.trim() || !formPhone.trim() || formSubmitting) return;
 
     setFormSubmitting(true);
@@ -261,6 +299,7 @@ export function ChatWidget() {
   /* ---- Submit Live Agent Form ---- */
   const handleLiveAgentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    touchActivity();
     if (!formName.trim() || !formEmail.trim() || formSubmitting) return;
 
     setFormSubmitting(true);
@@ -289,10 +328,10 @@ export function ChatWidget() {
       });
 
       const data = await res.json();
+      const tId = data.success && data.data.ticket ? data.data.ticket : "MFT-LIVE-SESSION";
 
-      if (data.success && data.data.ticket) {
-        setLiveTicket(data.data.ticket);
-      }
+      setLiveTicket(tId);
+      setTicketClosed(false);
 
       const botMsg: Message = {
         id: "bot-" + Date.now(),
@@ -319,6 +358,21 @@ export function ChatWidget() {
     }
   };
 
+  /* ---- End/Close Live Ticket (User or Admin action) ---- */
+  const handleEndLiveTicket = () => {
+    touchActivity();
+    if (!liveTicket) return;
+    const closedTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const closeMsg: Message = {
+      id: "sys-" + Date.now(),
+      role: "system",
+      text: `Support Session for ${liveTicket} was ended at ${closedTime}.`,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, closeMsg]);
+    setTicketClosed(true);
+  };
+
   const resetFormFields = () => {
     setFormName("");
     setFormPhone("");
@@ -326,9 +380,10 @@ export function ChatWidget() {
     setFormReason("");
   };
 
-  /* ---- Send regular message ---- */
+  /* ---- Send Message ---- */
   const sendUserQuery = async (queryText: string) => {
-    if (!queryText.trim() || isTyping) return;
+    touchActivity();
+    if (!queryText.trim() || isTyping || ticketClosed) return;
 
     const userMsg: Message = {
       id: "user-" + Date.now(),
@@ -402,17 +457,17 @@ export function ChatWidget() {
       <AnimatePresence>
         {promptState === "visible" && !isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 15, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed right-6 z-[99999] w-[280px]"
-            style={{ bottom: "calc(5.5rem + var(--cookie-banner-h, 0px))" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed right-4 sm:right-6 z-[99999] w-[260px] sm:w-[280px]"
+            style={{ bottom: "calc(5.2rem + var(--cookie-banner-h, 0px))" }}
           >
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-              <div className="bg-[#1B222C] px-4 py-3 flex items-center justify-between">
+              <div className="bg-[#1B222C] px-3.5 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <MfLogo size={20} />
+                  <MfLogo size={18} />
                   <span className="text-xs font-semibold text-white">M&amp;F Support</span>
                 </div>
                 <button
@@ -420,24 +475,24 @@ export function ChatWidget() {
                   className="text-[#9AA5B1] hover:text-white transition-colors p-0.5"
                   aria-label="Dismiss"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              <div className="p-4">
+              <div className="p-3.5">
                 <p className="text-xs text-[#1B222C] font-medium leading-relaxed mb-3">
                   Do you want help getting started?
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleOpenChat}
-                    className="flex-1 py-2 px-3 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors cursor-pointer"
+                    className="flex-1 py-1.5 px-3 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors cursor-pointer"
                   >
                     Contact Us
                   </button>
                   <button
                     onClick={handleDismissPrompt}
-                    className="flex-1 py-2 px-3 text-xs font-semibold text-[#616E7C] bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                    className="flex-1 py-1.5 px-3 text-xs font-semibold text-[#616E7C] bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                   >
                     No, thanks
                   </button>
@@ -445,15 +500,15 @@ export function ChatWidget() {
               </div>
             </div>
 
-            <div className="flex justify-end pr-6">
-              <div className="w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45 -mt-1.5" />
+            <div className="flex justify-end pr-5">
+              <div className="w-2.5 h-2.5 bg-white border-r border-b border-slate-200 rotate-45 -mt-1.5" />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ---- Floating Round Toggle Button (FAB) ---- */}
-      <div className="fixed right-6 z-[99999]" style={{ bottom: "calc(1.5rem + var(--cookie-banner-h, 0px))" }}>
+      {/* ---- Compact Floating Round Toggle Button (FAB) ---- */}
+      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: "calc(1.25rem + var(--cookie-banner-h, 0px))" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -464,122 +519,151 @@ export function ChatWidget() {
               handleOpenChat();
             }
           }}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#1B222C] text-white shadow-xl hover:bg-[#3E4C59] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1B222C]"
+          className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-full bg-[#1B222C] text-white shadow-xl hover:bg-[#3E4C59] transition-colors focus:outline-none"
           aria-label="Toggle chat window"
         >
-          {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+          {isOpen ? <X className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
         </motion.button>
       </div>
 
-      {/* ---- Expanded Chat Panel ---- */}
+      {/* ---- Compact Expanded Chat Panel (Fits Lower Right Corner) ---- */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed right-6 w-[360px] sm:w-[400px] h-[560px] bg-white border border-[#9AA5B1]/20 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
-            style={{ bottom: "calc(6rem + var(--cookie-banner-h, 0px))" }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed right-4 sm:right-6 w-[320px] sm:w-[350px] h-[450px] sm:h-[480px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
+            style={{ bottom: "calc(4.8rem + var(--cookie-banner-h, 0px))" }}
           >
             {/* Header */}
-            <div className="bg-[#1B222C] text-white p-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <MfLogo size={30} />
+            <div className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <MfLogo size={26} />
                 <div>
-                  <h3 className="text-sm font-bold tracking-tight">M&amp;F Support</h3>
-                  <span className="text-[10px] text-[#9AA5B1]">Online</span>
+                  <h3 className="text-xs font-bold tracking-tight">M&amp;F Support</h3>
+                  <span className="text-[9px] text-[#9AA5B1] block -mt-0.5">Online</span>
                 </div>
               </div>
               <button
                 onClick={handleMinimize}
-                className="text-[#9AA5B1] hover:text-white transition-colors rounded-lg p-1.5"
+                className="text-[#9AA5B1] hover:text-white transition-colors rounded-lg p-1"
                 aria-label="Minimize chat"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Pinned Live Ticket Banner (Only shown when Live Support Ticket exists) */}
+            {/* Pinned Live Ticket Banner */}
             {liveTicket && (
-              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  Live Agent Session
-                </span>
-                <span className="text-[11px] font-bold text-[#1B222C] font-mono">
-                  {liveTicket}
-                </span>
+              <div className="bg-slate-100 border-b border-slate-200 px-3 py-1.5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                    {ticketClosed ? "Ticket Closed" : "Live Session"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-[#1B222C] font-mono">
+                    {liveTicket}
+                  </span>
+                  {!ticketClosed && (
+                    <button
+                      onClick={handleEndLiveTicket}
+                      title="End Session"
+                      className="text-[9px] font-semibold text-red-600 hover:underline"
+                    >
+                      End
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Messages body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-              {messages.map((msg) => (
-                <div key={msg.id} className="space-y-1">
-                  <div className={`flex items-start gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-                    {msg.role === "bot" ? (
-                      <div className="shrink-0 mt-0.5">
-                        <MfLogo size={22} />
-                      </div>
-                    ) : (
-                      <div className="h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-                        <User className="h-3 w-3" />
-                      </div>
-                    )}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50">
+              {messages.map((msg) => {
+                if (msg.role === "system") {
+                  return (
+                    <div key={msg.id} className="my-2 py-1.5 px-3 bg-slate-200/70 rounded-xl text-center">
+                      <p className="text-[10px] font-semibold text-slate-600 flex items-center justify-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-slate-500" />
+                        {msg.text}
+                      </p>
+                    </div>
+                  );
+                }
 
-                    <div
-                      className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed whitespace-pre-line shadow-sm border ${
-                        msg.role === "bot"
-                          ? "bg-white text-[#1B222C] border-slate-200 rounded-tl-none"
-                          : "bg-[#1B222C] text-white border-transparent rounded-tr-none"
+                return (
+                  <div key={msg.id} className="space-y-0.5">
+                    <div className={`flex items-start gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                      {msg.role === "bot" ? (
+                        <div className="shrink-0 mt-0.5">
+                          <MfLogo size={20} />
+                        </div>
+                      ) : (
+                        <div className="h-5 w-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <User className="h-3 w-3" />
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed whitespace-pre-line shadow-sm border ${
+                          msg.role === "bot"
+                            ? "bg-white text-[#1B222C] border-slate-200 rounded-tl-none"
+                            : "bg-[#1B222C] text-white border-transparent rounded-tr-none"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[8px] font-medium text-slate-400 block ${
+                        msg.role === "user" ? "text-right mr-7" : "text-left ml-7"
                       }`}
                     >
-                      {msg.text}
-                    </div>
+                      {msg.role === "bot" ? "M&F Support" : "You"} &bull; {fmtTime(msg.timestamp)}
+                    </span>
                   </div>
-                  <span
-                    className={`text-[8px] font-medium text-slate-400 block ${
-                      msg.role === "user" ? "text-right mr-7" : "text-left ml-7"
-                    }`}
-                  >
-                    {msg.role === "bot" ? "M&F Support" : "You"} &bull; {fmtTime(msg.timestamp)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
 
-              {/* Main Menu Quick Option Buttons */}
-              {!activeForm && messages.length > 0 && (
-                <div className="space-y-2 pt-2 pl-7">
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              {/* Support Options Menu — ONLY SHOWN IF NO LIVE TICKET & NO ACTIVE FORM */}
+              {!liveTicket && !activeForm && !ticketClosed && messages.length > 0 && (
+                <div className="space-y-1.5 pt-1 pl-6">
+                  <div className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     Support Options
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <button
                       onClick={handleWhatWeDo}
                       disabled={isTyping}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                       <HelpCircle className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                       <span>What We Do</span>
                     </button>
                     <button
                       onClick={() => {
+                        touchActivity();
                         resetFormFields();
                         setActiveForm("live_agent");
                       }}
                       disabled={isTyping}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                       <UserCheck className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                       <span>Talk to Live Support Agent</span>
                     </button>
                     <button
                       onClick={() => {
+                        touchActivity();
                         resetFormFields();
                         setActiveForm("callback");
                       }}
                       disabled={isTyping}
-                      className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#1B222C] bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors text-left shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                       <PhoneCall className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                       <span>Request Callback</span>
@@ -590,69 +674,69 @@ export function ChatWidget() {
 
               {/* Form 1: Request Callback Form */}
               {activeForm === "callback" && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md space-y-3 mt-2 ml-7">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-md space-y-2 mt-1 ml-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
                     <span className="text-xs font-bold text-[#1B222C]">Request Callback</span>
-                    <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-1">
+                    <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-0.5">
                       <ArrowLeft className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <form onSubmit={handleCallbackSubmit} className="space-y-2">
+                  <form onSubmit={handleCallbackSubmit} className="space-y-1.5">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Full Name *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormName(e.target.value); }}
                         placeholder="John Doe"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Phone Number *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Phone Number *</label>
                       <input
                         type="tel"
                         required
                         value={formPhone}
-                        onChange={(e) => setFormPhone(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormPhone(e.target.value); }}
                         placeholder="+254 700 000 000"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Email Address</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Email Address</label>
                       <input
                         type="email"
                         value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormEmail(e.target.value); }}
                         placeholder="john@institution.com"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Reason for Callback *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Reason for Callback *</label>
                       <input
                         type="text"
                         required
                         value={formReason}
-                        onChange={(e) => setFormReason(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormReason(e.target.value); }}
                         placeholder="e.g. Core Lending Integration"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button
                         type="submit"
                         disabled={formSubmitting || !formName.trim() || !formPhone.trim() || !formReason.trim()}
-                        className="flex-1 py-2 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                        className="flex-1 py-1.5 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        {formSubmitting ? "Submitting..." : "Submit Callback Request"}
+                        {formSubmitting ? "Submitting..." : "Submit Callback"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveForm(null)}
-                        className="py-2 px-3 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                        className="py-1.5 px-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -663,59 +747,59 @@ export function ChatWidget() {
 
               {/* Form 2: Talk to Live Agent Form */}
               {activeForm === "live_agent" && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-md space-y-3 mt-2 ml-7">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-bold text-[#1B222C]">Connect to Live Support</span>
-                    <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-1">
+                <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-md space-y-2 mt-1 ml-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="text-xs font-bold text-[#1B222C]">Connect Live Support</span>
+                    <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-0.5">
                       <ArrowLeft className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <form onSubmit={handleLiveAgentSubmit} className="space-y-2">
+                  <form onSubmit={handleLiveAgentSubmit} className="space-y-1.5">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Full Name *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormName(e.target.value); }}
                         placeholder="John Doe"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Email Address *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Email Address *</label>
                       <input
                         type="email"
                         required
                         value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormEmail(e.target.value); }}
                         placeholder="john@institution.com"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Issue Description *</label>
+                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Issue Description *</label>
                       <input
                         type="text"
                         required
                         value={formReason}
-                        onChange={(e) => setFormReason(e.target.value)}
+                        onChange={(e) => { touchActivity(); setFormReason(e.target.value); }}
                         placeholder="e.g. API authentication issue"
-                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
                       />
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button
                         type="submit"
                         disabled={formSubmitting || !formName.trim() || !formEmail.trim() || !formReason.trim()}
-                        className="flex-1 py-2 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                        className="flex-1 py-1.5 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        {formSubmitting ? "Connecting..." : "Request Live Support Ticket"}
+                        {formSubmitting ? "Connecting..." : "Request Live Ticket"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveForm(null)}
-                        className="py-2 px-3 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                        className="py-1.5 px-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -724,17 +808,19 @@ export function ChatWidget() {
                 </div>
               )}
 
-              {/* Typing indicator */}
+              {/* Typing Indicator */}
               {isTyping && (
                 <div className="flex items-center gap-2 pl-2">
                   <div className="shrink-0 mt-0.5">
-                    <MfLogo size={22} />
+                    <MfLogo size={20} />
                   </div>
-                  <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-2.5 flex items-center gap-1.5 shadow-sm">
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none px-3 py-2 flex items-center gap-1.5 shadow-sm">
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                    <span className="text-[9px] text-slate-400 ml-1.5 font-medium">Typing...</span>
+                    <span className="text-[9px] text-slate-500 ml-1 font-medium">
+                      {liveTicket ? "Support Agent is typing..." : "Typing..."}
+                    </span>
                   </div>
                 </div>
               )}
@@ -743,22 +829,30 @@ export function ChatWidget() {
             </div>
 
             {/* Input form */}
-            <form onSubmit={handleFormSend} className="p-3 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0">
+            <form onSubmit={handleFormSend} className="p-2.5 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0">
               <input
                 ref={inputRef}
                 type="text"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                disabled={isTyping || activeForm !== null}
-                placeholder={activeForm !== null ? "Fill in details above..." : isTyping ? "Responding..." : "Type your message..."}
-                className="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] transition-colors disabled:bg-slate-50 disabled:text-slate-400"
+                onChange={(e) => { touchActivity(); setInputText(e.target.value); }}
+                disabled={isTyping || activeForm !== null || ticketClosed}
+                placeholder={
+                  ticketClosed
+                    ? "Session closed."
+                    : activeForm !== null
+                    ? "Fill in details above..."
+                    : isTyping
+                    ? "Responding..."
+                    : "Type your message..."
+                }
+                className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] transition-colors disabled:bg-slate-50 disabled:text-slate-400"
               />
               <button
                 type="submit"
-                disabled={!inputText.trim() || isTyping || activeForm !== null}
-                className="h-8 w-8 flex items-center justify-center rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] text-white disabled:bg-slate-200 disabled:text-slate-400 transition-colors cursor-pointer"
+                disabled={!inputText.trim() || isTyping || activeForm !== null || ticketClosed}
+                className="h-7 w-7 flex items-center justify-center rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] text-white disabled:bg-slate-200 disabled:text-slate-400 transition-colors cursor-pointer"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </button>
             </form>
           </motion.div>
