@@ -307,38 +307,42 @@ export function ChatWidget() {
 
             // Check if there are new messages
             setMessages((prev) => {
-              const prevFiltered = prev.filter((m) => m.role !== "system");
-              const hasNew = mapped.length > prevFiltered.length;
+              // Find any message in mapped that does not exist in prev
+              const newMsgs = mapped.filter(
+                (m) => !prev.some((p) => p.text === m.text && Math.abs(new Date(p.timestamp).getTime() - new Date(m.timestamp).getTime()) < 5000)
+              );
 
-              if (hasNew) {
-                // Find the newest message
-                const newMsgs = mapped.filter(
-                  (m) => !prev.some((p) => p.text === m.text && Math.abs(new Date(p.timestamp).getTime() - new Date(m.timestamp).getTime()) < 5000)
-                );
-
-                if (newMsgs.length > 0) {
-                  // If any new message is from the agent, play sound!
-                  const hasAgentMsg = newMsgs.some((m) => m.role === "bot");
-                  if (hasAgentMsg) {
-                    playIosNotificationSound();
-                    // If chat panel is closed or minimized, trigger the iOS banner alert!
-                    if (!isOpen) {
-                      const latestAgentMsg = newMsgs.filter((m) => m.role === "bot").pop();
-                      if (latestAgentMsg) {
-                        triggerIosNotification("Support Agent Reply", latestAgentMsg.text);
-                      }
+              if (newMsgs.length > 0) {
+                // If any new message is from the agent, play sound!
+                const hasAgentMsg = newMsgs.some((m) => m.role === "bot");
+                if (hasAgentMsg) {
+                  playIosNotificationSound();
+                  // If chat panel is closed or minimized, trigger the iOS banner alert!
+                  if (!isOpen) {
+                    const latestAgentMsg = newMsgs.filter((m) => m.role === "bot").pop();
+                    if (latestAgentMsg) {
+                      triggerIosNotification("Support Agent Reply", latestAgentMsg.text);
                     }
                   }
-
-                  // Reconstruct the message list combining system and mapped messages
-                  const systemMsgs = prev.filter((m) => m.role === "system");
-                  const combined = [...mapped];
-                  for (const sys of systemMsgs) {
-                    combined.push(sys);
-                  }
-                  combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                  return combined;
                 }
+
+                // Reconstruct the message list: start with the greeting if it exists,
+                // then append all mapped messages, plus any system messages.
+                const greetingMsg = prev.find((m) => m.id.startsWith("greeting-"));
+                const systemMsgs = prev.filter((m) => m.role === "system");
+
+                const combined: Message[] = [];
+                if (greetingMsg) {
+                  combined.push(greetingMsg);
+                }
+                for (const m of mapped) {
+                  combined.push(m);
+                }
+                for (const sys of systemMsgs) {
+                  combined.push(sys);
+                }
+                combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                return combined;
               }
               return prev;
             });
