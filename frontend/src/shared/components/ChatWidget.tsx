@@ -593,7 +593,7 @@ export function ChatWidget() {
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed right-4 sm:right-6 z-[99999] w-[260px] sm:w-[280px]"
-            style={{ bottom: "calc(5.2rem + var(--cookie-banner-h, 0px))" }}
+            style={{ bottom: "calc(5.2rem + var(--cookie-banner-h, 0px))", transition: "bottom 0.3s ease-out" }}
           >
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
               <div className="bg-[#1B222C] px-3.5 py-2.5 flex items-center justify-between">
@@ -639,7 +639,7 @@ export function ChatWidget() {
       </AnimatePresence>
 
       {/* Floating Round Toggle Button (FAB) */}
-      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: "calc(1.25rem + var(--cookie-banner-h, 0px))" }}>
+      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: "calc(1.25rem + var(--cookie-banner-h, 0px))", transition: "bottom 0.3s ease-out" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -666,7 +666,7 @@ export function ChatWidget() {
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed right-4 sm:right-6 w-[320px] sm:w-[350px] h-[450px] sm:h-[480px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
-            style={{ bottom: "calc(4.8rem + var(--cookie-banner-h, 0px))" }}
+            style={{ bottom: "calc(4.8rem + var(--cookie-banner-h, 0px))", transition: "bottom 0.3s ease-out" }}
           >
             {/* Header */}
             <div className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0">
