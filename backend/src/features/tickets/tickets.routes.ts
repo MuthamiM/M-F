@@ -19,6 +19,7 @@ export const ticketsRouter = Router();
 // Public chat endpoints for website visitors/chatbot UI
 ticketsRouter.get("/:id/messages", getMessagesHandler);
 ticketsRouter.post("/:id/messages", validate(clientSendMessageSchema), clientSendMessageHandler);
+ticketsRouter.post("/:id/client-close", closeTicketHandler);
 
 // Apply auth protection to all administrative ticket endpoints
 ticketsRouter.use(requireAuth);

@@ -42,12 +42,14 @@ services:
       dockerfile: Dockerfile
     container_name: mf-backend
     restart: always
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=4000
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/mf_db
       - NODE_ENV=production
-      - ALLOWED_ORIGINS=https://${DOMAIN:-mandftechnologies.com},https://www.${DOMAIN:-mandftechnologies.com},http://localhost:3000
+      - ALLOWED_ORIGINS=http://${DOMAIN:-mandftechnologies.com},https://${DOMAIN:-mandftechnologies.com},http://localhost:3000
       - JWT_SECRET=${JWT_SECRET:-production_fallback_secret_please_change}
       - JWT_EXPIRES_IN=7d
     ports:

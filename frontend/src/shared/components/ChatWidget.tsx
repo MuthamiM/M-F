@@ -21,6 +21,8 @@ interface ChatSession {
   liveTicket?: string | null;
   ticketClosed?: boolean;
   popCount?: number;
+  userName?: string | null;
+  userEmail?: string | null;
 }
 
 interface IosNotification {
@@ -170,9 +172,41 @@ export function ChatWidget() {
   const [formReason, setFormReason] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
+  // User identity persisted during session (for correct direct message routing)
+  const [userName, setUserName] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  // Virtual keyboard positioning offset
+  const [visualOffset, setVisualOffset] = useState<number>(0);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const isInitialPollRef = useRef<boolean>(true);
+
+  // visualViewport API to detect and handle virtual keyboard overlays on mobile
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleResize = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      
+      const offset = window.innerHeight - vv.height;
+      setVisualOffset(offset > 0 ? offset : 0);
+      setViewportHeight(vv.height);
+    };
+
+    window.visualViewport.addEventListener("resize", handleResize);
+    window.visualViewport.addEventListener("scroll", handleResize);
+    handleResize();
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
+    };
+  }, []);
 
   // Do not render inside admin pages
   if (typeof window !== "undefined" && pathname?.startsWith("/admin")) {
@@ -200,16 +234,17 @@ export function ChatWidget() {
     playIosNotificationSound(showBanner);
   };
 
-  /* ---- Trigger Pop-Up Prompt with iPhone sound ---- */
+  /* ---- Trigger Pop-Up Prompt (No annoying sound chime on auto-popup) ---- */
   const triggerPopUpPrompt = useCallback(() => {
     if (isOpen || popCount >= MAX_AUTO_POPS) return;
+    
+    // Respect user dismissal choices to avoid annoying pop-up repetition
+    if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") === "true") {
+      return;
+    }
 
-    const showPrompt = () => {
-      setPromptState("visible");
-      setPopCount((prev) => prev + 1);
-    };
-
-    playIosNotificationSound(showPrompt);
+    setPromptState("visible");
+    setPopCount((prev) => prev + 1);
   }, [isOpen, popCount]);
 
   /* ---- Restore Session ---- */
@@ -224,13 +259,19 @@ export function ChatWidget() {
       if (typeof saved.popCount === "number") {
         setPopCount(saved.popCount);
       }
+      if (saved.userName) {
+        setUserName(saved.userName);
+      }
+      if (saved.userEmail) {
+        setUserEmail(saved.userEmail);
+      }
     }
   }, []);
 
   /* ---- Save Session ---- */
   useEffect(() => {
-    saveSession({ messages, liveTicket, ticketClosed, popCount });
-  }, [messages, liveTicket, ticketClosed, popCount]);
+    saveSession({ messages, liveTicket, ticketClosed, popCount, userName, userEmail });
+  }, [messages, liveTicket, ticketClosed, popCount, userName, userEmail]);
 
   const isServicesPage = pathname?.startsWith("/services");
 
@@ -251,7 +292,9 @@ export function ChatWidget() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (popCount === 0 && !isOpen && !liveTicket) {
-        triggerPopUpPrompt();
+        if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") !== "true") {
+          triggerPopUpPrompt();
+        }
       }
     }, 600);
     return () => clearTimeout(timer);
@@ -260,26 +303,31 @@ export function ChatWidget() {
   /* ---- Services Page Special Behavior: Always present prompt ---- */
   useEffect(() => {
     if (isServicesPage && !isOpen && !liveTicket && promptState !== "visible") {
-      setPromptState("visible");
-      playIosNotificationSound();
+      if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") !== "true") {
+        setPromptState("visible");
+      }
     }
-  }, [pathname, isServicesPage, isOpen, liveTicket]);
+  }, [pathname, isServicesPage, isOpen, liveTicket, promptState]);
 
   /* ---- Route Navigation Pop-Up Trigger (up to 5 times as user navigates) ---- */
   useEffect(() => {
     if (!isServicesPage && !liveTicket && popCount > 0 && popCount < MAX_AUTO_POPS && !isOpen) {
-      const timer = setTimeout(() => {
-        triggerPopUpPrompt();
-      }, 1500);
-      return () => clearTimeout(timer);
+      if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") !== "true") {
+        const timer = setTimeout(() => {
+          triggerPopUpPrompt();
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [pathname, isServicesPage, liveTicket]);
+  }, [pathname, isServicesPage, liveTicket, popCount, isOpen, triggerPopUpPrompt]);
 
   /* ---- 30-Second Interval Pop-Up Trigger (every 30s up to 5 times) ---- */
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isServicesPage && !liveTicket && popCount < MAX_AUTO_POPS && !isOpen && promptState !== "visible") {
-        triggerPopUpPrompt();
+        if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") !== "true") {
+          triggerPopUpPrompt();
+        }
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -288,6 +336,9 @@ export function ChatWidget() {
   /* ---- Active Support Ticket Polling (every 4s) ---- */
   useEffect(() => {
     if (!liveTicket || ticketClosed) return;
+
+    // Reset initial poll on mount or ticket change to prevent historic message play
+    isInitialPollRef.current = true;
 
     let pollInterval: NodeJS.Timeout;
     let isFetching = false;
@@ -336,7 +387,7 @@ export function ChatWidget() {
               if (newMsgs.length > 0) {
                 // If any new message is from the agent, play sound!
                 const hasAgentMsg = newMsgs.some((m) => m.role === "bot");
-                if (hasAgentMsg) {
+                if (hasAgentMsg && !isInitialPollRef.current) {
                   playIosNotificationSound();
                   // If chat panel is closed or minimized, trigger the iOS banner alert!
                   if (!isOpen) {
@@ -367,6 +418,9 @@ export function ChatWidget() {
               }
               return prev;
             });
+
+            // Mark first poll as finished
+            isInitialPollRef.current = false;
           }
         }
       } catch (err) {
@@ -441,6 +495,9 @@ export function ChatWidget() {
   const handleDismissPrompt = () => {
     touchActivity();
     setPromptState("dismissed");
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("mf_chat_dismissed", "true");
+    }
   };
 
   /* ---- Quick Menu Actions ---- */
@@ -532,6 +589,8 @@ export function ChatWidget() {
     };
 
     setMessages((prev) => [...prev, userMsg]);
+    setUserName(formName.trim());
+    setUserEmail(formEmail.trim());
 
     try {
       const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
@@ -584,9 +643,21 @@ export function ChatWidget() {
   };
 
   /* ---- End Live Support Ticket Session ---- */
-  const handleEndLiveTicket = () => {
+  const handleEndLiveTicket = async () => {
     touchActivity();
     if (!liveTicket) return;
+
+    try {
+      const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
+      await fetch(`${apiHost}/api/tickets/${liveTicket}/client-close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Customer ended live chat support session." })
+      });
+    } catch (err) {
+      console.error("Failed to close ticket on server:", err);
+    }
+
     const closedTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const closeMsg: Message = {
       id: "sys-" + Date.now(),
@@ -598,6 +669,30 @@ export function ChatWidget() {
     setTicketClosed(true);
 
     triggerIosNotification("Support Session Ended", `Ticket ${liveTicket} closed at ${closedTime}`);
+  };
+
+  /* ---- Start a Fresh Conversation ---- */
+  const handleStartNewChat = () => {
+    touchActivity();
+    clearSessionData();
+    setMessages([]);
+    setLiveTicket(null);
+    setTicketClosed(false);
+    setUserName("");
+    setUserEmail("");
+    setActiveForm(null);
+    setIsTyping(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("mf_chat_dismissed");
+    }
+
+    const greetMsg: Message = {
+      id: "greeting-" + Date.now(),
+      role: "bot",
+      text: "Welcome to M&F Technologies. How can we help you today?",
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([greetMsg]);
   };
 
   const resetFormFields = () => {
@@ -624,38 +719,56 @@ export function ChatWidget() {
     setIsTyping(true);
 
     try {
-      const history = updated.slice(1).map((m) => ({
-        role: m.role === "bot" ? "assistant" : "user",
-        content: m.text,
-      }));
-
       const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
-      const res = await fetch(`${apiHost}/api/chatbot/message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: queryText.trim(), history, ticket: liveTicket }),
-      });
 
-      const data = await res.json();
-      if (data.success && data.data?.ticket && !liveTicket) {
-        setLiveTicket(data.data.ticket);
-      }
+      if (liveTicket && !ticketClosed) {
+        // Direct routing of user queries to the support ticket instead of AI agent
+        const res = await fetch(`${apiHost}/api/tickets/${liveTicket}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: queryText.trim(),
+            senderName: userName || "Website Visitor",
+          }),
+        });
 
-      const botText = data.success
-        ? cleanText(data.data.response)
-        : "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.";
+        if (!res.ok) {
+          throw new Error("Failed to send message to live ticket");
+        }
+      } else {
+        // Standard chatbot behavior (AI Assistant)
+        const history = updated.slice(1).map((m) => ({
+          role: m.role === "bot" ? "assistant" : "user",
+          content: m.text,
+        }));
 
-      const botMsg: Message = {
-        id: "bot-" + Date.now(),
-        role: "bot",
-        text: botText,
-        timestamp: new Date().toISOString(),
-      };
+        const res = await fetch(`${apiHost}/api/chatbot/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: queryText.trim(), history, ticket: liveTicket }),
+        });
 
-      setMessages((prev) => [...prev, botMsg]);
+        const data = await res.json();
+        if (data.success && data.data?.ticket && !liveTicket) {
+          setLiveTicket(data.data.ticket);
+        }
 
-      if (!isOpen || liveTicket) {
-        triggerIosNotification(liveTicket ? "Support Agent Reply" : "M&F Support", botText);
+        const botText = data.success
+          ? cleanText(data.data.response)
+          : "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.";
+
+        const botMsg: Message = {
+          id: "bot-" + Date.now(),
+          role: "bot",
+          text: botText,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, botMsg]);
+
+        if (!isOpen) {
+          triggerIosNotification("M&F Support", botText);
+        }
       }
     } catch {
       setMessages((prev) => [
@@ -797,7 +910,7 @@ export function ChatWidget() {
       </AnimatePresence>
 
       {/* Floating Round Toggle Button (FAB) */}
-      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: "calc(1.25rem + var(--cookie-banner-h, 0px))", transition: "bottom 0.3s ease-out" }}>
+      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: `calc(1.25rem + var(--cookie-banner-h, 0px) + ${visualOffset}px)`, transition: "bottom 0.1s ease-out" }}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -823,8 +936,12 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed right-4 sm:right-6 w-[320px] sm:w-[350px] h-[450px] sm:h-[480px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
-            style={{ bottom: "calc(4.8rem + var(--cookie-banner-h, 0px))", transition: "bottom 0.3s ease-out" }}
+            className="fixed right-4 sm:right-6 w-[320px] sm:w-[350px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
+            style={{ 
+              bottom: `calc(4.8rem + var(--cookie-banner-h, 0px) + ${visualOffset}px)`, 
+              height: viewportHeight ? `min(calc(${viewportHeight}px - 6rem - var(--cookie-banner-h, 0px)), 480px)` : "480px",
+              transition: "bottom 0.1s ease-out" 
+            }}
           >
             {/* Header */}
             <div className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0">
@@ -1111,6 +1228,19 @@ export function ChatWidget() {
                       {liveTicket ? "Support Agent is typing..." : "Typing..."}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {ticketClosed && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-2 mt-2">
+                  <p className="text-xs text-slate-700 font-medium">This support session has ended.</p>
+                  <button
+                    onClick={handleStartNewChat}
+                    type="button"
+                    className="w-full py-1.5 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors cursor-pointer"
+                  >
+                    Start New Chat
+                  </button>
                 </div>
               )}
 

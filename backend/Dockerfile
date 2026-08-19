@@ -14,6 +14,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/db/*.sql ./dist/db/
 RUN mkdir -p data
 EXPOSE 4000
 CMD ["npm", "run", "start"]

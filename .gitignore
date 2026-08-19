@@ -12,8 +12,10 @@ build/
 .env.local
 .env.*
 
-# Logs
+# Logs & PIDs
+logs/
 *.log
+*.pid
 npm-debug.log*
 
 # System Files
