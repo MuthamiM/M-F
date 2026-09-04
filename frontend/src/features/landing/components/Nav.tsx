@@ -106,9 +106,11 @@ export function Nav() {
 
           {/* Header Controls */}
           <div className="flex items-center gap-3">
-            {/* Desktop API CTA */}
+            {/* Desktop API CTA - Opens in a new tab */}
             <Link
               href="/docs"
+              target="_blank"
+              rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-[#1B222C] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-colors"
             >
               <span>API Reference</span>
@@ -268,6 +270,8 @@ export function Nav() {
                           <Link
                             key={item.label}
                             href={item.href}
+                            target={item.href === "/docs" ? "_blank" : undefined}
+                            rel={item.href === "/docs" ? "noopener noreferrer" : undefined}
                             onClick={() => handleNavClick(item.href)}
                             className="block p-3 rounded-lg bg-white hover:bg-[#F1F5F9] border border-[#9AA5B1]/20 transition-colors group"
                           >

@@ -104,24 +104,38 @@ export function ProtocolDocs() {
           </div>
 
           {/* Right Header Navigation & Actions */}
-          <div className="flex items-center gap-4 sm:gap-6 text-xs font-medium text-slate-600">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium text-slate-600">
             <button
               type="button"
-              onClick={() => setActiveId("create-loan-application")}
-              className="hidden sm:inline-block hover:text-slate-900 transition-colors cursor-pointer"
+              onClick={() => {
+                setActiveId("create-loan-application");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                currentEndpoint
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
             >
-              API
+              API Reference
             </button>
             <button
               type="button"
-              onClick={() => setActiveId("introduction")}
-              className="hidden sm:inline-block hover:text-slate-900 transition-colors cursor-pointer"
+              onClick={() => {
+                setActiveId("introduction");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                !currentEndpoint
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
             >
               Documentation
             </button>
             <Link
               href="/contact"
-              className="hidden sm:inline-block hover:text-slate-900 transition-colors"
+              className="hidden sm:inline-block hover:text-slate-900 transition-colors px-2 py-1"
             >
               Support
             </Link>
