@@ -347,8 +347,8 @@ export function ChatWidget() {
     };
   }, []);
 
-  // Do not render inside admin pages
-  if (typeof window !== "undefined" && pathname?.startsWith("/admin")) {
+  // Do not render inside admin or docs/API reference pages
+  if (typeof window !== "undefined" && (pathname?.startsWith("/admin") || pathname?.startsWith("/docs") || pathname?.startsWith("/api-reference"))) {
     return null;
   }
 

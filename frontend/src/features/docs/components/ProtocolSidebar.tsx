@@ -1,7 +1,5 @@
 "use client";
 
-import { EndpointSpec } from "../docsData";
-
 interface ProtocolSidebarProps {
   activeId: string;
   onSelect: (id: string) => void;
@@ -27,7 +25,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
     { id: "sdks", title: "SDKs" },
     { id: "authentication", title: "Authentication" },
     { id: "pagination", title: "Pagination" },
-    { id: "errors", title: "Errors" },
+    { id: "errors", title: "Errors & Limits" },
     { id: "webhooks", title: "Webhooks" },
   ];
 
@@ -46,24 +44,24 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
   ];
 
   return (
-    <nav className="w-full text-sm font-sans space-y-8">
+    <nav className="w-full text-sm font-sans space-y-7">
       {/* Guides Group */}
-      <div className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900 px-3">
+      <div className="space-y-2.5">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#1B222C] px-3 font-display">
           Guides
         </h2>
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           {guides.map((item) => {
             const isMainActive = activeId === item.id;
             return (
-              <li key={item.id} className="space-y-1">
+              <li key={item.id} className="space-y-0.5">
                 <button
                   type="button"
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                  className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-all cursor-pointer flex items-center justify-between ${
                     isMainActive
-                      ? "text-emerald-600 font-semibold bg-emerald-50/50"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      ? "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
+                      : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]/70"
                   }`}
                 >
                   <span>{item.title}</span>
@@ -71,7 +69,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
 
                 {/* Sub-items if Introduction is selected */}
                 {item.subItems && isMainActive && (
-                  <ul className="pl-6 space-y-1 border-l border-slate-200 ml-4 py-1">
+                  <ul className="pl-5 space-y-0.5 border-l border-[#E4E7EB] ml-4 py-1">
                     {item.subItems.map((sub) => (
                       <li key={sub.id}>
                         <button
@@ -79,8 +77,8 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
                           onClick={() => handleItemClick(sub.id)}
                           className={`w-full text-left py-1 text-xs transition-colors cursor-pointer ${
                             activeId === sub.id
-                              ? "text-emerald-600 font-semibold"
-                              : "text-slate-500 hover:text-slate-900"
+                              ? "text-[#1B222C] font-bold"
+                              : "text-[#6B7684] hover:text-[#1B222C]"
                           }`}
                         >
                           {sub.title}
@@ -96,11 +94,11 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
       </div>
 
       {/* Resources Group */}
-      <div className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900 px-3">
+      <div className="space-y-2.5">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#1B222C] px-3 font-display">
           Resources
         </h2>
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           {resources.map((res) => {
             const isActive = activeId === res.id;
             return (
@@ -108,10 +106,10 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
                 <button
                   type="button"
                   onClick={() => handleItemClick(res.id)}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-between group ${
+                  className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-all cursor-pointer flex items-center justify-between group ${
                     isActive
-                      ? "text-emerald-600 font-semibold bg-emerald-50/50"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      ? "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
+                      : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]/70"
                   }`}
                 >
                   <span className="truncate">{res.title}</span>
@@ -119,10 +117,10 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolS
                     <span
                       className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                         res.method === "POST"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                          ? "bg-[#E4E7EB] text-[#1B222C] border border-[#9AA5B1]/40"
                           : res.method === "GET"
-                          ? "bg-sky-50 text-sky-700 border border-sky-200/60"
-                          : "bg-slate-100 text-slate-700"
+                          ? "bg-[#F4F6F8] text-[#3E4C59] border border-[#9AA5B1]/30"
+                          : "bg-[#F4F6F8] text-[#6B7684]"
                       }`}
                     >
                       {res.method}

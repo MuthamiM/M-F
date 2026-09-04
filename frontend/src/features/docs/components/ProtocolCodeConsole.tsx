@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { EndpointSpec } from "../docsData";
-import { Play, Copy, Check, Terminal, Code2, RotateCcw, ShieldCheck } from "lucide-react";
+import { Play, Copy, Check, Terminal, Code2, RotateCcw, ShieldCheck, Activity } from "lucide-react";
 
 interface ProtocolCodeConsoleProps {
   endpoint: EndpointSpec;
@@ -22,7 +22,6 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
     latencyMs: number;
     data: any;
   } | null>(null);
-  const [showErrorExample, setShowErrorExample] = useState(false);
 
   const handleCopyCode = () => {
     let snippet = "";
@@ -46,66 +45,103 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
     setIsLoading(true);
     const start = Date.now();
 
-    await new Promise((r) => setTimeout(r, 180 + Math.floor(Math.random() * 90)));
-
-    let parsedBody = null;
-    try {
-      if (requestBodyText) {
+    let parsedBody: any = undefined;
+    if (endpoint.method && endpoint.method !== "GET" && requestBodyText.trim()) {
+      try {
         parsedBody = JSON.parse(requestBodyText);
+      } catch {
+        const duration = Date.now() - start;
+        setResponseState({
+          status: 400,
+          latencyMs: duration,
+          data: {
+            success: false,
+            error: {
+              code: "INVALID_JSON",
+              message: "Request body could not be parsed as valid JSON.",
+            },
+          },
+        });
+        setIsLoading(false);
+        return;
       }
-    } catch {
+    }
+
+    // Determine target URL for real live API call
+    let targetPath = endpoint.path || "/api/v1/health";
+    // Replace path parameters if needed
+    targetPath = targetPath
+      .replace("{id}", "loan_app_98234")
+      .replace(":id", "loan_app_98234");
+
+    if (!targetPath.startsWith("/")) {
+      targetPath = "/" + targetPath;
+    }
+
+    try {
+      const res = await fetch(targetPath, {
+        method: endpoint.method || "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": "your_api_key",
+        },
+        body:
+          endpoint.method && endpoint.method !== "GET" && parsedBody
+            ? JSON.stringify(parsedBody)
+            : undefined,
+      });
+
+      const duration = Date.now() - start;
+      let responseData: any;
+      try {
+        responseData = await res.json();
+      } catch {
+        const text = await res.text();
+        responseData = { rawResponse: text };
+      }
+
+      setResponseState({
+        status: res.status,
+        latencyMs: duration,
+        data: responseData,
+      });
+    } catch (err: any) {
       const duration = Date.now() - start;
       setResponseState({
-        status: 400,
+        status: 500,
         latencyMs: duration,
         data: {
           success: false,
           error: {
-            code: "INVALID_JSON",
-            message: "Request body could not be parsed as valid JSON.",
+            code: "NETWORK_ERROR",
+            message: err.message || "Failed to communicate with live M&F backend gateway",
           },
         },
       });
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const duration = Date.now() - start;
-    if (showErrorExample && endpoint.sampleResponseError) {
-      setResponseState({
-        status: endpoint.sampleResponseError.status,
-        latencyMs: duration,
-        data: endpoint.sampleResponseError.body,
-      });
-    } else {
-      setResponseState({
-        status: endpoint.sampleResponseSuccess.status,
-        latencyMs: duration,
-        data: endpoint.sampleResponseSuccess.body,
-      });
-    }
-    setIsLoading(false);
   };
 
   const currentCodeSnippet = endpoint.codeExamples?.[activeLang] || "";
 
   return (
-    <div className="rounded-2xl border border-slate-800/80 bg-slate-950 text-slate-200 shadow-xl overflow-hidden font-mono text-xs flex flex-col">
+    <div className="rounded-2xl border border-[#3E4C59]/40 bg-[#1B222C] text-[#E4E7EB] shadow-2xl overflow-hidden font-mono text-xs flex flex-col">
       {/* Top Console Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#13181F] border-b border-[#3E4C59]/50">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block" />
-          <span className="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block" />
-          <span className="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block" />
-          <span className="text-[11px] font-medium text-slate-400 ml-2 font-sans flex items-center gap-1.5">
-            <Terminal className="h-3 w-3 text-emerald-400" />
-            Sandbox Console
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3E4C59] inline-block" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3E4C59] inline-block" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3E4C59] inline-block" />
+          <span className="text-[11px] font-medium text-[#9AA5B1] ml-2 font-sans flex items-center gap-1.5">
+            <Terminal className="h-3 w-3 text-[#E4E7EB]" />
+            Live API Console
           </span>
         </div>
 
         {/* Language Tabs */}
         {endpoint.codeExamples && (
-          <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-slate-800">
+          <div className="flex items-center bg-[#1B222C] rounded-lg p-0.5 border border-[#3E4C59]/60">
             {(["curl", "typescript", "python", "csharp"] as LangTab[]).map((lang) => (
               <button
                 key={lang}
@@ -113,8 +149,8 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
                 onClick={() => setActiveLang(lang)}
                 className={`px-2.5 py-1 text-[11px] font-sans font-medium rounded-md transition-all capitalize cursor-pointer ${
                   activeLang === lang
-                    ? "bg-slate-800 text-white shadow-xs font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-[#3E4C59] text-white shadow-xs font-semibold"
+                    : "text-[#9AA5B1] hover:text-[#F4F6F8]"
                 }`}
               >
                 {lang === "csharp" ? "C#" : lang === "typescript" ? "Node.js" : lang}
@@ -126,21 +162,21 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
 
       {/* Code Snippet Area */}
       {currentCodeSnippet && (
-        <div className="relative p-4 bg-slate-950 border-b border-slate-800/60">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2.5 font-sans">
-            <span className="flex items-center gap-1.5 text-slate-300">
-              <Code2 className="h-3.5 w-3.5 text-emerald-400" />
+        <div className="relative p-4 bg-[#1B222C] border-b border-[#3E4C59]/50">
+          <div className="flex items-center justify-between text-[11px] text-[#9AA5B1] mb-2.5 font-sans">
+            <span className="flex items-center gap-1.5 text-[#C4CDD5]">
+              <Code2 className="h-3.5 w-3.5 text-white" />
               Request Snippet ({activeLang.toUpperCase()})
             </span>
             <button
               type="button"
               onClick={handleCopyCode}
-              className="inline-flex items-center gap-1.5 text-[11px] hover:text-white transition-colors cursor-pointer text-slate-400"
+              className="inline-flex items-center gap-1.5 text-[11px] hover:text-white transition-colors cursor-pointer text-[#9AA5B1]"
             >
               {copied ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 font-semibold">Copied</span>
+                  <Check className="h-3.5 w-3.5 text-white" />
+                  <span className="text-white font-semibold">Copied</span>
                 </>
               ) : (
                 <>
@@ -150,7 +186,7 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
               )}
             </button>
           </div>
-          <pre className="text-[11px] text-slate-100 overflow-x-auto leading-relaxed max-h-56 scrollbar-thin">
+          <pre className="text-[11px] text-[#F4F6F8] overflow-x-auto leading-relaxed max-h-56 scrollbar-thin">
             <code>{currentCodeSnippet}</code>
           </pre>
         </div>
@@ -158,13 +194,13 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
 
       {/* Interactive Payload Editor */}
       {endpoint.sampleRequestBody && (
-        <div className="p-4 border-b border-slate-800/60 bg-slate-900/40">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2 font-sans">
-            <span className="font-semibold text-slate-200">Request Body (JSON)</span>
+        <div className="p-4 border-b border-[#3E4C59]/50 bg-[#13181F]/60">
+          <div className="flex items-center justify-between text-[11px] text-[#9AA5B1] mb-2 font-sans">
+            <span className="font-semibold text-[#F4F6F8]">Request Body (JSON)</span>
             <button
               type="button"
               onClick={handleResetBody}
-              className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-[10px] text-[#9AA5B1] hover:text-[#F4F6F8] transition-colors cursor-pointer"
             >
               <RotateCcw className="h-2.5 w-2.5" />
               Reset Payload
@@ -174,37 +210,30 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
             value={requestBodyText}
             onChange={(e) => setRequestBodyText(e.target.value)}
             rows={5}
-            className="w-full bg-slate-950 text-slate-100 p-3 rounded-lg border border-slate-800 font-mono text-[11px] focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all leading-relaxed resize-y"
+            className="w-full bg-[#13181F] text-[#F4F6F8] p-3 rounded-lg border border-[#3E4C59]/60 font-mono text-[11px] focus:outline-none focus:border-[#9AA5B1] focus:ring-1 focus:ring-[#9AA5B1]/30 transition-all leading-relaxed resize-y"
           />
         </div>
       )}
 
       {/* Action Buttons */}
-      <div className="p-3.5 bg-slate-900/70 flex items-center justify-between gap-3 border-b border-slate-800 font-sans">
+      <div className="p-3.5 bg-[#13181F] flex items-center justify-between gap-3 border-b border-[#3E4C59]/50 font-sans">
         <div className="flex items-center gap-2">
-          {endpoint.sampleResponseError && (
-            <label className="inline-flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showErrorExample}
-                onChange={(e) => setShowErrorExample(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0 cursor-pointer"
-              />
-              <span>Simulate Error ({endpoint.sampleResponseError.status})</span>
-            </label>
-          )}
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[#9AA5B1]">
+            <Activity className="h-3 w-3 text-[#E4E7EB]" />
+            Live Gateway Active
+          </span>
         </div>
 
         <button
           type="button"
           onClick={handleRunRequest}
           disabled={isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-[#F4F6F8] text-[#1B222C] font-bold text-xs transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
         >
           {isLoading ? (
             <>
-              <div className="w-3.5 h-3.5 border-2 border-slate-950/40 border-t-slate-950 rounded-full animate-spin" />
-              <span>Executing...</span>
+              <div className="w-3.5 h-3.5 border-2 border-[#1B222C]/40 border-t-[#1B222C] rounded-full animate-spin" />
+              <span>Executing Live Call...</span>
             </>
           ) : (
             <>
@@ -216,21 +245,21 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
       </div>
 
       {/* Response Display Box */}
-      <div className="p-4 bg-slate-950 flex-1 min-h-[160px] flex flex-col justify-between">
+      <div className="p-4 bg-[#13181F] flex-1 min-h-[160px] flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2.5 font-sans">
-            <span className="font-semibold text-slate-200">Response</span>
+          <div className="flex items-center justify-between text-[11px] text-[#9AA5B1] mb-2.5 font-sans">
+            <span className="font-semibold text-[#F4F6F8]">Response Output</span>
             {responseState && (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 bg-slate-800/70 border border-slate-700 px-2 py-0.5 rounded">
-                  <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                <span className="inline-flex items-center gap-1 text-[10px] text-[#E4E7EB] bg-[#1B222C] border border-[#3E4C59]/60 px-2 py-0.5 rounded">
+                  <ShieldCheck className="h-3 w-3 text-white" />
                   {responseState.latencyMs}ms
                 </span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                     responseState.status < 300
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-red-500/10 text-red-400 border border-red-500/20"
+                      ? "bg-white text-[#1B222C]"
+                      : "bg-red-500/20 text-red-300 border border-red-500/40"
                   }`}
                 >
                   HTTP {responseState.status}
@@ -239,24 +268,18 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
             )}
           </div>
 
-          <pre className="text-[11px] text-slate-200 overflow-x-auto leading-relaxed max-h-64 scrollbar-thin">
+          <pre className="text-[11px] text-[#F4F6F8] overflow-x-auto leading-relaxed max-h-64 scrollbar-thin">
             <code>
               {responseState
                 ? JSON.stringify(responseState.data, null, 2)
-                : JSON.stringify(
-                    showErrorExample && endpoint.sampleResponseError
-                      ? endpoint.sampleResponseError.body
-                      : endpoint.sampleResponseSuccess.body,
-                    null,
-                    2
-                  )}
+                : JSON.stringify(endpoint.sampleResponseSuccess.body, null, 2)}
             </code>
           </pre>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 font-sans">
+        <div className="pt-3 mt-3 border-t border-[#3E4C59]/50 flex items-center justify-between text-[10px] text-[#9AA5B1] font-sans">
           <span>Host: api.mftechnologies.org</span>
-          <span>Zero-Trust Protocol Active</span>
+          <span>M&amp;F Gateway v2.4 Live</span>
         </div>
       </div>
     </div>
