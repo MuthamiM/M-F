@@ -1,6 +1,5 @@
 #!/bin/bash
-# M&F Technologies - Start all services with Tailscale Funnel
-# Services persist even when the laptop lid is closed (via systemd-inhibit + nohup)
+# M&F Technologies - Start all services (local dev)
 
 set -e
 
@@ -48,19 +47,6 @@ start_frontend() {
     echo "   📄 Logs: $LOG_DIR/frontend.log"
 }
 
-# --- Start Tailscale Funnel ---
-start_funnel() {
-    echo "🌐 Starting Tailscale Funnel (exposing Frontend port 3000 and Backend port 4000)..."
-    tailscale serve reset 2>/dev/null || true
-    tailscale serve --bg --set-path=/ http://127.0.0.1:3000
-    tailscale serve --bg --set-path=/api http://127.0.0.1:4000/api
-    tailscale funnel --bg 443 2>/dev/null || true
-    tailscale serve --bg --https=8443 --set-path=/ http://127.0.0.1:3000 2>/dev/null || true
-    tailscale serve --bg --https=8443 --set-path=/api http://127.0.0.1:4000/api 2>/dev/null || true
-    tailscale funnel --bg 8443 2>/dev/null || true
-    echo "   ✅ Tailscale Funnel active!"
-}
-
 # --- Wait for services to be healthy ---
 wait_for_services() {
     echo ""
@@ -96,7 +82,6 @@ cleanup
 start_backend
 start_frontend
 sleep 3
-start_funnel
 wait_for_services
 
 echo ""
@@ -104,10 +89,9 @@ echo "======================================="
 echo "ALL SERVICES RUNNING!"
 echo "======================================="
 echo ""
-echo " PUBLIC TAILSCALE URLS:"
-echo "   Main Platform:  https://technoblade.tail953a25.ts.net"
-echo "   Admin Login:    https://technoblade.tail953a25.ts.net/admin/login"
-echo "   Alt Port (8443):https://technoblade.tail953a25.ts.net:8443/admin/login"
+echo " PRODUCTION (VPS):"
+echo "   Website:        https://mftechnologies.org"
+echo "   Admin Login:    https://mftechnologies.org/admin/login"
 echo ""
 echo " LOCAL URLS:"
 echo "   Frontend:       http://localhost:3000"

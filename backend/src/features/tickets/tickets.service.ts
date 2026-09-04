@@ -123,16 +123,27 @@ export async function sendMessage(
   ticketId: string,
   sender: "client" | "agent",
   senderName: string,
-  text: string
+  text: string,
+  attachment?: {
+    url?: string;
+    name?: string;
+    type?: string;
+  }
 ) {
   const ticket = await getTicketById(ticketId);
   const now = new Date();
+
+  // Clear typing state for sender when a message is sent
+  setTyping(ticketId, sender, false);
 
   const msg: ChatMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     sender,
     senderName,
-    text,
+    text: text || (attachment?.name ? `[Attachment: ${attachment.name}]` : ""),
+    attachmentUrl: attachment?.url,
+    attachmentName: attachment?.name,
+    attachmentType: attachment?.type,
     timestamp: now,
   };
 
@@ -263,4 +274,36 @@ export async function getStats() {
   };
 
   return stats;
+}
+
+// ── Real-time Typing Indicator State ────────────────────────────────
+interface TypingState {
+  clientUntil: number;
+  agentUntil: number;
+}
+
+const typingRegistry: Map<string, TypingState> = new Map();
+const TYPING_TIMEOUT_MS = 3500;
+
+export function setTyping(ticketId: string, sender: "client" | "agent", isTyping: boolean) {
+  const current = typingRegistry.get(ticketId) || { clientUntil: 0, agentUntil: 0 };
+  const now = Date.now();
+  if (sender === "client") {
+    current.clientUntil = isTyping ? now + TYPING_TIMEOUT_MS : 0;
+  } else {
+    current.agentUntil = isTyping ? now + TYPING_TIMEOUT_MS : 0;
+  }
+  typingRegistry.set(ticketId, current);
+}
+
+export function getTypingStatus(ticketId: string): { isClientTyping: boolean; isAgentTyping: boolean } {
+  const current = typingRegistry.get(ticketId);
+  if (!current) {
+    return { isClientTyping: false, isAgentTyping: false };
+  }
+  const now = Date.now();
+  return {
+    isClientTyping: current.clientUntil > now,
+    isAgentTyping: current.agentUntil > now,
+  };
 }

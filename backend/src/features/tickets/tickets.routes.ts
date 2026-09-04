@@ -9,16 +9,21 @@ import {
   clientSendMessageHandler,
   logCallHandler,
   closeTicketHandler,
+  setTypingHandler,
+  uploadAttachmentHandler,
 } from "./tickets.controller";
 import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { updateTicketSchema, sendMessageSchema, clientSendMessageSchema, logCallSchema } from "./tickets.schema";
+import { uploadMiddleware } from "../../middleware/upload.middleware";
 
 export const ticketsRouter = Router();
 
 // Public chat endpoints for website visitors/chatbot UI
 ticketsRouter.get("/:id/messages", getMessagesHandler);
 ticketsRouter.post("/:id/messages", validate(clientSendMessageSchema), clientSendMessageHandler);
+ticketsRouter.post("/:id/typing", setTypingHandler);
+ticketsRouter.post("/upload", uploadMiddleware.single("file"), uploadAttachmentHandler);
 ticketsRouter.post("/:id/client-close", closeTicketHandler);
 
 // Apply auth protection to all administrative ticket endpoints

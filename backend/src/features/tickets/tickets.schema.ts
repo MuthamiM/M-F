@@ -14,7 +14,10 @@ export const chatMessageSchema = z.object({
   id: z.string(),
   sender: z.enum(["client", "agent"]),
   senderName: z.string(),
-  text: z.string(),
+  text: z.string().default(""),
+  attachmentUrl: z.string().optional(),
+  attachmentName: z.string().optional(),
+  attachmentType: z.string().optional(),
   timestamp: z.date(),
 });
 
@@ -77,8 +80,11 @@ export const sendMessageSchema = z.object({
     id: z.string().min(1),
   }),
   body: z.object({
-    text: z.string().min(1),
+    text: z.string().default(""),
     senderName: z.string().min(1),
+    attachmentUrl: z.string().optional(),
+    attachmentName: z.string().optional(),
+    attachmentType: z.string().optional(),
   }),
 });
 
@@ -88,8 +94,11 @@ export const clientSendMessageSchema = z.object({
     id: z.string().min(1),
   }),
   body: z.object({
-    text: z.string().min(1),
+    text: z.string().default(""),
     senderName: z.string().min(1),
+    attachmentUrl: z.string().optional(),
+    attachmentName: z.string().optional(),
+    attachmentType: z.string().optional(),
   }),
 });
 

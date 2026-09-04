@@ -86,7 +86,7 @@ export function Nav() {
     [pathname, activeHash]
   );
 
-  const apiDocsUrl = "/api/docs/sitemap";
+  const apiDocsUrl = "/docs";
 
   return (
     <>
@@ -107,15 +107,13 @@ export function Nav() {
           {/* Header Controls */}
           <div className="flex items-center gap-3">
             {/* Desktop API CTA */}
-            <a
-              href={apiDocsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/docs"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-[#1B222C] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-colors"
             >
               <span>API Reference</span>
               <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
-            </a>
+            </Link>
 
             {/* Hamburger Menu Trigger Button */}
             <button

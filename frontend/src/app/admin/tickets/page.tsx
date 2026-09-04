@@ -91,7 +91,7 @@ export default function AdminTicketsPage() {
           <div className="px-6 flex flex-wrap gap-2 items-center justify-between border-b border-[#E4E7EB]/60 pb-4">
             <div className="flex items-center gap-1.5">
               {/* Quick Status Filters */}
-              {["all", "open", "in_progress", "resolved"].map((st) => (
+              {["all", "open", "in_progress", "resolved", "closed"].map((st) => (
                 <button
                   key={st}
                   onClick={() => setSelectedStatus(st)}

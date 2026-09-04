@@ -55,6 +55,9 @@ class TicketStore {
         sender: m.sender as any,
         senderName: m.sender_name,
         text: m.text,
+        attachmentUrl: m.attachment_url || undefined,
+        attachmentName: m.attachment_name || undefined,
+        attachmentType: m.attachment_type || undefined,
         timestamp: new Date(m.timestamp),
       })),
       callLogs: callsRes.rows.map((c: any) => ({
@@ -93,6 +96,9 @@ class TicketStore {
         sender: m.sender as any,
         senderName: m.sender_name,
         text: m.text,
+        attachmentUrl: m.attachment_url || undefined,
+        attachmentName: m.attachment_name || undefined,
+        attachmentType: m.attachment_type || undefined,
         timestamp: new Date(m.timestamp),
       });
     }
@@ -176,10 +182,20 @@ class TicketStore {
       if (ticket.messages && ticket.messages.length > 0) {
         for (const msg of ticket.messages) {
           await client.query(
-            `INSERT INTO ticket_messages (id, ticket_id, sender, sender_name, text, timestamp)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO ticket_messages (id, ticket_id, sender, sender_name, text, attachment_url, attachment_name, attachment_type, timestamp)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              ON CONFLICT (id) DO NOTHING`,
-            [msg.id, ticket.id, msg.sender, msg.senderName, msg.text, msg.timestamp]
+            [
+              msg.id,
+              ticket.id,
+              msg.sender,
+              msg.senderName,
+              msg.text || "",
+              msg.attachmentUrl || null,
+              msg.attachmentName || null,
+              msg.attachmentType || null,
+              msg.timestamp,
+            ]
           );
         }
       }

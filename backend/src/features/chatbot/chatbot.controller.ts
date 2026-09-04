@@ -104,7 +104,6 @@ interface ChatMessage {
 
 function cleanText(text: string): string {
   return text
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/\*(.+?)\*/g, "$1")
     .replace(/__(.+?)__/g, "$1")
@@ -121,27 +120,39 @@ async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
   const apiKey = process.env.GROK_API_KEY;
   if (!apiKey) throw new Error("GROK_API_KEY is missing");
 
-  const body = JSON.stringify({
-    model: "llama-3.1-8b-instant",
-    messages,
-    max_tokens: 400,
-    temperature: 0.5,
-  });
+  // Try openai/gpt-oss-20b first, then groq/compound-mini
+  const models = ["openai/gpt-oss-20b", "groq/compound-mini"];
+  let lastError: any = null;
 
-  const data = await httpRequest(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-    },
-    body
-  );
+  for (const model of models) {
+    try {
+      const body = JSON.stringify({
+        model,
+        messages,
+        max_tokens: 400,
+        temperature: 0.5,
+      });
 
-  const raw = data.choices?.[0]?.message?.content || "";
-  return cleanText(raw);
+      const data = await httpRequest(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+        },
+        body
+      );
+
+      const raw = data.choices?.[0]?.message?.content || "";
+      if (raw) return cleanText(raw);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("All Groq models failed");
 }
 
 /* ------------------------------------------------------------------ */
@@ -164,7 +175,7 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
     generationConfig: { maxOutputTokens: 400, temperature: 0.5 },
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
   const data = await httpRequest(url, { method: "POST", headers: { "Content-Type": "application/json" } }, body);
 
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
@@ -176,11 +187,43 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
 /* ------------------------------------------------------------------ */
 export async function startChatHandler(_req: Request, res: Response) {
   const greeting = "Welcome to M&F Technologies. How can we help you today?";
+  const ticketId = await generateTicketNumber("CHAT");
+  const now = new Date();
+
+  try {
+    await ticketStore.set(ticketId, {
+      id: ticketId,
+      type: "chatbot",
+      name: "Website Visitor",
+      email: "chatbot@mftechnologies.org",
+      company: "ChatBot — Live Inquiry",
+      message: "Visitor opened live chat support session",
+      status: "open",
+      priority: "medium",
+      createdAt: now,
+      updatedAt: now,
+      notes: [],
+      messages: [
+        {
+          id: `msg-${Date.now()}`,
+          sender: "agent",
+          senderName: "Support Assistant",
+          text: greeting,
+          timestamp: now,
+        },
+      ],
+      callLogs: [],
+    });
+    logger.info(`Initialized live chat ticket ${ticketId} on chat start.`);
+  } catch (err: any) {
+    logger.error(`Failed to pre-create chat ticket: ${err.message}`);
+  }
 
   res.json({
     success: true,
     data: {
       message: greeting,
+      ticket: ticketId,
     },
   });
 }
@@ -330,7 +373,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
       usedProvider = "Gemini";
     } catch (geminiErr: any) {
       logger.error(`Gemini API failed: ${geminiErr.message}`);
-      responseText = "We are currently experiencing connection delays. Please contact info@mftechnologies.org or call +254 748 329 410 for assistance.";
+      responseText = "Thank you for contacting M&F Technologies. We engineer core lending systems, credit scoring platforms, and financial API infrastructure across East Africa. How can we assist you today?";
       usedProvider = "Fallback";
     }
   }

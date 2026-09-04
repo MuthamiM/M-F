@@ -49,7 +49,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres_secure_password}@postgres:5432/mf_db
       - NODE_ENV=production
-      - ALLOWED_ORIGINS=http://${DOMAIN:-mandftechnologies.com},https://${DOMAIN:-mandftechnologies.com},http://localhost:3000
+      - ALLOWED_ORIGINS=http://${DOMAIN:-mftechnologies.org},https://${DOMAIN:-mftechnologies.org},http://www.${DOMAIN:-mftechnologies.org},https://www.${DOMAIN:-mftechnologies.org},https://mftechnologies.org,http://mftechnologies.org,https://www.mftechnologies.org,http://www.mftechnologies.org,http://18.188.142.27,https://18.188.142.27,http://localhost:3000,http://127.0.0.1:3000
       - JWT_SECRET=${JWT_SECRET:-production_fallback_secret_please_change}
       - JWT_EXPIRES_IN=7d
     ports:

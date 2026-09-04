@@ -19,8 +19,15 @@ import {
   Play,
   Pause,
   Timer,
-  PhoneCall
+  PhoneCall,
+  Paperclip,
+  Smile,
+  FileText,
+  Download,
+  Loader2,
+  X
 } from "lucide-react";
+import { IosEmojiPicker } from "@/shared/components/IosEmojiPicker";
 
 
 interface Note {
@@ -34,6 +41,9 @@ interface ChatMessage {
   sender: "client" | "agent";
   senderName: string;
   text: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: "image" | "document";
   timestamp: string;
 }
 
@@ -61,6 +71,8 @@ interface TicketDetail {
   notes: Note[];
   messages: ChatMessage[];
   callLogs: CallLog[];
+  isClientTyping?: boolean;
+  isAgentTyping?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +100,131 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [quickMessage, setQuickMessage] = useState("");
   const [sendingQuick, setSendingQuick] = useState(false);
   const [prevMsgCount, setPrevMsgCount] = useState<number | null>(null);
+
+  // Live typing state
+  const [isClientTyping, setIsClientTyping] = useState(false);
+  const adminTypingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Attachment & Emoji state
+  const [showAdminEmojiPicker, setShowAdminEmojiPicker] = useState(false);
+  const [adminAttachment, setAdminAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number } | null>(null);
+  const [adminUploading, setAdminUploading] = useState(false);
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const compressImageForUpload = async (file: File): Promise<File> => {
+    if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
+      return file;
+    }
+    if (file.size <= 250 * 1024) {
+      return file;
+    }
+
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob || blob.size >= file.size) {
+                resolve(file);
+                return;
+              }
+              const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+              const compressedFile = new File([blob], safeName, {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            "image/jpeg",
+            0.82
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadAdminAttachment = async (file: File) => {
+    if (adminUploading) return;
+    setAdminUploading(true);
+    try {
+      const optimizedFile = await compressImageForUpload(file);
+      const formData = new FormData();
+      formData.append("file", optimizedFile);
+
+      const response = await fetch("/api/tickets/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.data) {
+        setAdminAttachment(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to upload attachment:", err);
+    } finally {
+      setAdminUploading(false);
+    }
+  };
+
+  const handleAdminInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNewChatMessage(val);
+
+    if (adminTypingTimeoutRef.current) clearTimeout(adminTypingTimeoutRef.current);
+    const isTypingNow = val.trim().length > 0;
+
+    fetch(`/api/tickets/${id}/typing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sender: "agent", isTyping: isTypingNow }),
+    }).catch(() => {});
+
+    if (isTypingNow) {
+      adminTypingTimeoutRef.current = setTimeout(() => {
+        fetch(`/api/tickets/${id}/typing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sender: "agent", isTyping: false }),
+        }).catch(() => {});
+      }, 3000);
+    }
+  };
+
+  const handleAdminPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      e.preventDefault();
+      uploadAdminAttachment(file);
+    }
+  };
 
   // Call logging fields
   const [callOutcome, setCallOutcome] = useState<string>("answered");
@@ -129,9 +266,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const fetchDetail = async () => {
     try {
       const token = sessionStorage.getItem("adminToken");
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        "Cache-Control": "no-cache",
+      };
 
-      const response = await fetch(`/api/tickets/${id}`, { headers });
+      const response = await fetch(`/api/tickets/${id}`, { headers, cache: "no-store" });
       const resData = await response.json();
 
       if (response.ok && resData.success) {
@@ -139,6 +279,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         setStatus(resData.data.status);
         setPriority(resData.data.priority);
         setAssignedAgent(resData.data.assignedAgent || "");
+        setIsClientTyping(Boolean(resData.data.isClientTyping));
       } else {
         setErrorMsg(resData.error || "Failed to load ticket details.");
       }
@@ -151,14 +292,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     fetchDetail();
-    // Live polling: reload details and chat messages every 4 seconds
-    const interval = setInterval(fetchDetail, 4000);
+    // Live polling: reload details, messages, and typing status every 700ms
+    const interval = setInterval(fetchDetail, 700);
     return () => clearInterval(interval);
   }, [id]);
 
   const handleSendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newChatMessage.trim()) return;
+    if (!newChatMessage.trim() && !adminAttachment) return;
 
     setSendingChat(true);
     try {
@@ -174,12 +315,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({
           text: newChatMessage.trim(),
           senderName: agentName,
+          attachmentUrl: adminAttachment?.url,
+          attachmentName: adminAttachment?.name,
+          attachmentType: adminAttachment?.type,
         }),
       });
 
       const resData = await response.json();
       if (response.ok && resData.success) {
         setNewChatMessage("");
+        setAdminAttachment(null);
+        setShowAdminEmojiPicker(false);
         fetchDetail();
       } else {
         setErrorMsg(resData.error || "Failed to send message.");
@@ -644,7 +790,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           )}
 
           {/* Live Chat Communication Hub (Real-time chat client interface) */}
-          {ticket.type === "chatbot" && (
+          {(ticket.type === "chatbot" || (ticket.messages && ticket.messages.length > 0)) && (
             <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-[#E4E7EB]/60 pb-3">
                 <div className="flex items-center gap-2">
@@ -663,12 +809,37 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   ticket.messages.map((msg) => (
                     <div key={msg.id} className="space-y-1">
                       <div className={`flex ${msg.sender === "agent" ? "justify-end" : "justify-start"}`}>
-                        <div className={`p-3 text-xs font-semibold leading-relaxed rounded-2xl shadow-sm ${
+                        <div className={`p-3 text-xs font-semibold leading-relaxed rounded-2xl shadow-sm max-w-[85%] ${
                           msg.sender === "agent"
                             ? "bg-[#1B222C] text-white rounded-tr-none"
                             : "bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200/60"
                         }`}>
-                          {msg.text}
+                          {msg.attachmentUrl && (
+                            <div className="mb-2">
+                              {msg.attachmentType === "image" || /\.(png|jpe?g|webp|gif)$/i.test(msg.attachmentUrl) ? (
+                                <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl group">
+                                  <img
+                                    src={msg.attachmentUrl}
+                                    alt={msg.attachmentName || "Attached screenshot or photo"}
+                                    className="max-h-60 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity cursor-pointer border border-black/10"
+                                  />
+                                </a>
+                              ) : (
+                                <a
+                                  href={msg.attachmentUrl}
+                                  download={msg.attachmentName || "download"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition-colors text-xs font-medium"
+                                >
+                                  <FileText className="h-4 w-4 shrink-0 text-[#007AFF]" />
+                                  <span className="truncate flex-1 underline">{msg.attachmentName || "Attached File"}</span>
+                                  <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {msg.text && <div>{msg.text}</div>}
                         </div>
                       </div>
                       <span className={`text-[9px] font-bold text-slate-400 block ${
@@ -687,20 +858,104 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 )}
               </div>
 
+              {/* Real-time Visitor Typing Notification */}
+              {isClientTyping && (
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 animate-pulse">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>💬 Visitor ({ticket.name}) is typing right now...</span>
+                </div>
+              )}
+
+              {/* Admin Attached File Preview Strip */}
+              {adminAttachment && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    {adminAttachment.type === "image" ? (
+                      <img src={adminAttachment.url} alt="Thumbnail" className="h-8 w-8 object-cover rounded-lg border border-slate-300" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
+                    )}
+                    <span className="truncate font-semibold text-slate-700">{adminAttachment.name}</span>
+                    {adminAttachment.size && (
+                      <span className="text-[10px] text-slate-400">({Math.round(adminAttachment.size / 1024)} KB)</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdminAttachment(null)}
+                    className="p-1 text-slate-400 hover:text-red-500 rounded-full transition-colors cursor-pointer"
+                    title="Remove attachment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Chat Input Bar */}
-              <form onSubmit={handleSendChatMessage} className="flex gap-2 border-t border-[#E4E7EB]/60 pt-4">
+              <form onSubmit={handleSendChatMessage} className="relative flex items-center gap-2 border-t border-[#E4E7EB]/60 pt-4">
+                {/* iPhone Emoji Picker Popover */}
+                {showAdminEmojiPicker && (
+                  <IosEmojiPicker
+                    position="top-left"
+                    onSelect={(emoji) => {
+                      setNewChatMessage((prev) => prev + emoji);
+                      setShowAdminEmojiPicker(false);
+                    }}
+                    onClose={() => setShowAdminEmojiPicker(false)}
+                  />
+                )}
+
+                {/* Hidden File Input for Screenshots, Photos, and Documents */}
+                <input
+                  ref={adminFileInputRef}
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      uploadAdminAttachment(e.target.files[0]);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+
+                {/* Paperclip Button */}
+                <button
+                  type="button"
+                  onClick={() => adminFileInputRef.current?.click()}
+                  disabled={adminUploading || sendingChat}
+                  title="Attach screenshot, photo, or document"
+                  className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-[#1B222C] hover:bg-slate-100 disabled:opacity-40 transition-colors cursor-pointer shrink-0 border border-slate-200"
+                >
+                  {adminUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#007AFF]" /> : <Paperclip className="h-4 w-4" />}
+                </button>
+
+                {/* Apple Emoji Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdminEmojiPicker((prev) => !prev)}
+                  disabled={sendingChat}
+                  title="iPhone Emojis"
+                  className={`h-10 w-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200 ${
+                    showAdminEmojiPicker ? "bg-slate-200 text-[#007AFF]" : "text-slate-500 hover:text-[#1B222C] hover:bg-slate-100"
+                  }`}
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
+
                 <input
                   type="text"
                   value={newChatMessage}
-                  onChange={(e) => setNewChatMessage(e.target.value)}
-                  placeholder={`Reply to ${ticket.name}...`}
+                  onChange={handleAdminInputChange}
+                  onPaste={handleAdminPaste}
+                  placeholder={`Reply to ${ticket.name} or paste screenshot...`}
                   className="flex-1 text-xs px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold bg-slate-50/50"
                   disabled={sendingChat}
                 />
                 <button
                   type="submit"
-                  disabled={sendingChat || !newChatMessage.trim()}
-                  className="px-4 bg-[#1B222C] hover:bg-[#3E4C59] text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={sendingChat || (!newChatMessage.trim() && !adminAttachment) || adminUploading}
+                  className="px-5 py-3 bg-[#1B222C] hover:bg-[#3E4C59] text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
                 >
                   {sendingChat ? (
                     <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
