@@ -1,12 +1,12 @@
 import { Metadata } from "next";
-import { DocsPortal } from "@/features/docs/components/DocsPortal";
+import { ProtocolDocs } from "@/features/docs/components/ProtocolDocs";
 
 export const metadata: Metadata = {
-  title: "API Reference & Developer Documentation | M&F Technologies",
+  title: "API Documentation | Protocol & M&F Technologies",
   description:
-    "Interactive API reference and sandbox for M&F Technologies core lending engines, algorithmic credit scoring, CRM collections, and transactional middleware.",
+    "Official API Documentation for Protocol & M&F Technologies core lending systems, credit scoring platforms, SMS gateway infrastructure, and event streaming webhooks.",
 };
 
 export default function DocsPage() {
-  return <DocsPortal />;
+  return <ProtocolDocs />;
 }
