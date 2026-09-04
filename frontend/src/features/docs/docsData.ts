@@ -34,6 +34,12 @@ export interface EndpointSpec {
     python: string;
     csharp: string;
   };
+  /** If true, this endpoint requires an authenticated API key to use */
+  authRequired?: boolean;
+  /** The live backend path to hit from the playground (relative to /v1/) */
+  liveEndpoint?: string;
+  /** HTTP method for the live call (defaults to endpoint.method) */
+  liveMethod?: HttpMethod;
 }
 
 export interface DocCategory {
