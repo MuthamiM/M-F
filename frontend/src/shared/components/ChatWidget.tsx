@@ -172,10 +172,11 @@ export function ChatWidget() {
 
   // Emoji, Attachment, and Live Typing state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [attachment, setAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number } | null>(null);
+  const [attachment, setAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number; isUploading?: boolean } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Active Form Mode: null | "callback" | "live_agent"
@@ -195,79 +196,72 @@ export function ChatWidget() {
   // Virtual keyboard positioning offset
   const [visualOffset, setVisualOffset] = useState<number>(0);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [isTypingOnPhone, setIsTypingOnPhone] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const isInitialPollRef = useRef<boolean>(true);
 
-  // Fast client-side image compressor: shrinks 10MB mobile/camera photos to crisp ~180KB in <50ms
+  // Fast client-side image compressor: uses URL.createObjectURL (instant, zero-copy) instead of slow FileReader
   const compressImageForUpload = async (file: File): Promise<File> => {
     if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
       return file;
     }
-    // If already lightweight (under 250KB), no compression needed
-    if (file.size <= 250 * 1024) {
-      return file;
-    }
+    if (file.size <= 250 * 1024) return file;
 
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1600;
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDim = 1200;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
           }
-
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            resolve(file);
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob || blob.size >= file.size) {
-                resolve(file);
-                return;
-              }
-              const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
-              const compressedFile = new File([blob], safeName, {
-                type: "image/jpeg",
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            },
-            "image/jpeg",
-            0.82
-          );
-        };
-        img.onerror = () => resolve(file);
-        img.src = e.target?.result as string;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) { resolve(file); return; }
+            const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+            resolve(new File([blob], safeName, { type: "image/jpeg", lastModified: Date.now() }));
+          },
+          "image/jpeg",
+          0.75
+        );
       };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
     });
   };
 
   const uploadAttachment = async (file: File) => {
     if (isUploading) return;
     setIsUploading(true);
+
+    // Instant local preview thumbnail while compressing & uploading
+    const localUrl = URL.createObjectURL(file);
+    setAttachment({
+      url: localUrl,
+      name: file.name,
+      type: file.type.startsWith("image/") ? "image" : "document",
+      size: file.size,
+      isUploading: true,
+    });
+
     try {
-      // Instant client-side compression makes upload 50x faster
       const optimizedFile = await compressImageForUpload(file);
       const formData = new FormData();
       formData.append("file", optimizedFile);
@@ -279,10 +273,13 @@ export function ChatWidget() {
       });
       const data = await res.json();
       if (res.ok && data.success && data.data) {
-        setAttachment(data.data);
+        setAttachment({ ...data.data, isUploading: false });
+      } else {
+        setAttachment(null);
       }
     } catch (err) {
       console.error("Failed to upload attachment:", err);
+      setAttachment(null);
     } finally {
       setIsUploading(false);
     }
@@ -347,6 +344,37 @@ export function ChatWidget() {
     };
   }, []);
 
+  // Broadcast chat open/close state to CookieBanner and other components
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mf-chat-state", { detail: { isOpen } }));
+    }
+  }, [isOpen]);
+
+  // Detect when user is typing anywhere on phone to suppress pop-ups & avoid overlapping
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        setIsTypingOnPhone(true);
+        setPromptState("dismissed");
+      }
+    };
+    const handleFocusOut = () => {
+      setIsTypingOnPhone(false);
+    };
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
 
   const touchActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -371,8 +399,13 @@ export function ChatWidget() {
 
   /* ---- Trigger Pop-Up Prompt (No annoying sound chime on auto-popup) ---- */
   const triggerPopUpPrompt = useCallback(() => {
-    if (isOpen || popCount >= MAX_AUTO_POPS) return;
-    if (pathname?.startsWith("/admin") || pathname?.startsWith("/docs") || pathname?.startsWith("/api-reference")) return;
+    if (isOpen || isTypingOnPhone || popCount >= MAX_AUTO_POPS) return;
+    if (
+      pathname?.startsWith("/admin") ||
+      pathname?.startsWith("/docs") ||
+      pathname?.startsWith("/api-reference") ||
+      pathname?.startsWith("/contact")
+    ) return;
     
     // Respect user dismissal choices to avoid annoying pop-up repetition
     if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") === "true") {
@@ -381,7 +414,7 @@ export function ChatWidget() {
 
     setPromptState("visible");
     setPopCount((prev) => prev + 1);
-  }, [isOpen, popCount, pathname]);
+  }, [isOpen, isTypingOnPhone, popCount, pathname]);
 
   /* ---- Restore Session ---- */
   useEffect(() => {
@@ -1024,7 +1057,7 @@ export function ChatWidget() {
 
       {/* Pop-up Prompt Bubble */}
       <AnimatePresence>
-        {promptState === "visible" && !isOpen && !iosBanner && (
+        {promptState === "visible" && !isOpen && !iosBanner && !isTypingOnPhone && (
           <motion.div
             initial={{ opacity: 0, y: 15, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1077,7 +1110,10 @@ export function ChatWidget() {
       </AnimatePresence>
 
       {/* Floating Round Toggle Button (FAB) */}
-      <div className="fixed right-4 sm:right-6 z-[99999]" style={{ bottom: `calc(1.25rem + var(--cookie-banner-h, 0px) + ${visualOffset}px)`, transition: "bottom 0.1s ease-out" }}>
+      <div 
+        className={`fixed right-4 sm:right-6 z-[99999] ${isOpen ? "hidden sm:block" : "block"}`} 
+        style={{ bottom: `calc(1.25rem + var(--cookie-banner-h, 0px) + ${visualOffset}px)`, transition: "bottom 0.1s ease-out" }}
+      >
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -1103,10 +1139,11 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed right-4 sm:right-6 w-[320px] sm:w-[350px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
+            className="fixed right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[350px] max-w-[360px] ml-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
             style={{ 
-              bottom: `calc(4.8rem + var(--cookie-banner-h, 0px) + ${visualOffset}px)`, 
-              height: viewportHeight ? `min(calc(${viewportHeight}px - 6rem - var(--cookie-banner-h, 0px)), 480px)` : "480px",
+              bottom: visualOffset > 0 ? `${visualOffset + 8}px` : "calc(1.25rem + var(--cookie-banner-h, 0px))", 
+              maxHeight: viewportHeight ? `${viewportHeight - (visualOffset > 0 ? visualOffset + 16 : 24)}px` : "520px",
+              height: viewportHeight ? `min(calc(${viewportHeight}px - 2.5rem - var(--cookie-banner-h, 0px)), 490px)` : "480px",
               transition: "bottom 0.1s ease-out" 
             }}
           >
@@ -1191,13 +1228,17 @@ export function ChatWidget() {
                         {msg.attachmentUrl && (
                           <div className="mb-2">
                             {msg.attachmentType === "image" || /\.(png|jpe?g|webp|gif)$/i.test(msg.attachmentUrl) ? (
-                              <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl group">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage({ url: msg.attachmentUrl!, name: msg.attachmentName || "Attached Image" })}
+                                className="block overflow-hidden rounded-xl group text-left cursor-zoom-in"
+                              >
                                 <img
                                   src={msg.attachmentUrl}
                                   alt={msg.attachmentName || "Attached screenshot or photo"}
-                                  className="max-h-48 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity cursor-pointer border border-black/10"
+                                  className="max-h-48 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity border border-black/10"
                                 />
-                              </a>
+                              </button>
                             ) : (
                               <a
                                 href={msg.attachmentUrl}
@@ -1444,14 +1485,26 @@ export function ChatWidget() {
               <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-100 border-t border-slate-200 text-xs animate-in fade-in duration-150">
                 <div className="flex items-center gap-2 truncate">
                   {attachment.type === "image" ? (
-                    <img src={attachment.url} alt="Thumbnail" className="h-7 w-7 object-cover rounded-lg border border-slate-300" />
+                    <div
+                      className="relative h-7 w-7 shrink-0 cursor-pointer"
+                      onClick={() => !attachment.isUploading && setPreviewImage({ url: attachment.url, name: attachment.name })}
+                    >
+                      <img src={attachment.url} alt="Thumbnail" className={`h-7 w-7 object-cover rounded-lg border border-slate-300 ${attachment.isUploading ? "opacity-50" : "hover:opacity-90"}`} />
+                      {attachment.isUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                          <Loader2 className="h-3 w-3 animate-spin text-white" />
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
                   )}
-                  <span className="truncate font-semibold text-slate-700">{attachment.name}</span>
-                  {attachment.size && (
-                    <span className="text-[10px] text-slate-400">({Math.round(attachment.size / 1024)} KB)</span>
-                  )}
+                  <div className="truncate">
+                    <span className="truncate font-semibold text-slate-700 block">{attachment.name}</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {attachment.isUploading ? "Optimizing & uploading..." : (attachment.size ? `${Math.round(attachment.size / 1024)} KB` : "Ready to send")}
+                    </span>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1549,6 +1602,40 @@ export function ChatWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Full-Screen Image Lightbox Modal ── */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+            aria-label="Close preview"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={previewImage.url}
+            alt={previewImage.name}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain select-none"
+          />
+          <a
+            href={previewImage.url}
+            download={previewImage.name}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-[#1B222C] font-bold text-xs rounded-xl shadow-lg transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download</span>
+          </a>
+        </div>
+      )}
     </>
   );
 }

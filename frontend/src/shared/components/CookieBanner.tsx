@@ -52,15 +52,79 @@ export function CookieBanner() {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
 
+  const [isTypingOnPhone, setIsTypingOnPhone] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   useEffect(() => {
     const updateHeight = () => {
+      if (isTypingOnPhone || isChatOpen) {
+        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+        return;
+      }
       const h = bannerVisible && bannerRef.current ? bannerRef.current.offsetHeight : 0;
       document.documentElement.style.setProperty("--cookie-banner-h", `${h}px`);
     };
     updateHeight();
     window.addEventListener("resize", updateHeight);
-    return () => window.removeEventListener("resize", updateHeight);
-  }, [bannerVisible]);
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        setIsTypingOnPhone(true);
+        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+      }
+    };
+
+    const handleFocusOut = () => {
+      setIsTypingOnPhone(false);
+      setTimeout(() => {
+        if (!isChatOpen) {
+          const h = bannerVisible && bannerRef.current ? bannerRef.current.offsetHeight : 0;
+          document.documentElement.style.setProperty("--cookie-banner-h", `${h}px`);
+        }
+      }, 120);
+    };
+
+    const handleViewport = () => {
+      if (typeof window !== "undefined" && window.visualViewport) {
+        const isKb = window.innerHeight - window.visualViewport.height > 100;
+        if (isKb) {
+          setIsTypingOnPhone(true);
+          document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+        } else if (!document.activeElement || (document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA")) {
+          setIsTypingOnPhone(false);
+        }
+      }
+    };
+
+    const handleChatState = (e: any) => {
+      const open = !!e.detail?.isOpen;
+      setIsChatOpen(open);
+      if (open) {
+        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+      } else {
+        setTimeout(updateHeight, 150);
+      }
+    };
+
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    window.visualViewport?.addEventListener("resize", handleViewport);
+    window.addEventListener("mf-chat-state", handleChatState);
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+      window.visualViewport?.removeEventListener("resize", handleViewport);
+      window.removeEventListener("mf-chat-state", handleChatState);
+    };
+  }, [bannerVisible, isTypingOnPhone, isChatOpen]);
 
   useEffect(() => {
 
@@ -139,9 +203,13 @@ export function CookieBanner() {
 
   return (
     <>
-      {/* Bottom Floating Consent Banner (Minimal Inline Straight Line with White Background) */}
       {bannerVisible && !modalOpen && (
-        <div ref={bannerRef} className="fixed bottom-0 left-0 right-0 z-[9000] border-t border-[#9AA5B1]/20 bg-white text-[#3E4C59] px-4 py-4 sm:px-8 lg:px-12 shadow-2xl">
+        <div
+          ref={bannerRef}
+          className={`fixed bottom-0 left-0 right-0 z-[9000] border-t border-[#9AA5B1]/20 bg-white text-[#3E4C59] px-4 py-4 sm:px-8 lg:px-12 shadow-2xl transition-all duration-200 ${
+            (isTypingOnPhone || isChatOpen) ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          }`}
+        >
           <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
             <div className="flex items-start md:items-center gap-3 text-[#3E4C59]">
               <Shield className="h-5 w-5 text-[#3E4C59] shrink-0 mt-0.5 md:mt-0" />

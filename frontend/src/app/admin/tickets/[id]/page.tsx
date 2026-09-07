@@ -116,73 +116,75 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   // Attachment & Emoji state
   const [showAdminEmojiPicker, setShowAdminEmojiPicker] = useState(false);
-  const [adminAttachment, setAdminAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number } | null>(null);
+  const [adminAttachment, setAdminAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number; isUploading?: boolean } | null>(null);
   const [adminUploading, setAdminUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const adminFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const compressImageForUpload = async (file: File): Promise<File> => {
     if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
       return file;
     }
-    if (file.size <= 250 * 1024) {
-      return file;
-    }
-
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1600;
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDim = 1200;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) {
+              resolve(file);
+              return;
             }
-          }
-
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            resolve(file);
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (!blob || blob.size >= file.size) {
-                resolve(file);
-                return;
-              }
-              const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
-              const compressedFile = new File([blob], safeName, {
-                type: "image/jpeg",
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            },
-            "image/jpeg",
-            0.82
-          );
-        };
-        img.onerror = () => resolve(file);
-        img.src = e.target?.result as string;
+            const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+            resolve(new File([blob], safeName, { type: "image/jpeg", lastModified: Date.now() }));
+          },
+          "image/jpeg",
+          0.75
+        );
       };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+      img.src = objectUrl;
     });
   };
 
   const uploadAdminAttachment = async (file: File) => {
     if (adminUploading) return;
     setAdminUploading(true);
+
+    // Instant local preview thumbnail while optimizing & uploading
+    const localUrl = URL.createObjectURL(file);
+    setAdminAttachment({
+      url: localUrl,
+      name: file.name,
+      type: file.type.startsWith("image/") ? "image" : "document",
+      size: file.size,
+      isUploading: true,
+    });
+
     try {
       const optimizedFile = await compressImageForUpload(file);
       const formData = new FormData();
@@ -194,10 +196,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
-        setAdminAttachment(data.data);
+        setAdminAttachment({
+          ...data.data,
+          isUploading: false,
+        });
+      } else {
+        setAdminAttachment(null);
       }
     } catch (err) {
       console.error("Failed to upload attachment:", err);
+      setAdminAttachment(null);
     } finally {
       setAdminUploading(false);
     }
@@ -560,7 +568,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   if (!ticket) return null;
 
   return (
-    <div className="space-y-6 font-sans antialiased text-[#1B222C]">
+    <>
+      <div className="space-y-6 font-sans antialiased text-[#1B222C]">
       {/* Top Nav and ID */}
       <div className="space-y-2">
         <Link href="/admin/tickets" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
@@ -645,27 +654,45 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               )}
 
               {(ticket.geoCity || ticket.geoCountry || ticket.geoRegion || (ticket.latitude !== undefined && ticket.longitude !== undefined)) && (
-                <div className="flex items-start gap-2.5 text-xs sm:col-span-2 bg-slate-50 border border-[#E4E7EB] rounded-xl p-3">
-                  <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Geolocation Origin</span>
-                    <div className="font-bold text-slate-800 text-xs">
-                      {[ticket.geoCity, ticket.geoRegion, ticket.geoCountry].filter(Boolean).join(", ")}
-                    </div>
-                    {ticket.latitude !== undefined && ticket.longitude !== undefined && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 font-normal">
-                        <span>Coordinates: {ticket.latitude.toFixed(4)}, {ticket.longitude.toFixed(4)}</span>
-                        <a
-                          href={`https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#1B222C] font-bold underline hover:text-[#3E4C59] inline-flex items-center gap-0.5"
-                        >
-                          View Map <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
+                <div className="flex flex-col gap-2.5 text-xs sm:col-span-2 bg-slate-50 border border-[#E4E7EB] rounded-xl p-4">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-1 flex-1">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Geolocation Origin</span>
+                      <div className="font-bold text-slate-800 text-xs">
+                        {[ticket.geoCity, ticket.geoRegion, ticket.geoCountry].filter(Boolean).join(", ")}
                       </div>
-                    )}
+                      {ticket.latitude !== undefined && ticket.longitude !== undefined && (
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-normal">
+                          <span>Coordinates: {ticket.latitude.toFixed(4)}, {ticket.longitude.toFixed(4)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#1B222C] font-bold underline hover:text-[#3E4C59] inline-flex items-center gap-0.5"
+                          >
+                            Open Google Maps <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {ticket.latitude !== undefined && ticket.longitude !== undefined && (
+                    <div className="mt-1 h-44 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 relative">
+                      <iframe
+                        title="Interactive Geolocation Map"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        scrolling="no"
+                        marginHeight={0}
+                        marginWidth={0}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${ticket.longitude - 0.05}%2C${ticket.latitude - 0.05}%2C${ticket.longitude + 0.05}%2C${ticket.latitude + 0.05}&layer=mapnik&marker=${ticket.latitude}%2C${ticket.longitude}`}
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -861,13 +888,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                           {msg.attachmentUrl && (
                             <div className="mb-2">
                               {msg.attachmentType === "image" || /\.(png|jpe?g|webp|gif)$/i.test(msg.attachmentUrl) ? (
-                                <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl group">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImage({ url: msg.attachmentUrl!, name: msg.attachmentName || "Attached Image" })}
+                                  className="block overflow-hidden rounded-xl group text-left cursor-zoom-in"
+                                >
                                   <img
                                     src={msg.attachmentUrl}
                                     alt={msg.attachmentName || "Attached screenshot or photo"}
-                                    className="max-h-60 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity cursor-pointer border border-black/10"
+                                    className="max-h-60 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity border border-black/10 shadow-sm"
                                   />
-                                </a>
+                                </button>
                               ) : (
                                 <a
                                   href={msg.attachmentUrl}
@@ -915,19 +946,31 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs">
                   <div className="flex items-center gap-2 truncate">
                     {adminAttachment.type === "image" ? (
-                      <img src={adminAttachment.url} alt="Thumbnail" className="h-8 w-8 object-cover rounded-lg border border-slate-300" />
+                      <div
+                        className="relative h-9 w-9 shrink-0 cursor-pointer"
+                        onClick={() => !adminAttachment.isUploading && setPreviewImage({ url: adminAttachment.url, name: adminAttachment.name })}
+                      >
+                        <img src={adminAttachment.url} alt="Thumbnail" className={`h-9 w-9 object-cover rounded-lg border border-slate-300 ${adminAttachment.isUploading ? "opacity-50" : "hover:opacity-90"}`} />
+                        {adminAttachment.isUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
                     )}
-                    <span className="truncate font-semibold text-slate-700">{adminAttachment.name}</span>
-                    {adminAttachment.size && (
-                      <span className="text-[10px] text-slate-400">({Math.round(adminAttachment.size / 1024)} KB)</span>
-                    )}
+                    <div className="truncate">
+                      <span className="truncate font-semibold text-slate-700 block">{adminAttachment.name}</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        {adminAttachment.isUploading ? "Optimizing & uploading..." : (adminAttachment.size ? `${Math.round(adminAttachment.size / 1024)} KB` : "Ready to send")}
+                      </span>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAdminAttachment(null)}
-                    className="p-1 text-slate-400 hover:text-red-500 rounded-full transition-colors cursor-pointer"
+                    className="p-1 text-slate-400 hover:text-red-500 rounded-full transition-colors cursor-pointer shrink-0"
                     title="Remove attachment"
                   >
                     <X className="h-4 w-4" />
@@ -992,6 +1035,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   value={newChatMessage}
                   onChange={handleAdminInputChange}
                   onPaste={handleAdminPaste}
+                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                   placeholder={`Reply to ${ticket.name} or paste screenshot...`}
                   className="flex-1 text-xs px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold bg-slate-50/50"
                   disabled={sendingChat}
@@ -1112,6 +1156,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <textarea
                     value={quickMessage}
                     onChange={(e) => setQuickMessage(e.target.value)}
+                    onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                     placeholder="Short message to send to the client..."
                     rows={2}
                     className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold resize-none"
@@ -1170,5 +1215,40 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
     </div>
+
+      {/* ── Full-Screen Image Lightbox Modal ── */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+            aria-label="Close preview"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={previewImage.url}
+            alt={previewImage.name}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain select-none"
+          />
+          <a
+            href={previewImage.url}
+            download={previewImage.name}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-[#1B222C] font-bold text-xs rounded-xl shadow-lg transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download</span>
+          </a>
+        </div>
+      )}
+    </>
   );
 }

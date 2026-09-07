@@ -6,6 +6,30 @@ import { X, Download } from "lucide-react";
 export function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [visible, setVisible] = useState(false);
+  const [isTypingOnPhone, setIsTypingOnPhone] = useState(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        setIsTypingOnPhone(true);
+      }
+    };
+    const handleFocusOut = () => {
+      setIsTypingOnPhone(false);
+    };
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => {
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
 
   useEffect(() => {
     const dismissed = localStorage.getItem("mf-install-dismissed");
@@ -33,7 +57,7 @@ export function InstallBanner() {
     localStorage.setItem("mf-install-dismissed", "1");
   };
 
-  if (!visible) return null;
+  if (!visible || isTypingOnPhone) return null;
 
   return (
     <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-md z-[10002] bg-[#1B222C]/95 backdrop-blur-md text-white border border-white/15 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300">

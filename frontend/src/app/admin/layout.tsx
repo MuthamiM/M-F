@@ -129,6 +129,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 // Brand new ticket
                 if (prevMsgCount === undefined) {
+                  // Do not pop banner if user is currently viewing this ticket or typing
+                  if (pathname && pathname.includes(ticket.id)) {
+                    continue;
+                  }
+                  if (typeof document !== "undefined") {
+                    const activeEl = document.activeElement;
+                    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+                      continue;
+                    }
+                  }
                   playAdminNotificationSound();
                   setAdminBanner({
                     id: "notif-" + Date.now(),
@@ -143,6 +153,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 else if (currentMsgCount > prevMsgCount) {
                   const lastMsg = ticket.messages[ticket.messages.length - 1];
                   if (lastMsg && lastMsg.sender === "client") {
+                    // Do not pop banner if admin is currently viewing this ticket conversation or actively typing
+                    if (pathname && pathname.includes(ticket.id)) {
+                      continue;
+                    }
+                    if (typeof document !== "undefined") {
+                      const activeEl = document.activeElement;
+                      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+                        continue;
+                      }
+                    }
                     playAdminNotificationSound();
                     setAdminBanner({
                       id: "notif-" + Date.now(),

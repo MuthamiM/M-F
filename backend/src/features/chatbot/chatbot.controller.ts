@@ -142,7 +142,7 @@ async function callGroqAPI(messages: Array<{ role: string; content: string }>): 
     max_tokens: 300,
   });
 
-  const data = await fetchIPv4("https://api.groq.com/openai/v1/chat/completions", {
+  const data = await httpRequest("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -182,7 +182,7 @@ async function callGeminiAPI(messages: Array<{ role: string; content: string }>)
   });
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-  const data = await fetchIPv4(url, {
+  const data = await httpRequest(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
   }, payload);
@@ -422,7 +422,9 @@ export async function sendMessageHandler(req: Request, res: Response) {
   if (!activeTicketId) {
     activeTicketId = await generateTicketNumber("CHAT");
     const now = new Date();
+    const ip = getReqIp(req);
     try {
+      const geo = ip ? await lookupGeo(ip) : {};
       await ticketStore.set(activeTicketId, {
         id: activeTicketId,
         type: "chatbot",
@@ -432,6 +434,12 @@ export async function sendMessageHandler(req: Request, res: Response) {
         message: cleanText(message),
         status: "open",
         priority: "medium",
+        latitude: geo.lat,
+        longitude: geo.lon,
+        ipAddress: ip || undefined,
+        geoCity: geo.city,
+        geoCountry: geo.country,
+        geoRegion: geo.region,
         createdAt: now,
         updatedAt: now,
         notes: [],
@@ -453,7 +461,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
         ],
         callLogs: [],
       });
-      logger.info(`Auto-created ticket ${activeTicketId} in DB for initial chat message.`);
+      logger.info(`Auto-created ticket ${activeTicketId} in DB for initial chat message with IP: ${ip}.`);
     } catch (err: any) {
       logger.error(`Failed to auto-create ticket in DB: ${err.message}`);
     }
@@ -462,6 +470,18 @@ export async function sendMessageHandler(req: Request, res: Response) {
     try {
       const existingTicket = await ticketStore.get(activeTicketId);
       if (existingTicket) {
+        const ip = getReqIp(req);
+        if (ip && !existingTicket.ipAddress) {
+          existingTicket.ipAddress = ip;
+          try {
+            const geo = await lookupGeo(ip);
+            if (geo.city) existingTicket.geoCity = geo.city;
+            if (geo.country) existingTicket.geoCountry = geo.country;
+            if (geo.region) existingTicket.geoRegion = geo.region;
+            if (geo.lat) existingTicket.latitude = geo.lat;
+            if (geo.lon) existingTicket.longitude = geo.lon;
+          } catch {}
+        }
         existingTicket.messages.push({
           id: `msg-${Date.now()}`,
           sender: "client",
