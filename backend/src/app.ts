@@ -8,6 +8,7 @@ import { applySecurityMiddleware } from "./middleware/security.middleware";
 import { globalRateLimiter } from "./middleware/rateLimiter.middleware";
 import { errorHandler } from "./middleware/errorHandler.middleware";
 import { healthRouter } from "./features/health/health.routes";
+import { statusRouter } from "./features/status/status.routes";
 import { authRouter } from "./features/auth/auth.routes";
 import { contactRouter } from "./features/contact/contact.routes";
 import { docsRouter } from "./features/docs/docs.routes";
@@ -29,8 +30,9 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: "25mb" }));
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-  // Health check route (unlimited for monitoring/uptime probes)
+  // Health and Status routes (unlimited for monitoring/uptime probes)
   app.use("/api/health", healthRouter);
+  app.use("/api/status", statusRouter);
 
   app.use(globalRateLimiter);
 
