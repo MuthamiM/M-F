@@ -31,6 +31,14 @@ export function Footer() {
 
         {/* Links */}
         <div className="w-full flex flex-wrap justify-center sm:justify-start gap-x-8 gap-y-3 text-xs font-medium max-w-4xl">
+          <Link href="/about" className="hover:text-white transition-colors py-1">
+            About Us
+          </Link>
+
+          <Link href="/services" className="hover:text-white transition-colors py-1">
+            Services
+          </Link>
+
           <Link href="/news" className="hover:text-white transition-colors py-1">
             News
           </Link>
@@ -59,10 +67,16 @@ export function Footer() {
             Where We Are
           </Link>
 
+          <Link href="/get-involved" className="hover:text-white transition-colors py-1">
+            Get Involved
+          </Link>
+
+          <Link href="/contact" className="hover:text-white transition-colors py-1">
+            Contact
+          </Link>
+
           <Link
             href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
             className="hover:text-white transition-colors py-1"
           >
             Privacy Policy
@@ -70,8 +84,6 @@ export function Footer() {
 
           <Link
             href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
             className="hover:text-white transition-colors py-1"
           >
             Terms of Service

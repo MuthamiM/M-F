@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, ChevronDown, ChevronRight, Layers, Shield, Cpu, CreditCard, RefreshCw, FileCode, CheckCircle2, MessageSquare } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Layers, Shield, Cpu, CreditCard, RefreshCw, FileCode, CheckCircle2, MessageSquare, Lock } from "lucide-react";
 import { DocCategory, EndpointSpec } from "../docsData";
 
 interface ApiSidebarProps {
@@ -110,26 +110,40 @@ export function ApiSidebar({
                             : "text-[#3E4C59] hover:bg-[#E4E7EB] hover:text-[#1B222C]"
                         }`}
                       >
-                        <span className="truncate text-[11px] leading-tight">{item.title}</span>
-                        {item.method ? (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${
-                              isActive ? "bg-white/20 text-white border-white/30" : getMethodBadgeClass(item.method)
-                            }`}
-                          >
-                            {item.method}
-                          </span>
-                        ) : item.badge ? (
-                          <span
-                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
-                              isActive
-                                ? "bg-white/20 text-white"
-                                : "bg-[#E4E7EB] text-[#3E4C59]"
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        ) : null}
+                        <span className="truncate text-[11px] leading-tight flex-1">{item.title}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.authRequired ? (
+                            <span title="Account Required">
+                              <Lock
+                                className={`h-2.5 w-2.5 ${isActive ? "text-[#F59E0B]" : "text-[#D97706]"}`}
+                              />
+                            </span>
+                          ) : item.authRequired === false ? (
+                            <span
+                              className="w-1.5 h-1.5 rounded-full bg-[#10B981]"
+                              title="Public Access"
+                            />
+                          ) : null}
+                          {item.method ? (
+                            <span
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                                isActive ? "bg-white/20 text-white border-white/30" : getMethodBadgeClass(item.method)
+                              }`}
+                            >
+                              {item.method}
+                            </span>
+                          ) : item.badge ? (
+                            <span
+                              className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                                isActive
+                                  ? "bg-white/20 text-white"
+                                  : "bg-[#E4E7EB] text-[#3E4C59]"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          ) : null}
+                        </div>
                       </button>
                     );
                   })}

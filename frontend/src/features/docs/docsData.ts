@@ -58,6 +58,9 @@ export const DOCS_DATA: DocCategory[] = [
       {
         id: "overview",
         category: "getting-started",
+        authRequired: false,
+        liveEndpoint: "/v1/health",
+        liveMethod: "GET",
         title: "Platform Overview",
         badge: "Guide",
         description:
@@ -209,8 +212,162 @@ Console.WriteLine(content);`,
     description: "Endpoints for loan origination, automated underwriting, repayment schedules, and state machine updates.",
     items: [
       {
+        id: "list-loan-products",
+        category: "lending",
+        title: "Loan Products Catalog",
+        badge: "Public",
+        method: "GET",
+        path: "/v1/lending/products",
+        authRequired: false,
+        liveEndpoint: "/v1/lending/products",
+        liveMethod: "GET",
+        description:
+          "Retrieves the active catalog of institutional and commercial loan products (Logbook Asset Credit, SME Business Boost, Salary Advance, Heavy Equipment Financing, Karibu Emergency Cash) powered by the Karibu Credit Engine. Can be queried freely without an account or API key.",
+        sampleResponseSuccess: {
+          status: 200,
+          body: {
+            success: true,
+            data: {
+              institution: "M&F Technologies Live Lending Platform",
+              poweredBy: "Karibu Credit Core v2.4",
+              currency: "KES",
+              count: 5,
+              products: [
+                {
+                  id: "prod_logbook_ke",
+                  code: "LOGBOOK",
+                  name: "Logbook Asset Credit",
+                  category: "SECURED",
+                  interestRateMonthlyPercent: 3.5,
+                  interestRateAnnualPercent: 42.0,
+                  minAmount: 50000,
+                  maxAmount: 2500000,
+                  minTenureMonths: 3,
+                  maxTenureMonths: 24,
+                  processingFeePercent: 2.5,
+                  currency: "KES",
+                  description: "Fast liquidity secured against motor vehicle logbooks with 24-hour settlement."
+                },
+                {
+                  id: "prod_sme_boost",
+                  code: "SME",
+                  name: "SME Working Capital Boost",
+                  category: "COMMERCIAL",
+                  interestRateMonthlyPercent: 2.5,
+                  interestRateAnnualPercent: 30.0,
+                  minAmount: 100000,
+                  maxAmount: 1500000,
+                  minTenureMonths: 1,
+                  maxTenureMonths: 12,
+                  processingFeePercent: 2.0,
+                  currency: "KES",
+                  description: "Working capital facility and stock financing tailored for registered Kenyan businesses and retail merchants."
+                }
+              ]
+            }
+          }
+        },
+        codeExamples: {
+          curl: `curl -X GET "https://api.mftechnologies.org/v1/lending/products"`,
+          typescript: `const res = await fetch("https://api.mftechnologies.org/v1/lending/products");
+const data = await res.json();
+console.log(data.data.products);`,
+          python: `import requests
+res = requests.get("https://api.mftechnologies.org/v1/lending/products")
+print(res.json())`,
+          csharp: `var res = await client.GetAsync("https://api.mftechnologies.org/v1/lending/products");`
+        }
+      },
+      {
+        id: "calculate-loan-repayment",
+        category: "lending",
+        title: "Loan Amortization Calculator",
+        badge: "Public",
+        method: "POST",
+        path: "/v1/lending/calculate",
+        authRequired: false,
+        liveEndpoint: "/v1/lending/calculate",
+        liveMethod: "POST",
+        description:
+          "Calculates monthly installments, total interest, effective APR, processing fees, and payment schedule for any loan scenario (reducing balance or flat rate). Open to all developers without an account.",
+        bodyParams: [
+          {
+            name: "loanAmount",
+            type: "number",
+            required: true,
+            description: "Principal amount in KES.",
+            example: 150000
+          },
+          {
+            name: "tenureMonths",
+            type: "integer",
+            required: true,
+            description: "Loan duration in months (1 - 60).",
+            example: 12
+          },
+          {
+            name: "interestRateAnnual",
+            type: "number",
+            required: false,
+            description: "Annual interest rate percent (default 12.0%).",
+            example: 14.0
+          },
+          {
+            name: "calculationMethod",
+            type: "string",
+            required: false,
+            description: "'REDUCING_BALANCE' or 'FLAT_RATE'.",
+            example: "REDUCING_BALANCE"
+          }
+        ],
+        sampleRequestBody: {
+          loanAmount: 150000,
+          tenureMonths: 12,
+          interestRateAnnual: 14.0,
+          calculationMethod: "REDUCING_BALANCE"
+        },
+        sampleResponseSuccess: {
+          status: 200,
+          body: {
+            success: true,
+            data: {
+              principal: 150000,
+              currency: "KES",
+              tenureMonths: 12,
+              calculationMethod: "REDUCING_BALANCE",
+              interestRateAnnualPercent: 14.0,
+              monthlyPayment: 13468.07,
+              totalInterest: 11616.81,
+              totalRepayment: 161616.81,
+              processingFee: 3000,
+              disbursementAmount: 147000,
+              amortizationSchedule: [
+                { period: 1, payment: 13468.07, principal: 11718.07, interest: 1750, remainingBalance: 138281.93 },
+                { period: 2, payment: 13468.07, principal: 11854.78, interest: 1613.29, remainingBalance: 126427.15 }
+              ]
+            }
+          }
+        },
+        codeExamples: {
+          curl: `curl -X POST "https://api.mftechnologies.org/v1/lending/calculate" \\
+  -H "Content-Type: application/json" \\
+  -d '{"loanAmount": 150000, "tenureMonths": 12, "interestRateAnnual": 14.0}'`,
+          typescript: `const res = await fetch("https://api.mftechnologies.org/v1/lending/calculate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ loanAmount: 150000, tenureMonths: 12, interestRateAnnual: 14.0 })
+});`,
+          python: `import requests
+res = requests.post("https://api.mftechnologies.org/v1/lending/calculate", json={"loanAmount": 150000, "tenureMonths": 12})`,
+          csharp: `var res = await client.PostAsJsonAsync("https://api.mftechnologies.org/v1/lending/calculate", new { loanAmount = 150000, tenureMonths = 12 });`
+        }
+      },
+      {
         id: "create-loan-application",
         category: "lending",
+        authRequired: true,
+        liveEndpoint: "/v1/lending/applications",
+        liveMethod: "POST",
         title: "Create Loan Application",
         method: "POST",
         path: "/v1/lending/applications",
@@ -390,6 +547,9 @@ Console.WriteLine(result);`,
       {
         id: "get-loan-application",
         category: "lending",
+        authRequired: true,
+        liveEndpoint: "/v1/lending/applications/loan_app_98234",
+        liveMethod: "GET",
         title: "Get Application Status & Schedule",
         method: "GET",
         path: "/v1/lending/applications/{id}",
@@ -446,6 +606,9 @@ var json = await response.Content.ReadAsStringAsync();`,
       {
         id: "evaluate-credit-score",
         category: "scoring",
+        authRequired: true,
+        liveEndpoint: "/v1/scoring/evaluate",
+        liveMethod: "POST",
         title: "Evaluate Borrower Risk",
         method: "POST",
         path: "/v1/scoring/evaluate",
@@ -578,6 +741,9 @@ var response = await client.PostAsync("https://api.mftechnologies.org/v1/scoring
       {
         id: "get-collections-queue",
         category: "crm",
+        authRequired: true,
+        liveEndpoint: "/v1/crm/collections",
+        liveMethod: "GET",
         title: "Query Collections Queue",
         method: "GET",
         path: "/v1/collections/queue",
@@ -655,6 +821,9 @@ print(response.json())`,
       {
         id: "send-sms-message",
         category: "sms",
+        authRequired: true,
+        liveEndpoint: "/v1/messages",
+        liveMethod: "POST",
         title: "Send Transactional SMS",
         method: "POST",
         path: "/v1/messages",
@@ -815,6 +984,9 @@ Console.WriteLine(result);`,
       {
         id: "get-sms-status",
         category: "sms",
+        authRequired: true,
+        liveEndpoint: "/v1/messages/msg_90182374-4b91",
+        liveMethod: "GET",
         title: "Get Message Delivery Status",
         method: "GET",
         path: "/v1/messages/{id}",
@@ -871,6 +1043,9 @@ print(res.json())`,
       {
         id: "list-sms-messages",
         category: "sms",
+        authRequired: true,
+        liveEndpoint: "/v1/messages?limit=10",
+        liveMethod: "GET",
         title: "List Outbound SMS Messages",
         method: "GET",
         path: "/v1/messages",
@@ -945,6 +1120,9 @@ print(res.json())`,
       {
         id: "list-sms-devices",
         category: "sms",
+        authRequired: false,
+        liveEndpoint: "/v1/devices",
+        liveMethod: "GET",
         title: "List Connected Gateway Devices",
         method: "GET",
         path: "/v1/devices",
@@ -987,6 +1165,9 @@ print(res.json())`,
       {
         id: "verify-sms-otp",
         category: "sms",
+        authRequired: false,
+        liveEndpoint: "/v1/auth/verify-otp",
+        liveMethod: "POST",
         title: "Verify SMS OTP & 2FA",
         method: "POST",
         path: "/v1/auth/verify-otp",
@@ -1067,6 +1248,9 @@ var response = await client.PostAsync("https://gateway.mftechnologies.org/v1/aut
       {
         id: "webhook-verification",
         category: "webhooks",
+        authRequired: false,
+        liveEndpoint: "/v1/webhooks/test",
+        liveMethod: "POST",
         title: "Signature Verification",
         badge: "Security",
         description:

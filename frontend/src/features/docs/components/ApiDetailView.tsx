@@ -2,7 +2,7 @@
 
 import { EndpointSpec } from "../docsData";
 import { ApiPlayground } from "./ApiPlayground";
-import { Copy, Check, Terminal, ExternalLink, ShieldAlert, FileText } from "lucide-react";
+import { Copy, Check, Terminal, ExternalLink, ShieldAlert, FileText, Lock, Unlock } from "lucide-react";
 import { useState } from "react";
 
 interface ApiDetailViewProps {
@@ -46,6 +46,18 @@ export function ApiDetailView({ endpoint }: ApiDetailViewProps) {
               {endpoint.badge}
             </span>
           )}
+          {endpoint.authRequired !== undefined && (
+            <span
+              className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded flex items-center gap-1 border ${
+                endpoint.authRequired
+                  ? "bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]"
+                  : "bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]"
+              }`}
+            >
+              {endpoint.authRequired ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+              {endpoint.authRequired ? "Account Required" : "Public Access"}
+            </span>
+          )}
           <span className="text-xs text-[#6B7684]">
             Module: <span className="capitalize font-semibold text-[#1B222C]">{endpoint.category.replace("-", " ")}</span>
           </span>
@@ -69,6 +81,40 @@ export function ApiDetailView({ endpoint }: ApiDetailViewProps) {
             >
               {copiedPath ? <Check className="h-3.5 w-3.5 text-[#1B222C]" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
+          </div>
+        )}
+
+        {/* Account Authorization Callout */}
+        {endpoint.authRequired !== undefined && (
+          <div
+            className={`flex items-start gap-2.5 p-3 rounded-lg border text-xs ${
+              endpoint.authRequired
+                ? "bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]"
+                : "bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]"
+            }`}
+          >
+            {endpoint.authRequired ? (
+              <>
+                <Lock className="h-4 w-4 shrink-0 mt-0.5 text-[#D97706]" />
+                <div>
+                  <span className="font-bold">M&amp;F Account &amp; API Key Required: </span>
+                  <span>
+                    Calls to this endpoint require an active M&amp;F account. Pass your institutional key via{" "}
+                    <code className="bg-black/5 px-1 py-0.5 rounded font-mono text-[11px]">X-API-Key</code>. Test live in the console using our demo sandbox key.
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Unlock className="h-4 w-4 shrink-0 mt-0.5 text-[#059669]" />
+                <div>
+                  <span className="font-bold">Public Endpoint (Try Without Account): </span>
+                  <span>
+                    This endpoint is open to all developers and third-party integrators. You can query and try it immediately without an account or key.
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         )}
 

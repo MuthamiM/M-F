@@ -81,14 +81,17 @@ const CLIENT_SEGMENTS: ClientSegment[] = [
   }
 ];
 
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
+
 export function OurClientsClient() {
   return (
     <div className="min-h-screen bg-white text-[#1B222C] flex flex-col w-full px-0">
       <Nav />
 
       {/* Hero Banner Section */}
-      <section className="w-full bg-[#F4F6F8] border-b border-[#9AA5B1]/20 py-20 sm:py-24">
+      <section className="w-full bg-[#F4F6F8] border-b border-[#9AA5B1]/20 py-12 sm:py-20">
         <div className="w-full px-4 sm:px-8 lg:px-12">
+          <Breadcrumbs items={[{ label: "Our Clients" }]} />
           <ScrollAnimate delay={0.1}>
             <span className="text-[11px] font-bold uppercase tracking-widest text-[#3E4C59] bg-[#E4E7EB] px-2.5 py-1 rounded">
               Institutional Partners

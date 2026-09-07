@@ -50,21 +50,51 @@ const CASE_STUDIES: CaseStudy[] = [
     solution:
       "Migrated Horizon's complete database layer to M&F's transaction ledger engine. The migration was achieved with zero service interruption. The new engine successfully processed over 120,000 daily disbursements with 0.00% ledger balance drift. In addition, automated webhook triggers enabled instant, sub-second payment settlement notifications and integrated automated SMS notification workflows for borrowers.",
   },
+  {
+    id: "tier1-bank-syndication",
+    client: "Equatorial Commercial Bank",
+    industry: "Tier-1 Commercial Bank",
+    title: "Multi-Currency Syndications Ledger & Cross-Border Float Optimization",
+    metrics: [
+      { label: "Cross-Border Settlement", value: "< 3 Seconds" },
+      { label: "Monthly Volume", value: "$320M" },
+      { label: "Reconciliation Accuracy", value: "100.0%" },
+    ],
+    challenge:
+      "Equatorial Commercial Bank managed syndicated commercial loans across 4 East African jurisdictions using fragmented spreadsheet reconciliations and legacy batch core banking routines. Currency conversions, fluctuating interbank rates, and multi-participant dividend distributions took up to 10 days to reconcile at month-end.",
+    architecture:
+      "A distributed multi-currency ledger module with automated FX rate feed hooks, atomic multi-participant journal entries, and programmatic escrow allocations. Built with Node.js and PostgreSQL read-replicas across three cloud regions.",
+    solution:
+      "Implemented M&F's API-first syndication engine, enabling automated dividend splits and near-instant cross-border mobile wallet float rebalancing. Month-end reconciliation time was reduced from 10 days to under 15 minutes, with zero currency allocation discrepancies across over $320M in monthly volume.",
+  },
+  {
+    id: "agricultural-credit-cooperative",
+    client: "Kilimo Bora Credit Cooperative",
+    industry: "Rural SACCO Federation",
+    title: "Offline-First Tablet Underwriting & Biometric KYC for 250,000 Smallholder Farmers",
+    metrics: [
+      { label: "Farmers Reached", value: "250,000+" },
+      { label: "Approval Cycle", value: "Same-Day" },
+      { label: "Repayment Rate", value: "96.8%" },
+    ],
+    challenge:
+      "Kilimo Bora's loan officers traveled to remote rural farming communities with poor cellular connectivity, manually filling out paper credit applications and taking days to return to town centers for data entry. Farmer loan approvals routinely took 4 to 6 weeks, frequently missing planting seasons.",
+    architecture:
+      "An offline-first mobile app using SQLite on encrypted Android tablets, synchronizing bidirectionally with M&F's core lending engine whenever field officers reach cellular reception or Wi-Fi mesh points. Integrated local biometric fingerprint validation against offline encrypted identity caches.",
+    solution:
+      "Equipped 120 field credit officers with M&F's offline underwriting app. Farmers now receive credit decisions and seasonal fertilizer vouchers on the same day. Over 250,000 farmers were successfully onboarded, and delinquency rates remained below 3.2% due to predictive harvest cycle repayment scheduling.",
+  },
 ];
+
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
 
 export function CaseStudiesClient() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero */}
       <section className="bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
-        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C] transition-colors mb-6 sm:mb-8"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Home
-          </Link>
+        <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
+          <Breadcrumbs items={[{ label: "Case Studies" }]} />
 
           <div className="flex items-center gap-3 mb-4">
             <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center text-[#1B222C] border border-[#9AA5B1]/20 shadow-sm">

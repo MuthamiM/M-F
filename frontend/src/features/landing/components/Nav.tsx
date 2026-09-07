@@ -9,14 +9,16 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_LINKS = [
   { label: "Home", href: "/", hash: "#home" },
-  { label: "About", href: "/#about", hash: "#about" },
-  { label: "Services", href: "/#services", hash: "#services" },
+  { label: "About", href: "/about", hash: "" },
+  { label: "Services", href: "/services", hash: "" },
+  { label: "News", href: "/news", hash: "" },
   { label: "Clients", href: "/our-clients", hash: "" },
   { label: "Careers", href: "/careers", hash: "" },
   { label: "Contact", href: "/contact", hash: "" },
 ];
 
 const SERVICES_LIST = [
+  { label: "All Services Overview", href: "/services", desc: "Complete 10-module infrastructure catalog" },
   { label: "Workflow Automation", href: "/services/workflow-automation", desc: "Intelligent credit approval pipelines" },
   { label: "Developer API & Docs", href: "/docs", desc: "REST & GraphQL integration suites" },
   { label: "Security & Compliance", href: "/security", desc: "Bank-grade AES-256 & SOC 2 audit readiness" },
@@ -24,7 +26,7 @@ const SERVICES_LIST = [
 ];
 
 const ABOUT_LIST = [
-  { label: "About M&F", href: "/#about", desc: "Institutional lending technology overview" },
+  { label: "About M&F", href: "/about", desc: "Company mission, leadership & milestones" },
   { label: "Who We Are", href: "/where-we-are", desc: "Our engineering leadership & vision" },
   { label: "Get Involved", href: "/get-involved", desc: "Partner program & institutional advisory" },
 ];
@@ -77,6 +79,9 @@ export function Nav() {
   const isActive = useCallback(
     (link: (typeof NAV_LINKS)[0]) => {
       if (!pathname) return false;
+      if (link.href === "/about") return pathname === "/about";
+      if (link.href === "/services") return pathname.startsWith("/services");
+      if (link.href === "/news") return pathname.startsWith("/news");
       if (link.href === "/our-clients") return pathname === "/our-clients";
       if (link.href === "/careers") return pathname === "/careers";
       if (link.href === "/contact") return pathname === "/contact";

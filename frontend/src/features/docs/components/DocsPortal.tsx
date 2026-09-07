@@ -8,7 +8,7 @@ import { ApiDetailView } from "./ApiDetailView";
 import { ArrowLeft, Menu, X, Key } from "lucide-react";
 
 export function DocsPortal() {
-  const [activeEndpointId, setActiveEndpointId] = useState<string>("create-loan-application");
+  const [activeEndpointId, setActiveEndpointId] = useState<string>("list-loan-products");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [environment, setEnvironment] = useState<"sandbox" | "production">("sandbox");

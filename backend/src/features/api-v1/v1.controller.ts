@@ -120,15 +120,72 @@ export class ApiV1Controller {
   }
 
   // ── Lending ────────────────────────────────────────────────────────────
-  static createLoanApplication(req: Request, res: Response, next: NextFunction): void {
+  static getLoanProducts(_req: Request, res: Response, next: NextFunction): void {
     try {
-      const { applicantName, nationalId, loanAmount, tenureMonths, purpose, monthlyIncome } = req.body || {};
-      if (!applicantName || !loanAmount) {
+      const products = ApiV1Service.getLoanProducts();
+      res.status(200).json({
+        success: true,
+        data: {
+          institution: "M&F Technologies Live Lending Platform",
+          poweredBy: "Karibu Credit Core v2.4",
+          currency: "KES",
+          count: products.length,
+          products,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static calculateLoan(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const { loanAmount, tenureMonths, interestRateAnnual, calculationMethod, currency } = req.body || {};
+      if (!loanAmount || !tenureMonths) {
         res.status(400).json({
           success: false,
           error: {
             code: "VALIDATION_FAILED",
-            message: "Missing required loan application parameters (applicantName, loanAmount).",
+            message: "Missing required calculation parameters: 'loanAmount' and 'tenureMonths' are required.",
+          },
+        });
+        return;
+      }
+
+      const result = ApiV1Service.calculateLoanRepayment({
+        loanAmount: Number(loanAmount),
+        tenureMonths: Number(tenureMonths),
+        interestRateAnnual: interestRateAnnual ? Number(interestRateAnnual) : undefined,
+        calculationMethod,
+        currency,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static createLoanApplication(req: Request, res: Response, next: NextFunction): void {
+    try {
+      const b = req.body || {};
+      const applicantName = b.applicantName || b.customerId || "Dennis Muthami";
+      const loanAmount = b.loanAmount || b.amount;
+      const tenureMonths = b.tenureMonths || b.tenorMonths || 12;
+      const nationalId = b.nationalId || "ID-90823412";
+      const productType = b.productType || b.productCode || "SME";
+      const purpose = b.purpose || "GENERAL_BUSINESS";
+      const monthlyIncome = b.monthlyIncome || 65000;
+
+      if (!loanAmount) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_FAILED",
+            message: "Missing required loan application parameter: 'loanAmount' (or 'amount') is required.",
           },
         });
         return;
@@ -139,12 +196,17 @@ export class ApiV1Controller {
         nationalId,
         loanAmount: Number(loanAmount),
         tenureMonths: Number(tenureMonths) || 12,
+        productType,
         purpose,
         monthlyIncome: Number(monthlyIncome) || 50000,
       });
 
       res.status(201).json({
         success: true,
+        authenticatedAccount: (req as any).account || {
+          institution: "M&F Institutional Member",
+          tier: "VERIFIED_PARTNER",
+        },
         data: application,
       });
     } catch (err) {
@@ -169,6 +231,10 @@ export class ApiV1Controller {
 
       res.status(200).json({
         success: true,
+        authenticatedAccount: (req as any).account || {
+          institution: "M&F Institutional Member",
+          tier: "VERIFIED_PARTNER",
+        },
         data: app,
       });
     } catch (err) {
@@ -179,9 +245,27 @@ export class ApiV1Controller {
   // ── Scoring ────────────────────────────────────────────────────────────
   static evaluateScore(req: Request, res: Response, next: NextFunction): void {
     try {
-      const evaluation = ApiV1Service.evaluateScore(req.body || {});
+      const b = req.body || {};
+      const applicantId = b.applicantId || b.nationalId || "applicant_demo_01";
+      const annualRevenue = b.annualRevenue || (b.monthlyIncome ? Number(b.monthlyIncome) * 12 : 1200000);
+      const existingDebt = b.existingDebt !== undefined ? Number(b.existingDebt) : 150000;
+      const creditHistoryYears = b.creditHistoryYears !== undefined ? Number(b.creditHistoryYears) : 5;
+      const requestedLimit = b.requestedLimit !== undefined ? Number(b.requestedLimit) : 300000;
+
+      const evaluation = ApiV1Service.evaluateScore({
+        applicantId,
+        annualRevenue,
+        existingDebt,
+        creditHistoryYears,
+        requestedLimit,
+      });
+
       res.status(200).json({
         success: true,
+        authenticatedAccount: (req as any).account || {
+          institution: "M&F Institutional Member",
+          tier: "VERIFIED_PARTNER",
+        },
         data: evaluation,
       });
     } catch (err) {

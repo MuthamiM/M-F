@@ -3,20 +3,15 @@
 
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
 
 export function PrivacyClient() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Header */}
       <section className="bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
-        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C] transition-colors mb-6 sm:mb-8"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Home
-          </Link>
+        <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
+          <Breadcrumbs items={[{ label: "Privacy Policy" }]} />
 
           <div className="flex items-center gap-3 mb-4">
             <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center text-[#1B222C] border border-[#9AA5B1]/20 shadow-sm">

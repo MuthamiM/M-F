@@ -347,10 +347,6 @@ export function ChatWidget() {
     };
   }, []);
 
-  // Do not render inside admin or docs/API reference pages
-  if (typeof window !== "undefined" && (pathname?.startsWith("/admin") || pathname?.startsWith("/docs") || pathname?.startsWith("/api-reference"))) {
-    return null;
-  }
 
   const touchActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -376,6 +372,7 @@ export function ChatWidget() {
   /* ---- Trigger Pop-Up Prompt (No annoying sound chime on auto-popup) ---- */
   const triggerPopUpPrompt = useCallback(() => {
     if (isOpen || popCount >= MAX_AUTO_POPS) return;
+    if (pathname?.startsWith("/admin") || pathname?.startsWith("/docs") || pathname?.startsWith("/api-reference")) return;
     
     // Respect user dismissal choices to avoid annoying pop-up repetition
     if (typeof window !== "undefined" && sessionStorage.getItem("mf_chat_dismissed") === "true") {
@@ -384,7 +381,7 @@ export function ChatWidget() {
 
     setPromptState("visible");
     setPopCount((prev) => prev + 1);
-  }, [isOpen, popCount]);
+  }, [isOpen, popCount, pathname]);
 
   /* ---- Restore Session ---- */
   useEffect(() => {
@@ -965,6 +962,11 @@ export function ChatWidget() {
       return "";
     }
   };
+
+  // Do not render inside admin or docs/API reference pages
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/docs") || pathname?.startsWith("/api-reference")) {
+    return null;
+  }
 
   return (
     <>

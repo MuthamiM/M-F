@@ -39,6 +39,7 @@ export interface LoanApplication {
   nationalId: string;
   loanAmount: number;
   tenureMonths: number;
+  productType?: string;
   purpose: string;
   monthlyIncome: number;
   interestRateAnnual: number;
@@ -46,6 +47,43 @@ export interface LoanApplication {
   decision: "APPROVED" | "PENDING_UNDERWRITING" | "REJECTED";
   creditScore: number;
   createdAt: string;
+}
+
+export interface LoanProduct {
+  id: string;
+  code: string;
+  name: string;
+  category: "SECURED" | "UNSECURED" | "COMMERCIAL" | "ASSET_BACKED";
+  interestRateMonthlyPercent: number;
+  interestRateAnnualPercent: number;
+  minAmount: number;
+  maxAmount: number;
+  minTenureMonths: number;
+  maxTenureMonths: number;
+  processingFeePercent: number;
+  currency: string;
+  description: string;
+  requirements: string[];
+}
+
+export interface LoanCalculationResult {
+  principal: number;
+  currency: string;
+  tenureMonths: number;
+  calculationMethod: "REDUCING_BALANCE" | "FLAT_RATE";
+  interestRateAnnualPercent: number;
+  monthlyPayment: number;
+  totalInterest: number;
+  totalRepayment: number;
+  processingFee: number;
+  disbursementAmount: number;
+  amortizationSchedule: {
+    period: number;
+    payment: number;
+    principal: number;
+    interest: number;
+    remainingBalance: number;
+  }[];
 }
 
 export class ApiV1Service {
@@ -211,11 +249,172 @@ export class ApiV1Service {
 
   // ── Core Lending Methods ───────────────────────────────────────────────
 
+  static getLoanProducts(): LoanProduct[] {
+    return [
+      {
+        id: "prod_logbook_ke",
+        code: "LOGBOOK",
+        name: "Logbook Asset Credit",
+        category: "SECURED",
+        interestRateMonthlyPercent: 3.5,
+        interestRateAnnualPercent: 42.0,
+        minAmount: 50000,
+        maxAmount: 2500000,
+        minTenureMonths: 3,
+        maxTenureMonths: 24,
+        processingFeePercent: 2.5,
+        currency: "KES",
+        description: "Fast liquidity secured against private or commercial motor vehicle logbooks with 24-hour settlement.",
+        requirements: ["Original Logbook / NTSA Copy", "National ID & KRA PIN", "6 Months Bank/M-Pesa Statement", "Comprehensive Insurance"],
+      },
+      {
+        id: "prod_sme_boost",
+        code: "SME",
+        name: "SME Working Capital Boost",
+        category: "COMMERCIAL",
+        interestRateMonthlyPercent: 2.5,
+        interestRateAnnualPercent: 30.0,
+        minAmount: 100000,
+        maxAmount: 1500000,
+        minTenureMonths: 1,
+        maxTenureMonths: 12,
+        processingFeePercent: 2.0,
+        currency: "KES",
+        description: "Working capital facility and stock financing tailored for registered Kenyan businesses and retail merchants.",
+        requirements: ["Certificate of Incorporation / Business Reg", "12 Months Trading Turnover Records", "Director Guarantees"],
+      },
+      {
+        id: "prod_salary_adv",
+        code: "SALARY_ADVANCE",
+        name: "Salary Advance (Check-Off)",
+        category: "UNSECURED",
+        interestRateMonthlyPercent: 5.0,
+        interestRateAnnualPercent: 60.0,
+        minAmount: 5000,
+        maxAmount: 100000,
+        minTenureMonths: 1,
+        maxTenureMonths: 1,
+        processingFeePercent: 0.0,
+        currency: "KES",
+        description: "Instant check-off advance for verified employees of partnered corporate institutions with direct M-Pesa push.",
+        requirements: ["Latest 3 Pay Slips", "Staff Employee ID", "Employer Check-off MoU"],
+      },
+      {
+        id: "prod_asset_machinery",
+        code: "ASSET_FINANCE",
+        name: "Equipment & Heavy Machinery Financing",
+        category: "ASSET_BACKED",
+        interestRateMonthlyPercent: 1.17,
+        interestRateAnnualPercent: 14.0,
+        minAmount: 200000,
+        maxAmount: 5000000,
+        minTenureMonths: 6,
+        maxTenureMonths: 36,
+        processingFeePercent: 1.5,
+        currency: "KES",
+        description: "Longer-term asset acquisition financing for logistics, agricultural machinery, and industrial hardware.",
+        requirements: ["Proforma Invoice from Approved Vendor", "Company Financial Statements", "20% Down Payment"],
+      },
+      {
+        id: "prod_emergency_cash",
+        code: "EMERGENCY",
+        name: "Karibu Emergency Instant Cash",
+        category: "UNSECURED",
+        interestRateMonthlyPercent: 8.0,
+        interestRateAnnualPercent: 96.0,
+        minAmount: 1000,
+        maxAmount: 50000,
+        minTenureMonths: 1,
+        maxTenureMonths: 1,
+        processingFeePercent: 0.0,
+        currency: "KES",
+        description: "Algorithmic emergency micro-cash facility disbursed within 90 seconds via automated M-Pesa B2C rail.",
+        requirements: ["National ID", "Mobile Line with Active M-Pesa Record > 6 Mos"],
+      },
+    ];
+  }
+
+  static calculateLoanRepayment(params: {
+    loanAmount: number;
+    tenureMonths: number;
+    interestRateAnnual?: number;
+    calculationMethod?: "REDUCING_BALANCE" | "FLAT_RATE";
+    currency?: string;
+  }): LoanCalculationResult {
+    const principal = Number(params.loanAmount) || 100000;
+    const tenure = Number(params.tenureMonths) || 12;
+    const annualRate = Number(params.interestRateAnnual) || 12.0;
+    const method = params.calculationMethod === "FLAT_RATE" ? "FLAT_RATE" : "REDUCING_BALANCE";
+    const currency = params.currency || "KES";
+    const processingFee = Number((principal * 0.02).toFixed(2));
+
+    let monthlyPayment = 0;
+    let totalInterest = 0;
+    const schedule: LoanCalculationResult["amortizationSchedule"] = [];
+
+    if (method === "FLAT_RATE") {
+      totalInterest = principal * (annualRate / 100) * (tenure / 12);
+      const totalRepay = principal + totalInterest;
+      monthlyPayment = totalRepay / tenure;
+
+      let remaining = principal;
+      const principalPerMonth = principal / tenure;
+      const interestPerMonth = totalInterest / tenure;
+
+      for (let i = 1; i <= Math.min(6, tenure); i++) {
+        remaining -= principalPerMonth;
+        schedule.push({
+          period: i,
+          payment: Number(monthlyPayment.toFixed(2)),
+          principal: Number(principalPerMonth.toFixed(2)),
+          interest: Number(interestPerMonth.toFixed(2)),
+          remainingBalance: Math.max(0, Number(remaining.toFixed(2))),
+        });
+      }
+    } else {
+      const monthlyRate = annualRate / 100 / 12;
+      monthlyPayment = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -tenure));
+      let currentBalance = principal;
+
+      for (let i = 1; i <= tenure; i++) {
+        const interestPeriod = currentBalance * monthlyRate;
+        const principalPeriod = monthlyPayment - interestPeriod;
+        currentBalance -= principalPeriod;
+        totalInterest += interestPeriod;
+
+        if (i <= 6) {
+          schedule.push({
+            period: i,
+            payment: Number(monthlyPayment.toFixed(2)),
+            principal: Number(principalPeriod.toFixed(2)),
+            interest: Number(interestPeriod.toFixed(2)),
+            remainingBalance: Math.max(0, Number(currentBalance.toFixed(2))),
+          });
+        }
+      }
+    }
+
+    return {
+      principal,
+      currency,
+      tenureMonths: tenure,
+      calculationMethod: method,
+      interestRateAnnualPercent: annualRate,
+      monthlyPayment: Number(monthlyPayment.toFixed(2)),
+      totalInterest: Number(totalInterest.toFixed(2)),
+      totalRepayment: Number((principal + totalInterest).toFixed(2)),
+      processingFee,
+      disbursementAmount: Number((principal - processingFee).toFixed(2)),
+      amortizationSchedule: schedule,
+    };
+  }
+
   static createLoanApplication(data: {
     applicantName: string;
     nationalId: string;
     loanAmount: number;
     tenureMonths: number;
+    productType?: string;
     purpose?: string;
     monthlyIncome: number;
   }): LoanApplication {
@@ -236,6 +435,7 @@ export class ApiV1Service {
       nationalId: data.nationalId || "ID-UNKNOWN",
       loanAmount: amount,
       tenureMonths: tenure,
+      productType: data.productType || "SME",
       purpose: data.purpose || "GENERAL_BUSINESS",
       monthlyIncome: Number(data.monthlyIncome) || 50000,
       interestRateAnnual: interestRate,

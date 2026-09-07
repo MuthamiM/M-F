@@ -4,22 +4,17 @@
 import Link from "next/link";
 import { ArrowLeft, Briefcase, Mail, Terminal, Coins, Globe, Heart, Shield, Cpu } from "lucide-react";
 import { IsometricDevice } from "@/features/landing/components/IsometricDevice";
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
 
 export function CareersClient() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero */}
       <section className="bg-cloud border-b border-fog/20 relative overflow-hidden">
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 items-center gap-8 px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 items-center gap-8 px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
           {/* Left side text */}
           <div className="space-y-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-graphite transition-colors mb-2"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Home
-            </Link>
+            <Breadcrumbs items={[{ label: "Careers" }]} />
 
             <h1 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl animate-fade-in-up">
               Join M&amp;F Technologies
