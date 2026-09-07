@@ -1142,8 +1142,10 @@ export function ChatWidget() {
             className="fixed right-2 sm:right-6 left-2 sm:left-auto w-auto sm:w-[350px] max-w-[360px] ml-auto bg-white border border-slate-200 rounded-2xl shadow-2xl z-[99999] flex flex-col overflow-hidden"
             style={{ 
               bottom: visualOffset > 0 ? `${visualOffset + 8}px` : "calc(1.25rem + var(--cookie-banner-h, 0px))", 
-              maxHeight: viewportHeight ? `${viewportHeight - (visualOffset > 0 ? visualOffset + 16 : 24)}px` : "520px",
-              height: viewportHeight ? `min(calc(${viewportHeight}px - 2.5rem - var(--cookie-banner-h, 0px)), 490px)` : "480px",
+              maxHeight: viewportHeight ? `${viewportHeight - 16}px` : "540px",
+              height: visualOffset > 0 && viewportHeight 
+                ? `${viewportHeight - 16}px` 
+                : (viewportHeight ? `min(${viewportHeight - 40}px, 520px)` : "480px"),
               transition: "bottom 0.1s ease-out" 
             }}
           >
@@ -1313,7 +1315,7 @@ export function ChatWidget() {
 
               {/* Form 1: Request Callback Form */}
               {activeForm === "callback" && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-md space-y-2 mt-1 ml-6">
+                <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-md space-y-2 mt-1 mx-0.5">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
                     <span className="text-xs font-bold text-[#1B222C]">Request Callback</span>
                     <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-0.5">
@@ -1386,59 +1388,62 @@ export function ChatWidget() {
 
               {/* Form 2: Talk to Live Agent Form */}
               {activeForm === "live_agent" && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-md space-y-2 mt-1 ml-6">
+                <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-md space-y-2.5 mt-1 mx-0.5">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
                     <span className="text-xs font-bold text-[#1B222C]">Connect Live Support</span>
                     <button onClick={() => setActiveForm(null)} className="text-slate-400 hover:text-slate-600 p-0.5">
                       <ArrowLeft className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <form onSubmit={handleLiveAgentSubmit} className="space-y-1.5">
+                  <form onSubmit={handleLiveAgentSubmit} className="space-y-2">
                     <div>
-                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Full Name *</label>
+                      <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Full Name *</label>
                       <input
                         type="text"
                         required
                         value={formName}
                         onChange={(e) => { touchActivity(); setFormName(e.target.value); }}
+                        onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200)}
                         placeholder="John Doe"
-                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C] bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Email Address *</label>
+                      <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Email Address *</label>
                       <input
                         type="email"
                         required
                         value={formEmail}
                         onChange={(e) => { touchActivity(); setFormEmail(e.target.value); }}
+                        onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200)}
                         placeholder="john@institution.com"
-                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C] bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-semibold text-slate-500 mb-0.5">Issue Description *</label>
+                      <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Issue Description *</label>
                       <input
                         type="text"
                         required
                         value={formReason}
                         onChange={(e) => { touchActivity(); setFormReason(e.target.value); }}
+                        onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200)}
                         placeholder="e.g. API authentication issue"
-                        className="w-full px-2.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C]"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#1B222C] bg-white"
                       />
                     </div>
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex gap-2 pt-1.5">
                       <button
                         type="submit"
                         disabled={formSubmitting || !formName.trim() || !formEmail.trim() || !formReason.trim()}
-                        className="flex-1 py-1.5 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                        className="flex-1 py-2 text-xs font-semibold text-white bg-[#1B222C] hover:bg-[#3E4C59] rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                       >
                         {formSubmitting ? "Connecting..." : "Request Live Ticket"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveForm(null)}
-                        className="py-1.5 px-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                        className="py-2 px-3 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -1517,88 +1522,90 @@ export function ChatWidget() {
               </div>
             )}
 
-            {/* Input form */}
-            <form onSubmit={handleFormSend} className="relative p-2.5 border-t border-slate-200 bg-white flex items-center gap-1.5 shrink-0">
-              {/* iPhone Emoji Picker Popover */}
-              {showEmojiPicker && (
-                <IosEmojiPicker
-                  position="top-left"
-                  onSelect={(emoji) => {
-                    setInputText((prev) => prev + emoji);
-                    setShowEmojiPicker(false);
-                    inputRef.current?.focus();
+            {/* Input form — hidden when filling out a ticket/callback form */}
+            {!activeForm && (
+              <form onSubmit={handleFormSend} className="relative p-2.5 border-t border-slate-200 bg-white flex items-center gap-1.5 shrink-0">
+                {/* iPhone Emoji Picker Popover */}
+                {showEmojiPicker && (
+                  <IosEmojiPicker
+                    position="top-left"
+                    onSelect={(emoji) => {
+                      setInputText((prev) => prev + emoji);
+                      setShowEmojiPicker(false);
+                      inputRef.current?.focus();
+                    }}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                )}
+
+                {/* Hidden File Input for Screenshots, Photos, and Files */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      uploadAttachment(e.target.files[0]);
+                      e.target.value = "";
+                    }
                   }}
-                  onClose={() => setShowEmojiPicker(false)}
                 />
-              )}
 
-              {/* Hidden File Input for Screenshots, Photos, and Files */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.pdf,.doc,.docx,.txt"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    uploadAttachment(e.target.files[0]);
-                    e.target.value = "";
+                {/* Paperclip Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || activeForm !== null || ticketClosed}
+                  title="Attach screenshot, photo, or document"
+                  className="h-8 w-8 flex items-center justify-center rounded-xl text-slate-500 hover:text-[#1B222C] hover:bg-slate-100 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
+                >
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#007AFF]" /> : <Paperclip className="h-4 w-4" />}
+                </button>
+
+                {/* Apple Emoji Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  disabled={activeForm !== null || ticketClosed}
+                  title="iPhone Emojis"
+                  className={`h-8 w-8 flex items-center justify-center rounded-xl transition-colors cursor-pointer shrink-0 ${
+                    showEmojiPicker ? "bg-slate-200 text-[#007AFF]" : "text-slate-500 hover:text-[#1B222C] hover:bg-slate-100"
+                  }`}
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
+
+                {/* Text Input with Clipboard Screenshot Paste Support */}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={handleInputChange}
+                  onPaste={handlePaste}
+                  disabled={isTyping || activeForm !== null || ticketClosed}
+                  placeholder={
+                    ticketClosed
+                      ? "Session closed."
+                      : activeForm !== null
+                      ? "Fill in details above..."
+                      : isTyping
+                      ? "Responding..."
+                      : "Message or paste screenshot..."
                   }
-                }}
-              />
+                  className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] transition-colors disabled:bg-slate-50 disabled:text-slate-400"
+                />
 
-              {/* Paperclip Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading || activeForm !== null || ticketClosed}
-                title="Attach screenshot, photo, or document"
-                className="h-8 w-8 flex items-center justify-center rounded-xl text-slate-500 hover:text-[#1B222C] hover:bg-slate-100 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
-              >
-                {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#007AFF]" /> : <Paperclip className="h-4 w-4" />}
-              </button>
-
-              {/* Apple Emoji Button */}
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker((prev) => !prev)}
-                disabled={activeForm !== null || ticketClosed}
-                title="iPhone Emojis"
-                className={`h-8 w-8 flex items-center justify-center rounded-xl transition-colors cursor-pointer shrink-0 ${
-                  showEmojiPicker ? "bg-slate-200 text-[#007AFF]" : "text-slate-500 hover:text-[#1B222C] hover:bg-slate-100"
-                }`}
-              >
-                <Smile className="h-4 w-4" />
-              </button>
-
-              {/* Text Input with Clipboard Screenshot Paste Support */}
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputText}
-                onChange={handleInputChange}
-                onPaste={handlePaste}
-                disabled={isTyping || activeForm !== null || ticketClosed}
-                placeholder={
-                  ticketClosed
-                    ? "Session closed."
-                    : activeForm !== null
-                    ? "Fill in details above..."
-                    : isTyping
-                    ? "Responding..."
-                    : "Message or paste screenshot..."
-                }
-                className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] transition-colors disabled:bg-slate-50 disabled:text-slate-400"
-              />
-
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={(!inputText.trim() && !attachment) || isTyping || activeForm !== null || ticketClosed || isUploading}
-                className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#1B222C] hover:bg-[#3E4C59] text-white disabled:bg-slate-200 disabled:text-slate-400 transition-colors cursor-pointer shrink-0"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
-            </form>
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={(!inputText.trim() && !attachment) || isTyping || activeForm !== null || ticketClosed || isUploading}
+                  className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#1B222C] hover:bg-[#3E4C59] text-white disabled:bg-slate-200 disabled:text-slate-400 transition-colors cursor-pointer shrink-0"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </form>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
