@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/db/init.sql dist/db/init.sql",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts"
   },

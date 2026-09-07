@@ -25,7 +25,10 @@ import {
   FileText,
   Download,
   Loader2,
-  X
+  X,
+  Globe,
+  MapPin,
+  ExternalLink
 } from "lucide-react";
 import { IosEmojiPicker } from "@/shared/components/IosEmojiPicker";
 
@@ -68,6 +71,12 @@ interface TicketDetail {
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high";
   assignedAgent?: string;
+  latitude?: number;
+  longitude?: number;
+  ipAddress?: string;
+  geoCity?: string;
+  geoCountry?: string;
+  geoRegion?: string;
   notes: Note[];
   messages: ChatMessage[];
   callLogs: CallLog[];
@@ -624,6 +633,41 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <span className="font-bold text-slate-700">{new Date(ticket.createdAt).toLocaleString()}</span>
                 </div>
               </div>
+
+              {ticket.ipAddress && (
+                <div className="flex items-center gap-2.5 text-xs">
+                  <Globe className="h-4 w-4 text-slate-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Visitor IP Address</span>
+                    <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200">{ticket.ipAddress}</span>
+                  </div>
+                </div>
+              )}
+
+              {(ticket.geoCity || ticket.geoCountry || ticket.geoRegion || (ticket.latitude !== undefined && ticket.longitude !== undefined)) && (
+                <div className="flex items-start gap-2.5 text-xs sm:col-span-2 bg-slate-50 border border-[#E4E7EB] rounded-xl p-3">
+                  <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Geolocation Origin</span>
+                    <div className="font-bold text-slate-800 text-xs">
+                      {[ticket.geoCity, ticket.geoRegion, ticket.geoCountry].filter(Boolean).join(", ")}
+                    </div>
+                    {ticket.latitude !== undefined && ticket.longitude !== undefined && (
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 font-normal">
+                        <span>Coordinates: {ticket.latitude.toFixed(4)}, {ticket.longitude.toFixed(4)}</span>
+                        <a
+                          href={`https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#1B222C] font-bold underline hover:text-[#3E4C59] inline-flex items-center gap-0.5"
+                        >
+                          View Map <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-[#E4E7EB]/60 pt-4 space-y-2">

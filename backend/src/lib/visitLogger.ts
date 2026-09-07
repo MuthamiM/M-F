@@ -1,7 +1,7 @@
 import { pgPool } from "../db/pgClient";
 import { logger } from "../config/logger";
 
-interface GeoInfo {
+export interface GeoInfo {
   country?: string;
   city?: string;
   region?: string;
@@ -23,7 +23,7 @@ interface GeoApiResponse {
 const geoCache = new Map<string, GeoInfo>();
 const PRIVATE_IP_RE = /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|::1|localhost)/;
 
-async function lookupGeo(ip: string): Promise<GeoInfo> {
+export async function lookupGeo(ip: string): Promise<GeoInfo> {
   if (ip.length === 0 || PRIVATE_IP_RE.test(ip)) return {};
   if (geoCache.has(ip)) return geoCache.get(ip)!;
 

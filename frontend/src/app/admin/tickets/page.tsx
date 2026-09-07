@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight } from "lucide-react";
+import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight, MapPin, Globe } from "lucide-react";
 
 interface TicketItem {
   id: string;
@@ -15,6 +15,12 @@ interface TicketItem {
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high";
   assignedAgent?: string;
+  latitude?: number;
+  longitude?: number;
+  ipAddress?: string;
+  geoCity?: string;
+  geoCountry?: string;
+  geoRegion?: string;
   createdAt: string;
 }
 
@@ -149,9 +155,15 @@ export default function AdminTicketsPage() {
                        {t.message}
                      </td>
                      <td className="px-6 py-4 text-xs">
-                       <div className="font-bold">{t.name}</div>
-                       <div className="text-[10px] text-slate-400 font-medium">{t.company}</div>
-                     </td>
+                        <div className="font-bold">{t.name}</div>
+                        <div className="text-[10px] text-slate-400 font-medium">{t.company}</div>
+                        {(t.geoCity || t.geoCountry || t.ipAddress) && (
+                          <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium mt-1" title={t.ipAddress ? `IP: ${t.ipAddress}` : undefined}>
+                            <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span>{[t.geoCity, t.geoCountry].filter(Boolean).join(", ") || t.ipAddress}</span>
+                          </div>
+                        )}
+                      </td>
                      <td className="px-6 py-4 text-xs">
                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
                          t.type === "chatbot" ? "bg-purple-50 text-purple-700 border-purple-200" :

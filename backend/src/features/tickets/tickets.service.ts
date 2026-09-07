@@ -50,6 +50,10 @@ export async function createTicket(input: {
   message: string;
   latitude?: number;
   longitude?: number;
+  ipAddress?: string;
+  geoCity?: string;
+  geoCountry?: string;
+  geoRegion?: string;
 }) {
   const allTickets = await ticketStore.getAll();
   const nextId = `TKT-${1000 + allTickets.length + 1}`;
@@ -74,6 +78,10 @@ export async function createTicket(input: {
     message: input.message,
     latitude: input.latitude,
     longitude: input.longitude,
+    ipAddress: input.ipAddress,
+    geoCity: input.geoCity,
+    geoCountry: input.geoCountry,
+    geoRegion: input.geoRegion,
     status: "open",
     priority,
     notes: [],

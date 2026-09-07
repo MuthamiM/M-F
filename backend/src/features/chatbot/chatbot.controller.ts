@@ -4,6 +4,16 @@ import https from "https";
 import { logger } from "../../config/logger";
 import { ticketStore } from "../tickets/tickets.store";
 import { pgPool } from "../../db/pgClient";
+import { lookupGeo } from "../../lib/visitLogger";
+
+function getReqIp(req: Request): string {
+  return (
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() ||
+    req.socket.remoteAddress ||
+    req.ip ||
+    ""
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Ticket Numbers dynamically retrieved from Database                 */
@@ -114,69 +124,72 @@ function cleanText(text: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Groq Provider (Primary)                                            */
+/*  Groq API with Gemma 2 9B IT                                       */
 /* ------------------------------------------------------------------ */
-async function callGroqAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GROK_API_KEY;
-  if (!apiKey) throw new Error("GROK_API_KEY is missing");
+async function callGroqAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
+  const apiKey = process.env.GROK_API_KEY || "";
+  if (!apiKey) throw new Error("GROK_API_KEY is not configured");
 
-  // Try openai/gpt-oss-20b first, then groq/compound-mini
-  const models = ["openai/gpt-oss-20b", "groq/compound-mini"];
-  let lastError: any = null;
+  const groqMessages = messages.map((m) => ({
+    role: m.role === "agent" ? "assistant" : m.role,
+    content: m.content,
+  }));
 
-  for (const model of models) {
-    try {
-      const body = JSON.stringify({
-        model,
-        messages,
-        max_tokens: 400,
-        temperature: 0.5,
-      });
+  const payload = JSON.stringify({
+    model: "gemma2-9b-it",
+    messages: groqMessages,
+    temperature: 0.7,
+    max_tokens: 300,
+  });
 
-      const data = await httpRequest(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-        },
-        body
-      );
+  const data = await fetchIPv4("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  }, payload);
 
-      const raw = data.choices?.[0]?.message?.content || "";
-      if (raw) return cleanText(raw);
-    } catch (err) {
-      lastError = err;
-    }
+  if (data.error) {
+    throw new Error(`Groq API Error: ${data.error.message || JSON.stringify(data.error)}`);
   }
 
-  throw lastError || new Error("All Groq models failed");
+  const raw = data.choices?.[0]?.message?.content || "";
+  return cleanText(raw);
 }
 
 /* ------------------------------------------------------------------ */
-/*  Gemini Provider (Fallback)                                         */
+/*  Gemini API Fallback with gemini-2.0-flash                          */
 /* ------------------------------------------------------------------ */
-async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+async function callGeminiAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
   const contents = messages
     .filter((m) => m.role !== "system")
     .map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
+      role: m.role === "agent" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-  const body = JSON.stringify({
-    contents,
+  const payload = JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    generationConfig: { maxOutputTokens: 400, temperature: 0.5 },
+    contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 300,
+    },
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
-  const data = await httpRequest(url, { method: "POST", headers: { "Content-Type": "application/json" } }, body);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const data = await fetchIPv4(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  }, payload);
+
+  if (data.error) {
+    throw new Error(`Gemini API Error: ${data.error.message || JSON.stringify(data.error)}`);
+  }
 
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   return cleanText(raw);
@@ -185,12 +198,14 @@ async function callGeminiAPI(messages: ChatMessage[]): Promise<string> {
 /* ------------------------------------------------------------------ */
 /*  POST /api/chatbot/start                                            */
 /* ------------------------------------------------------------------ */
-export async function startChatHandler(_req: Request, res: Response) {
+export async function startChatHandler(req: Request, res: Response) {
   const greeting = "Welcome to M&F Technologies. How can we help you today?";
   const ticketId = await generateTicketNumber("CHAT");
   const now = new Date();
+  const ip = getReqIp(req);
 
   try {
+    const geo = ip ? await lookupGeo(ip) : {};
     await ticketStore.set(ticketId, {
       id: ticketId,
       type: "chatbot",
@@ -200,6 +215,12 @@ export async function startChatHandler(_req: Request, res: Response) {
       message: "Visitor opened live chat support session",
       status: "open",
       priority: "medium",
+      latitude: geo.lat,
+      longitude: geo.lon,
+      ipAddress: ip || undefined,
+      geoCity: geo.city,
+      geoCountry: geo.country,
+      geoRegion: geo.region,
       createdAt: now,
       updatedAt: now,
       notes: [],
@@ -241,7 +262,9 @@ export async function sendMessageHandler(req: Request, res: Response) {
 
     const response = `Thank you ${name || "Client"}. Your callback request has been logged under Callback Ticket ${ticketId}.\n\nDetails:\n- Phone: ${phone}\n- Email: ${email || "Not provided"}\n- Reason: ${reason || "General Callback"}\n\nOur engineering support team will call you within 1 business day.`;
 
+    const ip = getReqIp(req);
     try {
+      const geo = ip ? await lookupGeo(ip) : {};
       await ticketStore.set(ticketId, {
         id: ticketId,
         type: "chatbot",
@@ -252,6 +275,12 @@ export async function sendMessageHandler(req: Request, res: Response) {
         message: `Callback requested. Phone: ${phone}. Reason: ${reason || "General Inquiries"}`,
         status: "open",
         priority: "high",
+        latitude: geo.lat,
+        longitude: geo.lon,
+        ipAddress: ip || undefined,
+        geoCity: geo.city,
+        geoCountry: geo.country,
+        geoRegion: geo.region,
         createdAt: now,
         updatedAt: now,
         notes: [],
@@ -293,10 +322,12 @@ export async function sendMessageHandler(req: Request, res: Response) {
   if (mode === "request_live_agent") {
     const ticketId = await generateTicketNumber("LIVE");
     const now = new Date();
+    const ip = getReqIp(req);
 
     const response = `Live Support Ticket ${ticketId} created for ${name || "Client"}.\n\nIssue: ${issue || "Support Request"}\n\nYou are now connected to live support queue. An agent will join this session shortly. You may type your message below.`;
 
     try {
+      const geo = ip ? await lookupGeo(ip) : {};
       await ticketStore.set(ticketId, {
         id: ticketId,
         type: "chatbot",
@@ -306,6 +337,12 @@ export async function sendMessageHandler(req: Request, res: Response) {
         message: `Live support session requested. Issue: ${issue || "Technical Assistance"}`,
         status: "open",
         priority: "high",
+        latitude: geo.lat,
+        longitude: geo.lon,
+        ipAddress: ip || undefined,
+        geoCity: geo.city,
+        geoCountry: geo.country,
+        geoRegion: geo.region,
         createdAt: now,
         updatedAt: now,
         notes: [],
@@ -327,7 +364,7 @@ export async function sendMessageHandler(req: Request, res: Response) {
         ],
         callLogs: [],
       });
-      logger.info(`Persisted Live Agent Ticket ${ticketId} to database.`);
+      logger.info(`Persisted Live Agent Ticket ${ticketId} to database with IP: ${ip}.`);
     } catch (err: any) {
       logger.error(`Failed to save live agent ticket to database: ${err.message}`);
     }

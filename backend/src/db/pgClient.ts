@@ -14,8 +14,15 @@ export async function initDb() {
     const client = await pgPool.connect();
     logger.info("Connected to PostgreSQL database successfully.");
     
-    // Read and run init.sql
-    const sqlPath = join(__dirname, "init.sql");
+    // Read and run init.sql (support both dist/ and src/ locations)
+    let sqlPath = join(__dirname, "init.sql");
+    const { existsSync } = await import("fs");
+    if (!existsSync(sqlPath)) {
+      const fallbackPath = join(process.cwd(), "src", "db", "init.sql");
+      if (existsSync(fallbackPath)) {
+        sqlPath = fallbackPath;
+      }
+    }
     const sql = readFileSync(sqlPath, "utf8");
     await client.query(sql);
     logger.info("PostgreSQL database tables verified/initialized.");

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Send, Sparkles, Building, Layers } from "lucide-react";
+import { Send, Sparkles, Building, Layers, Loader2 } from "lucide-react";
 import { Nav } from "@/features/landing/components/Nav";
 import { Footer } from "@/features/landing/components/Footer";
 import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
+import { apiFetch, ApiError } from "@/shared/lib/apiClient";
 
 export default function RequestDemoPage() {
   const [form, setForm] = useState(() => {
@@ -24,10 +25,30 @@ export default function RequestDemoPage() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await apiFetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          company: `${form.company} (Institutional Demo)`,
+          message: `[DEMO EVALUATION REQUEST]\nOrganization: ${form.company}\nObjectives: ${form.message}`,
+        }),
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitError(err instanceof ApiError ? err.message : "Failed to submit demo request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -122,13 +143,28 @@ export default function RequestDemoPage() {
                     placeholder="e.g. automating underwriting, scaling transactional ledger"
                   />
                 </div>
+                {submitError && (
+                  <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg border border-red-200">
+                    {submitError}
+                  </div>
+                )}
                 <div>
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-graphite hover:bg-[#3E4C59] text-white px-5 py-3 text-xs font-bold transition-all shadow-sm active:scale-98 cursor-pointer"
+                    disabled={submitting}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-graphite hover:bg-[#3E4C59] disabled:opacity-60 text-white px-5 py-3 text-xs font-bold transition-all shadow-sm active:scale-98 cursor-pointer"
                   >
-                    <Send className="h-3.5 w-3.5" />
-                    <span>Submit Demo Request</span>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-3.5 w-3.5" />
+                        <span>Submit Demo Request</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
