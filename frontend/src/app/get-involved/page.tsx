@@ -81,7 +81,7 @@ export default function GetInvolved() {
           <div className="rounded-xl bg-[#1B222C] text-white p-8 sm:p-10 text-center space-y-4 max-w-3xl mx-auto">
             <h3 className="text-lg sm:text-xl font-bold">Interested in partnership opportunities?</h3>
             <p className="text-xs sm:text-sm text-[#9AA5B1] leading-relaxed max-w-xl mx-auto">
-              Email us directly at <span className="font-mono text-white font-semibold">partnerships@mftechnologies.org</span> or send an inquiry via our contact channel. Let&apos;s build financial infrastructure together.
+              Email us directly at <span className="font-mono text-white font-semibold">info@mftechnologies.org</span> or send an inquiry via our contact channel. Let&apos;s build financial infrastructure together.
             </p>
             <div className="pt-2">
               <Link

@@ -254,7 +254,7 @@ export function StatusClient() {
         <div className="rounded-xl bg-[#1B222C] text-white p-8 sm:p-10 space-y-4">
           <h3 className="text-lg sm:text-xl font-bold">Enterprise SLA Guarantees</h3>
           <p className="text-xs sm:text-sm text-[#9AA5B1] leading-relaxed max-w-3xl">
-            All partner institutions are covered under a contractual 99.99% uptime SLA with defined remediation timelines. Our operations team maintains 24/7 monitoring with automated alerting via PagerDuty and internal telemetry dashboards. For SLA-related inquiries, contact <span className="font-mono text-white font-semibold">ops@mftechnologies.org</span>.
+            All partner institutions are covered under a contractual 99.99% uptime SLA with defined remediation timelines. Our operations team maintains 24/7 monitoring with automated alerting via PagerDuty and internal telemetry dashboards. For SLA-related inquiries, contact <span className="font-mono text-white font-semibold">info@mftechnologies.org</span>.
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
             <Link
