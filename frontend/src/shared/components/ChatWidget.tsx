@@ -23,6 +23,7 @@ interface Message {
 interface ChatSession {
   messages: Message[];
   liveTicket?: string | null;
+  chatTicket?: string | null;
   ticketClosed?: boolean;
   popCount?: number;
   userName?: string | null;
@@ -161,6 +162,7 @@ export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [liveTicket, setLiveTicket] = useState<string | null>(null);
+  const [chatTicket, setChatTicket] = useState<string | null>(null);
   const [ticketClosed, setTicketClosed] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -423,7 +425,17 @@ export function ChatWidget() {
       if (saved.messages && saved.messages.length > 0) {
         setMessages(saved.messages);
       }
-      setLiveTicket(saved.liveTicket || null);
+      let lTicket = saved.liveTicket || null;
+      let cTicket = saved.chatTicket || null;
+
+      // Migrate legacy chat tickets out of liveTicket state
+      if (lTicket && lTicket.startsWith("TKT-CHAT")) {
+        cTicket = lTicket;
+        lTicket = null;
+      }
+
+      setLiveTicket(lTicket);
+      setChatTicket(cTicket);
       setTicketClosed(saved.ticketClosed || false);
       if (typeof saved.popCount === "number") {
         setPopCount(saved.popCount);
@@ -439,8 +451,8 @@ export function ChatWidget() {
 
   /* ---- Save Session ---- */
   useEffect(() => {
-    saveSession({ messages, liveTicket, ticketClosed, popCount, userName, userEmail });
-  }, [messages, liveTicket, ticketClosed, popCount, userName, userEmail]);
+    saveSession({ messages, liveTicket, chatTicket, ticketClosed, popCount, userName, userEmail });
+  }, [messages, liveTicket, chatTicket, ticketClosed, popCount, userName, userEmail]);
 
   const isServicesPage = pathname?.startsWith("/services");
 
@@ -502,9 +514,10 @@ export function ChatWidget() {
     return () => clearInterval(interval);
   }, [popCount, isOpen, promptState, triggerPopUpPrompt, isServicesPage, liveTicket]);
 
-  /* ---- Active Support Ticket Polling (every 4s) ---- */
+  /* ---- Active Human Support Ticket Polling (every 4s) ---- */
   useEffect(() => {
-    if (!liveTicket || ticketClosed) return;
+    const isHumanTicket = Boolean(liveTicket && (liveTicket.startsWith("TKT-LIVE") || liveTicket.startsWith("TKT-CB")));
+    if (!isHumanTicket || ticketClosed) return;
 
     // Reset initial poll on mount or ticket change to prevent historic message play
     isInitialPollRef.current = true;
@@ -852,6 +865,7 @@ export function ChatWidget() {
     clearSessionData();
     setMessages([]);
     setLiveTicket(null);
+    setChatTicket(null);
     setTicketClosed(false);
     setUserName("");
     setUserEmail("");
@@ -910,7 +924,9 @@ export function ChatWidget() {
     try {
       const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
 
-      if (liveTicket && !ticketClosed) {
+      const isHumanTicket = Boolean(liveTicket && (liveTicket.startsWith("TKT-LIVE") || liveTicket.startsWith("TKT-CB")) && !ticketClosed);
+
+      if (isHumanTicket) {
         // Direct routing of user queries to the support ticket instead of AI agent
         const res = await fetch(`${apiHost}/api/tickets/${liveTicket}/messages`, {
           method: "POST",
@@ -934,15 +950,20 @@ export function ChatWidget() {
           content: m.text,
         }));
 
+        const currentTicket = chatTicket || (liveTicket && liveTicket.startsWith("TKT-CHAT") ? liveTicket : null);
+
         const res = await fetch(`${apiHost}/api/chatbot/message`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: queryText.trim() || `Sent attachment: ${attachedFile?.name || "file"}`, history, ticket: liveTicket }),
+          body: JSON.stringify({ message: queryText.trim() || `Sent attachment: ${attachedFile?.name || "file"}`, history, ticket: currentTicket }),
         });
 
         const data = await res.json();
-        if (data.success && data.data?.ticket && !liveTicket) {
-          setLiveTicket(data.data.ticket);
+        if (data.success && data.data?.ticket) {
+          setChatTicket(data.data.ticket);
+          if (liveTicket && liveTicket.startsWith("TKT-CHAT")) {
+            setLiveTicket(null);
+          }
         }
 
         const botText = data.success
