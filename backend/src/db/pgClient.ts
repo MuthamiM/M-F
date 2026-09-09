@@ -3,10 +3,19 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { logger } from "../config/logger";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres_secure_password@localhost:5432/mf_db";
+const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres_secure_password@127.0.0.1:5432/mf_db";
 
 export const pgPool = new Pool({
   connectionString,
+  ssl: false,
+  max: parseInt(process.env.PG_POOL_MAX || "50", 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  maxUses: 7500,
+});
+
+pgPool.on("error", (err) => {
+  logger.error(`Unexpected PostgreSQL pool client error: ${err.message}`);
 });
 
 export async function initDb() {

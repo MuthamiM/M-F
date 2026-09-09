@@ -1,6 +1,8 @@
 import { ticketStore } from "./tickets.store";
 import { Ticket, TicketStatus, TicketPriority, TicketType, Note, ChatMessage, CallLog } from "./tickets.schema";
 import { AppError } from "../../middleware/errorHandler.middleware";
+import { getTicketRaw, setWithTtl } from "../../lib/redisClient";
+import { pgPool } from "../../db/pgClient";
 
 export async function getAllTickets(filters: {
   status?: TicketStatus;
@@ -266,21 +268,54 @@ export async function logCall(
 // ── Stats ────────────────────────────────────────────────────────────
 
 export async function getStats() {
-  const all = await ticketStore.getAll();
-  
+  const cacheKey = "cache:ticket_stats";
+  const cached = await getTicketRaw(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      // Fallback on parse error
+    }
+  }
+
+  const res = await pgPool.query(
+    "SELECT status, type, COUNT(*)::int as count FROM tickets GROUP BY status, type"
+  );
+
+  let total = 0;
+  let open = 0;
+  let inProgress = 0;
+  let resolved = 0;
+  let closed = 0;
+  let typeChatbot = 0;
+  let typeDemo = 0;
+  let typeContact = 0;
+
+  for (const row of res.rows) {
+    const count = parseInt(row.count, 10) || 0;
+    total += count;
+    if (row.status === "open") open += count;
+    else if (row.status === "in_progress") inProgress += count;
+    else if (row.status === "resolved") resolved += count;
+    else if (row.status === "closed") closed += count;
+
+    if (row.type === "chatbot") typeChatbot += count;
+    else if (row.type === "demo") typeDemo += count;
+    else if (row.type === "contact") typeContact += count;
+  }
+
   const stats = {
-    total: all.length,
-    open: all.filter((t) => t.status === "open").length,
-    inProgress: all.filter((t) => t.status === "in_progress").length,
-    resolved: all.filter((t) => t.status === "resolved").length,
-    closed: all.filter((t) => t.status === "closed").length,
-    
-    // Breakdown by types
-    typeChatbot: all.filter((t) => t.type === "chatbot").length,
-    typeDemo: all.filter((t) => t.type === "demo").length,
-    typeContact: all.filter((t) => t.type === "contact").length,
+    total,
+    open,
+    inProgress,
+    resolved,
+    closed,
+    typeChatbot,
+    typeDemo,
+    typeContact,
   };
 
+  await setWithTtl(cacheKey, JSON.stringify(stats), 3);
   return stats;
 }
 

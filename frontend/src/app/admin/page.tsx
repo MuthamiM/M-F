@@ -46,6 +46,11 @@ export default function AdminDashboardPage() {
   const fetchData = async () => {
     try {
       const token = sessionStorage.getItem("adminToken");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
       const headers = { Authorization: `Bearer ${token}` };
 
       const [statsRes, listRes] = await Promise.all([
@@ -53,14 +58,21 @@ export default function AdminDashboardPage() {
         fetch("/api/tickets", { headers }),
       ]);
 
+      if (statsRes.status === 401 || listRes.status === 401) {
+        sessionStorage.removeItem("adminToken");
+        window.location.href = "/admin/login";
+        return;
+      }
+
       const statsData = await statsRes.json();
       const listData = await listRes.json();
 
       if (statsRes.ok && listRes.ok && statsData.success && listData.success) {
         setStats(statsData.data);
         setRecentTickets(listData.data.slice(0, 5)); // Top 5 recent
+        setErrorMsg("");
       } else {
-        setErrorMsg("Failed to retrieve console data.");
+        setErrorMsg("Failed to retrieve console data. Please verify session or refresh.");
       }
     } catch {
       setErrorMsg("Failed to load ticketing metrics. Is the backend running?");

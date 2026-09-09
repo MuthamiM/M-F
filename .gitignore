@@ -22,3 +22,5 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 cloudflared.deb
+backend/uploads/
+*.mjs

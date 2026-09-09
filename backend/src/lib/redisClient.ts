@@ -36,6 +36,15 @@ export async function setTicketRaw(key: string, value: string) {
   }
 }
 
+export async function setWithTtl(key: string, value: string, ttlSeconds: number) {
+  if (!isRedisHealthy() || !redis) return;
+  try {
+    await redis.setex(key, ttlSeconds, value);
+  } catch (err: any) {
+    logger.warn(`Failed to setex redis key ${key}: ${err?.message || err}`);
+  }
+}
+
 export async function getTicketRaw(key: string) {
   if (!isRedisHealthy() || !redis) return null;
   try {
