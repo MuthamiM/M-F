@@ -253,35 +253,50 @@ export function ChatWidget() {
     if (isUploading) return;
     setIsUploading(true);
 
-    // Instant local preview thumbnail while compressing & uploading
     const localUrl = URL.createObjectURL(file);
-    setAttachment({
+    const initialAttachment = {
       url: localUrl,
       name: file.name,
-      type: file.type.startsWith("image/") ? "image" : "document",
+      type: file.type.startsWith("image/") ? ("image" as const) : ("document" as const),
       size: file.size,
       isUploading: true,
-    });
+    };
+    setAttachment(initialAttachment);
+
+    const uploadTask = (async () => {
+      try {
+        const optimizedFile = await compressImageForUpload(file);
+        const formData = new FormData();
+        formData.append("file", optimizedFile);
+
+        const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
+        const res = await fetch(`${apiHost}/api/tickets/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.data) {
+          return { ...data.data, isUploading: false };
+        }
+        return null;
+      } catch (err) {
+        console.error("Upload error:", err);
+        return null;
+      }
+    })();
+
+    // Capped strictly at 5 seconds maximum loading time
+    const timeoutTask = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
 
     try {
-      const optimizedFile = await compressImageForUpload(file);
-      const formData = new FormData();
-      formData.append("file", optimizedFile);
-
-      const apiHost = typeof window !== "undefined" ? "" : "http://localhost:4000";
-      const res = await fetch(`${apiHost}/api/tickets/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.success && data.data) {
-        setAttachment({ ...data.data, isUploading: false });
+      const result = await Promise.race([uploadTask, timeoutTask]);
+      if (result) {
+        setAttachment(result);
       } else {
-        setAttachment(null);
+        setAttachment({ ...initialAttachment, isUploading: false });
       }
-    } catch (err) {
-      console.error("Failed to upload attachment:", err);
-      setAttachment(null);
+    } catch {
+      setAttachment({ ...initialAttachment, isUploading: false });
     } finally {
       setIsUploading(false);
     }
@@ -960,9 +975,17 @@ export function ChatWidget() {
 
         const data = await res.json();
         if (data.success && data.data?.ticket) {
-          setChatTicket(data.data.ticket);
-          if (liveTicket && liveTicket.startsWith("TKT-CHAT")) {
-            setLiveTicket(null);
+          if (data.data.connectLive || data.data.ticket.startsWith("TKT-LIVE")) {
+            setLiveTicket(data.data.ticket);
+            setTicketClosed(false);
+            if (data.data.userName) setUserName(data.data.userName);
+            if (data.data.userEmail) setUserEmail(data.data.userEmail);
+            triggerIosNotification("Live Support Connected", `Ticket ${data.data.ticket} created`);
+          } else {
+            setChatTicket(data.data.ticket);
+            if (liveTicket && liveTicket.startsWith("TKT-CHAT")) {
+              setLiveTicket(null);
+            }
           }
         }
 
@@ -1215,7 +1238,27 @@ export function ChatWidget() {
             )}
 
             {/* Messages body */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50">
+            <div className="relative flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50">
+              {/* Full-panel semi-transparent loading overlay in middle of chatbox */}
+              {isUploading && (
+                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/65 backdrop-blur-[3px] text-[#1B222C] animate-in fade-in zoom-in-95 duration-200 p-4 text-center select-none">
+                  <div className="relative flex items-center justify-center mb-3">
+                    <div className="h-14 w-14 rounded-2xl bg-[#1B222C] text-white flex items-center justify-center shadow-xl animate-pulse">
+                      <Loader2 className="h-7 w-7 animate-spin text-blue-400" />
+                    </div>
+                  </div>
+                  <h4 className="text-xs font-bold text-[#1B222C] tracking-wide uppercase">
+                    Uploading Image...
+                  </h4>
+                  <p className="text-[11px] font-medium text-slate-500 mt-1 max-w-[200px]">
+                    Optimizing &amp; preparing attachment
+                  </p>
+                  <div className="w-24 h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-pulse w-3/4" />
+                  </div>
+                </div>
+              )}
+
               {messages.map((msg) => {
                 if (msg.role === "system") {
                   return (
@@ -1254,13 +1297,18 @@ export function ChatWidget() {
                               <button
                                 type="button"
                                 onClick={() => setPreviewImage({ url: msg.attachmentUrl!, name: msg.attachmentName || "Attached Image" })}
-                                className="block overflow-hidden rounded-xl group text-left cursor-zoom-in"
+                                className="relative block aspect-square w-48 sm:w-52 rounded-xl overflow-hidden group text-left cursor-zoom-in border border-black/10 shadow-sm bg-slate-900/5 hover:shadow-md transition-all duration-300"
                               >
                                 <img
                                   src={msg.attachmentUrl}
                                   alt={msg.attachmentName || "Attached screenshot or photo"}
-                                  className="max-h-48 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity border border-black/10"
+                                  className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300 ease-out"
                                 />
+                                <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                                  <div className="h-9 w-9 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-200">
+                                    <ImageIcon className="h-4 w-4" />
+                                  </div>
+                                </div>
                               </button>
                             ) : (
                               <a
@@ -1631,35 +1679,41 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* ── Full-Screen Image Lightbox Modal ── */}
+      {/* ── Full-Screen Image Lightbox Modal with Crisp Square Card Frame ── */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in zoom-in-95 duration-200 select-none"
           onClick={() => setPreviewImage(null)}
         >
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
             aria-label="Close preview"
           >
             <X className="h-6 w-6" />
           </button>
-          <img
-            src={previewImage.url}
-            alt={previewImage.name}
+
+          <div
             onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain select-none"
-          />
+            className="relative w-full max-w-[380px] sm:max-w-[440px] aspect-square bg-[#111827] rounded-3xl p-3 shadow-2xl border border-white/20 flex items-center justify-center overflow-hidden animate-in zoom-in-95 duration-200"
+          >
+            <img
+              src={previewImage.url}
+              alt={previewImage.name}
+              className="w-full h-full object-contain rounded-2xl select-none drop-shadow-md"
+            />
+          </div>
+
           <a
             href={previewImage.url}
             download={previewImage.name}
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-[#1B222C] font-bold text-xs rounded-xl shadow-lg transition-colors"
+            className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-[#1B222C] font-bold text-xs rounded-xl shadow-2xl transition-colors cursor-pointer"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4 text-[#007AFF]" />
             <span>Download</span>
           </a>
         </div>
