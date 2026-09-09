@@ -23,6 +23,11 @@ export const metadata: import("next").Metadata = {
   },
   description: "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware for modern financial institutions.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "M&F Technologies",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: [
       { url: "/favicon-v2.ico", sizes: "any" },
@@ -117,7 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           async
@@ -132,9 +137,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" sizes="192x192" href="/icon-v2-192.png" type="image/png" />
         <link rel="icon" sizes="512x512" href="/icon-v2-512.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="M&F Technologies" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -146,7 +148,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-body text-graphite">
+      <body className="font-body text-graphite" suppressHydrationWarning>
         {children}
         <CookieBanner />
         <ChatWidget />

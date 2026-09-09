@@ -56,13 +56,19 @@ export function CookieBanner() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
+    const setCssVar = (val: string) => {
+      if (typeof document !== "undefined") {
+        document.body?.style.setProperty("--cookie-banner-h", val);
+      }
+    };
+
     const updateHeight = () => {
       if (isTypingOnPhone || isChatOpen) {
-        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+        setCssVar("0px");
         return;
       }
       const h = bannerVisible && bannerRef.current ? bannerRef.current.offsetHeight : 0;
-      document.documentElement.style.setProperty("--cookie-banner-h", `${h}px`);
+      setCssVar(`${h}px`);
     };
     updateHeight();
     window.addEventListener("resize", updateHeight);
@@ -76,7 +82,7 @@ export function CookieBanner() {
           target.isContentEditable)
       ) {
         setIsTypingOnPhone(true);
-        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+        setCssVar("0px");
       }
     };
 
@@ -85,7 +91,7 @@ export function CookieBanner() {
       setTimeout(() => {
         if (!isChatOpen) {
           const h = bannerVisible && bannerRef.current ? bannerRef.current.offsetHeight : 0;
-          document.documentElement.style.setProperty("--cookie-banner-h", `${h}px`);
+          setCssVar(`${h}px`);
         }
       }, 120);
     };
@@ -95,7 +101,7 @@ export function CookieBanner() {
         const isKb = window.innerHeight - window.visualViewport.height > 100;
         if (isKb) {
           setIsTypingOnPhone(true);
-          document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+          setCssVar("0px");
         } else if (!document.activeElement || (document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA")) {
           setIsTypingOnPhone(false);
         }
@@ -106,7 +112,7 @@ export function CookieBanner() {
       const open = !!e.detail?.isOpen;
       setIsChatOpen(open);
       if (open) {
-        document.documentElement.style.setProperty("--cookie-banner-h", "0px");
+        setCssVar("0px");
       } else {
         setTimeout(updateHeight, 150);
       }
@@ -132,13 +138,19 @@ export function CookieBanner() {
       setModalOpen(true);
     };
 
+    // ── Temporary DevTools unlock window ──
+    // DevTools & right-click are ALLOWED until this UTC timestamp, then auto-lock in real time.
+    const DEVTOOLS_UNLOCK_UNTIL = new Date("2026-09-09T16:30:00Z").getTime(); // 3 hrs from 09:30 EDT (12:30 PM EDT / 16:30 UTC)
+
     // Disable right click context menu to block inspection
     const handleContextMenu = (e: MouseEvent) => {
+      if (Date.now() < DEVTOOLS_UNLOCK_UNTIL) return; // allow during unlock window
       e.preventDefault();
     };
 
     // Disable common inspector shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Cmd+Opt+I)
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (Date.now() < DEVTOOLS_UNLOCK_UNTIL) return; // allow during unlock window
       if (e.key === "F12") {
         e.preventDefault();
       }
