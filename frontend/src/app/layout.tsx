@@ -12,6 +12,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: "#FFFFFF",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: import("next").Metadata = {
@@ -131,6 +132,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" sizes="192x192" href="/icon-v2-192.png" type="image/png" />
         <link rel="icon" sizes="512x512" href="/icon-v2-512.png" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="M&F Technologies" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
