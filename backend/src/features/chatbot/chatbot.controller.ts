@@ -102,18 +102,15 @@ COMPLETE CAPABILITIES & SOLUTIONS (WHAT WE DO):
 5. Financial API Gateway: Microservices architecture, M-Pesa Daraja integration, CRB query connectors, core banking connectors, REST and GraphQL endpoints with 99.99% uptime SLA.
 6. Security & Compliance: AES-256 encryption, TLS 1.3, double-entry immutable ledgers, SOC 2 Type II audit path, role-based access control (RBAC), and GDPR/Data Protection Act compliance.
 
-APPROXIMATE PRICING & LICENSING STRUCTURE:
-- Core Lending Engine: Starter Tier ($450/month for up to 10,000 active loans), Growth Tier ($1,200/month for up to 100,000 active loans), Enterprise Tier (Custom volume pricing for commercial banks with dedicated infrastructure).
-- Credit Scoring Platform: Pay-as-you-go per query. Starter at $0.15/query; Enterprise High-Volume (50,000+ queries/mo) at $0.05/query.
-- Collections Management: $350/month flat software subscription + $0.02 per automated SMS/email recovery notification.
-- Web & Mobile App Suite: $500/month per institutional tenant instance with unlimited field officer/agent licenses.
-- Financial API Connectors: Included free with Core Lending, or $250/month for standalone API gateway access.
-
-SALES & SUPPORT CONNECTION PROTOCOL:
-- Sales and Support are unified under our engineering support team.
-- When asked about what we do, provide a clear, comprehensive, and helpful answer covering relevant services.
-- When asked about prices or costs, ALWAYS share the approximate pricing transparently AND offer to connect them directly with Sales/Support for a custom quote or architectural demo.
-- Direct Escalation instruction to give users: "Our Sales & Support Engineering team is available right now. To connect with Sales for a custom quote or speak with a live agent, click Request Callback or Talk to Live Support Agent below, or call +254 748 329 410."
+CRITICAL PRICING & SALES CONNECTION RULES:
+1. NEVER mention price figures, dollar amounts ($), or numerical costs under any circumstances.
+2. ONLY IF the user explicitly asks for price, cost, rates, or pricing:
+   - DO NOT state prices or numbers.
+   - ASK whether to connect them with Sales & Support to get a custom institutional quote or proposal.
+3. For general inquiries about what we do, services, or solutions:
+   - Provide a comprehensive response explaining our capabilities.
+   - ASK whether to connect them with Sales & Support to discuss their requirements or schedule a demo.
+4. Always include action options: "You can click Request Callback or Talk to Live Support Agent below, or call +254 748 329 410."
 
 STRICT FORMATTING RULES:
 1. NEVER use any emojis under any circumstances.
@@ -425,10 +422,12 @@ export async function sendMessageHandler(req: Request, res: Response) {
     } catch (geminiErr: any) {
       logger.error(`Gemini API failed: ${geminiErr.message}`);
       const lowerMsg = (message || "").toLowerCase();
-      if (lowerMsg.includes("price") || lowerMsg.includes("cost") || lowerMsg.includes("pricing") || lowerMsg.includes("rate") || lowerMsg.includes("how much") || lowerMsg.includes("detail") || lowerMsg.includes("service")) {
-        responseText = "M&F Technologies Service & Pricing Breakdown:\n- Core Lending Engine: Starter ($450/mo for up to 10k loans), Growth ($1,200/mo for 100k loans), Enterprise (Custom quote).\n- Credit Scoring Platform: $0.15/query (Starter) down to $0.05/query (Enterprise high volume).\n- Collections & Recovery: $350/mo flat subscription + $0.02/automated SMS dispatch.\n- Web & Mobile App Suite: $500/mo per tenant instance (unlimited field agent licenses).\n- API Connectors: Included with Core Lending or $250/mo standalone.\n\nTo get an official enterprise quote or speak directly with our team, click Request Callback or Talk to Live Support Agent below.";
+      const isPriceQuery = lowerMsg.includes("price") || lowerMsg.includes("cost") || lowerMsg.includes("pricing") || lowerMsg.includes("rate") || lowerMsg.includes("how much") || lowerMsg.includes("fee") || lowerMsg.includes("quote");
+
+      if (isPriceQuery) {
+        responseText = "We provide customized pricing tailored to your institution scale, loan portfolio volume, and deployment requirements. Would you like me to connect you with Sales & Support to discuss your specific requirements and receive an official quote? Click Request Callback or Talk to Live Support Agent below, or call us at +254 748 329 410.";
       } else {
-        responseText = "Thank you for contacting M&F Technologies. We provide core lending systems, credit scoring platforms, collections automation, and financial APIs. To speak directly with our team, click Request Callback or Talk to Live Support Agent below.";
+        responseText = "M&F Technologies Core Solutions:\n1. Core Lending Engine: Automated loan origination, double-entry audit accounting ledger, automated disbursements (M-Pesa/Bank rails), and repayment scheduling.\n2. Alternative Credit Scoring: Machine learning risk assessment, credit bureau (CRB) aggregation, and mobile money telemetry scoring.\n3. Collections Management: Delinquency tracking, automated SMS/email recovery notifications, and collector queue management.\n4. Mobile & Web Apps: Borrower self-service portals and offline-first field agent apps with mobile KYC.\n5. Financial API Gateway: High-throughput REST and GraphQL endpoints with 99.99% uptime SLA.\n\nWould you like me to connect you with Sales & Support to discuss your requirements or request a live demo? Click Request Callback or Talk to Live Support Agent below.";
       }
       usedProvider = "Fallback System";
     }
