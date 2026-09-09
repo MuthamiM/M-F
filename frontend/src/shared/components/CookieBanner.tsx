@@ -195,6 +195,23 @@ export function CookieBanner() {
           sessionActive: true,
         })
       );
+
+      let vid = localStorage.getItem("mf_vid");
+      if (!vid) {
+        vid = "vid_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now().toString(36);
+        localStorage.setItem("mf_vid", vid);
+      }
+
+      fetch("/api/track/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          visitorId: vid,
+          consentMode: mode === "accept_all" ? "all" : mode === "reject_optional" ? "declined" : "custom",
+          analyticsEnabled: prefsToSave.analytics,
+          marketingEnabled: prefsToSave.marketing,
+        }),
+      }).catch(() => {});
     } catch {}
 
     setPreferences(prefsToSave);
