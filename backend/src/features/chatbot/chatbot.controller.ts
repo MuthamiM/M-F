@@ -135,7 +135,7 @@ function cleanText(text: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Groq API with Gemma 2 9B IT                                       */
+/*  Groq API with groq/compound-mini                                  */
 /* ------------------------------------------------------------------ */
 async function callGroqAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
   const apiKey = process.env.GROK_API_KEY || "";
@@ -147,7 +147,7 @@ async function callGroqAPI(messages: Array<{ role: string; content: string }>): 
   }));
 
   const payload = JSON.stringify({
-    model: "gemma2-9b-it",
+    model: "groq/compound-mini",
     messages: groqMessages,
     temperature: 0.7,
     max_tokens: 300,
@@ -170,7 +170,7 @@ async function callGroqAPI(messages: Array<{ role: string; content: string }>): 
 }
 
 /* ------------------------------------------------------------------ */
-/*  Gemini API Fallback with gemini-2.0-flash                          */
+/*  Gemini API Fallback with gemini-3.6-flash                          */
 /* ------------------------------------------------------------------ */
 async function callGeminiAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || "";
@@ -192,7 +192,7 @@ async function callGeminiAPI(messages: Array<{ role: string; content: string }>)
     },
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
   const data = await httpRequest(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
