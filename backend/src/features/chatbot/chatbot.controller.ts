@@ -110,7 +110,14 @@ CRITICAL PRICING & SALES CONNECTION RULES:
 3. For general inquiries about what we do, services, or solutions:
    - Provide a comprehensive response explaining our capabilities.
    - ASK whether to connect them with Sales & Support to discuss their requirements or schedule a demo.
-4. Always include action options: "You can click Request Callback or Talk to Live Support Agent below, or call +254 748 329 410."
+4. STEP-BY-STEP SUPPORT CONNECTION (ASK NAME AND EMAIL ONE BY ONE WITH VALIDATION):
+   - Step 1 (Ask Name First): When a visitor asks to connect with sales/support or agrees to connect:
+     Ask ONLY for their Full Name first: "I would be glad to connect you with our Sales & Support team. First, what is your Full Name?"
+   - Step 2 (Ask Email Second): Once the visitor provides their name, acknowledge their name and ask ONLY for their Email Address next: "Thank you [Name]! What is your Email Address so our team can contact you or send a proposal?"
+   - Step 3 (Validate Input): If the user enters an invalid email format when asked for email, politely ask: "Please enter a valid email address (e.g. name@institution.com) so we can log your request."
+   - Step 4 (Confirm & Connect): Once BOTH a valid Name and a valid Email address have been provided:
+     Confirm warmly: "Thank you, [Name]! Your live support request has been logged for [Email]. A representative from our Sales & Support team will join this session or reach out to you shortly."
+5. Always include action options: "You can click Request Callback or Talk to Live Support Agent below, or call +254 748 329 410."
 
 STRICT FORMATTING RULES:
 1. NEVER use any emojis under any circumstances.
@@ -436,8 +443,98 @@ export async function sendMessageHandler(req: Request, res: Response) {
   const cleanedResponse = cleanText(responseText);
   let activeTicketId = ticket;
 
-  // Auto-generate ticket for any chat interaction if no active ticket ID exists yet!
-  if (!activeTicketId) {
+  // Detect if visitor provided an email address in text conversation to upgrade to Live Support Ticket
+  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
+  let emailMatch = (message || "").match(emailRegex);
+  let detectedEmail = emailMatch ? emailMatch[1] : "";
+  let detectedName = "";
+
+  // Check history for email if not present in current message
+  if (!detectedEmail && Array.isArray(history)) {
+    for (const h of history.slice().reverse()) {
+      const match = (h.content || "").match(emailRegex);
+      if (match) {
+        detectedEmail = match[1];
+        break;
+      }
+    }
+  }
+
+  // Extract name from history or current message
+  if (Array.isArray(history)) {
+    for (let i = 0; i < history.length; i++) {
+      const h = history[i];
+      if (h.role === "assistant" && h.content && (h.content.includes("Full Name") || h.content.includes("your name"))) {
+        if (i + 1 < history.length && history[i + 1].role === "user") {
+          const candidate = history[i + 1].content.trim();
+          if (candidate && !candidate.includes("@") && candidate.length < 40) {
+            detectedName = candidate.replace(/my name is/i, "").replace(/i am/i, "").trim();
+          }
+        }
+      }
+    }
+  }
+
+  if (!detectedName && message) {
+    const msgText = cleanText(message);
+    const parts = msgText.split(/[,|\n-]/);
+    if (parts.length > 0 && !parts[0].includes("@") && parts[0].length < 40) {
+      const candidate = parts[0].replace(/my name is/i, "").replace(/i am/i, "").trim();
+      if (candidate.length >= 2 && !candidate.toLowerCase().includes("connect") && !candidate.toLowerCase().includes("yes")) {
+        detectedName = candidate;
+      }
+    }
+  }
+
+  const shouldConnectLive = Boolean(detectedEmail);
+
+  if (shouldConnectLive) {
+    activeTicketId = await generateTicketNumber("LIVE");
+    const now = new Date();
+    const ip = getReqIp(req);
+    try {
+      const geo = ip ? await lookupGeo(ip) : {};
+      await ticketStore.set(activeTicketId, {
+        id: activeTicketId,
+        type: "chatbot",
+        name: detectedName || "Website Visitor",
+        email: detectedEmail,
+        company: "ChatBot — Live Support Requested in Chat",
+        message: `Live support session requested via text chat. Email: ${detectedEmail}`,
+        status: "open",
+        priority: "high",
+        latitude: geo.lat,
+        longitude: geo.lon,
+        ipAddress: ip || undefined,
+        geoCity: geo.city,
+        geoCountry: geo.country,
+        geoRegion: geo.region,
+        createdAt: now,
+        updatedAt: now,
+        notes: [],
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            sender: "client",
+            senderName: detectedName || "Website Visitor",
+            text: cleanText(message),
+            timestamp: now,
+          },
+          {
+            id: `msg-${Date.now() + 1}`,
+            sender: "agent",
+            senderName: usedProvider === "Groq" || usedProvider === "Gemini" ? "AI Assistant" : "Support Agent",
+            text: cleanedResponse,
+            timestamp: new Date(now.getTime() + 200),
+          },
+        ],
+        callLogs: [],
+      });
+      logger.info(`Upgraded chat to Live Support Ticket ${activeTicketId} for ${detectedEmail}.`);
+    } catch (err: any) {
+      logger.error(`Failed to create live support ticket from email match: ${err.message}`);
+    }
+  } else if (!activeTicketId) {
     activeTicketId = await generateTicketNumber("CHAT");
     const now = new Date();
     const ip = getReqIp(req);
@@ -529,6 +626,9 @@ export async function sendMessageHandler(req: Request, res: Response) {
       ticket: activeTicketId,
       response: cleanedResponse,
       provider: usedProvider,
+      connectLive: shouldConnectLive,
+      userName: detectedName,
+      userEmail: detectedEmail,
     },
   });
 }
