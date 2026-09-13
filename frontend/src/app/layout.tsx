@@ -71,6 +71,9 @@ export const metadata: import("next").Metadata = {
     description: "Lending technology for banks and credit unions.",
     images: ["https://mftechnologies.org/og-image.png"],
   },
+  other: {
+    "google-adsense-account": "ca-pub-8996168943533702",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -92,7 +95,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "image": "https://mftechnologies.org/og-image.png",
         "sameAs": [
           "https://mftechnologies.org"
-        ]
+        ],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "The Pavilion, 4th Floor, Lower Kabete Road, Westlands",
+          "addressLocality": "Nairobi",
+          "postalCode": "00100",
+          "addressCountry": "KE"
+        }
       },
       {
         "@type": "FinancialService",
@@ -106,8 +116,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "email": "info@mftechnologies.org",
         "address": {
           "@type": "PostalAddress",
-          "addressCountry": "KE",
-          "addressLocality": "Nairobi"
+          "streetAddress": "The Pavilion, 4th Floor, Lower Kabete Road, Westlands",
+          "addressLocality": "Nairobi",
+          "postalCode": "00100",
+          "addressCountry": "KE"
         },
         "openingHoursSpecification": [
           {
@@ -124,9 +136,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="google-adsense-account" content="ca-pub-8996168943533702" />
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1759034301918367"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996168943533702"
           crossOrigin="anonymous"
         ></script>
         <link rel="icon" href="/favicon-v2.ico" sizes="any" />

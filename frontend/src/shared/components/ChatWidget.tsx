@@ -174,12 +174,24 @@ export function ChatWidget() {
 
   // Emoji, Attachment, and Live Typing state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [attachment, setAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number; isUploading?: boolean } | null>(null);
+  const [attachment, setAttachment] = useState<{ url: string; serverUrl?: string; name: string; type: "image" | "document"; size?: number; isUploading?: boolean } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getAttachmentUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("blob:") || url.startsWith("data:")) {
+      return url;
+    }
+    const apiHost = typeof window !== "undefined"
+      ? (window.location.port === "3000" ? "http://localhost:4000" : "")
+      : "http://localhost:4000";
+    const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+    return `${apiHost}${cleanUrl}`;
+  };
 
   // Active Form Mode: null | "callback" | "live_agent"
   const [activeForm, setActiveForm] = useState<null | "callback" | "live_agent">(null);
@@ -256,6 +268,7 @@ export function ChatWidget() {
     const localUrl = URL.createObjectURL(file);
     const initialAttachment = {
       url: localUrl,
+      serverUrl: "",
       name: file.name,
       type: file.type.startsWith("image/") ? ("image" as const) : ("document" as const),
       size: file.size,
@@ -276,7 +289,12 @@ export function ChatWidget() {
         });
         const data = await res.json();
         if (res.ok && data.success && data.data) {
-          return { ...data.data, isUploading: false };
+          return {
+            ...data.data,
+            url: localUrl,
+            serverUrl: data.data.url,
+            isUploading: false,
+          };
         }
         return null;
       } catch (err) {
@@ -911,11 +929,12 @@ export function ChatWidget() {
     touchActivity();
     if ((!queryText.trim() && !attachedFile) || isTyping || ticketClosed) return;
 
+    const resolvedAttachmentUrl = attachedFile?.serverUrl || attachedFile?.url;
     const userMsg: Message = {
       id: "user-" + Date.now(),
       role: "user",
       text: queryText.trim(),
-      attachmentUrl: attachedFile?.url,
+      attachmentUrl: resolvedAttachmentUrl,
       attachmentName: attachedFile?.name,
       attachmentType: attachedFile?.type,
       timestamp: new Date().toISOString(),
@@ -949,7 +968,7 @@ export function ChatWidget() {
           body: JSON.stringify({
             text: queryText.trim(),
             senderName: userName || "Website Visitor",
-            attachmentUrl: attachedFile?.url,
+            attachmentUrl: resolvedAttachmentUrl,
             attachmentName: attachedFile?.name,
             attachmentType: attachedFile?.type,
           }),
@@ -1239,22 +1258,12 @@ export function ChatWidget() {
 
             {/* Messages body */}
             <div className="relative flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50">
-              {/* Full-panel semi-transparent loading overlay in middle of chatbox */}
+              {/* Sleek Floating Glass Pill Loader (Uploading) */}
               {isUploading && (
-                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/65 backdrop-blur-[3px] text-[#1B222C] animate-in fade-in zoom-in-95 duration-200 p-4 text-center select-none">
-                  <div className="relative flex items-center justify-center mb-3">
-                    <div className="h-14 w-14 rounded-2xl bg-[#1B222C] text-white flex items-center justify-center shadow-xl animate-pulse">
-                      <Loader2 className="h-7 w-7 animate-spin text-blue-400" />
-                    </div>
-                  </div>
-                  <h4 className="text-xs font-bold text-[#1B222C] tracking-wide uppercase">
-                    Uploading Image...
-                  </h4>
-                  <p className="text-[11px] font-medium text-slate-500 mt-1 max-w-[200px]">
-                    Optimizing &amp; preparing attachment
-                  </p>
-                  <div className="w-24 h-1 bg-slate-200 rounded-full mt-3 overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full animate-pulse w-3/4" />
+                <div className="absolute inset-x-0 bottom-3 z-[100] flex justify-center pointer-events-none px-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="bg-[#111827]/90 backdrop-blur-xl border border-white/15 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-2.5 text-xs font-semibold select-none">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-400 shrink-0" />
+                    <span>Uploading image...</span>
                   </div>
                 </div>
               )}
@@ -1296,23 +1305,24 @@ export function ChatWidget() {
                             {msg.attachmentType === "image" || /\.(png|jpe?g|webp|gif)$/i.test(msg.attachmentUrl) ? (
                               <button
                                 type="button"
-                                onClick={() => setPreviewImage({ url: msg.attachmentUrl!, name: msg.attachmentName || "Attached Image" })}
-                                className="relative block aspect-square w-48 sm:w-52 rounded-xl overflow-hidden group text-left cursor-zoom-in border border-black/10 shadow-sm bg-slate-900/5 hover:shadow-md transition-all duration-300"
+                                onClick={() => setPreviewImage({ url: getAttachmentUrl(msg.attachmentUrl), name: msg.attachmentName || "Attached Image" })}
+                                className="relative block max-w-[240px] max-h-[280px] rounded-2xl overflow-hidden group text-left cursor-zoom-in border border-black/10 shadow-md bg-black/5 hover:shadow-lg transition-all duration-200"
                               >
                                 <img
-                                  src={msg.attachmentUrl}
+                                  src={getAttachmentUrl(msg.attachmentUrl)}
                                   alt={msg.attachmentName || "Attached screenshot or photo"}
-                                  className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300 ease-out"
+                                  className="max-w-full max-h-[280px] w-auto h-auto object-contain rounded-2xl group-hover:scale-[1.02] transition-transform duration-200 ease-out"
                                 />
-                                <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                                  <div className="h-9 w-9 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-200">
-                                    <ImageIcon className="h-4 w-4" />
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                                  <div className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-xl transform scale-95 group-hover:scale-100 transition-transform">
+                                    <ImageIcon className="h-3.5 w-3.5 text-blue-400" />
+                                    <span>Expand</span>
                                   </div>
                                 </div>
                               </button>
                             ) : (
                               <a
-                                href={msg.attachmentUrl}
+                                href={getAttachmentUrl(msg.attachmentUrl)}
                                 download={msg.attachmentName || "download"}
                                 target="_blank"
                                 rel="noreferrer"
@@ -1556,38 +1566,60 @@ export function ChatWidget() {
 
             {/* Attached File Preview Strip */}
             {attachment && (
-              <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-100 border-t border-slate-200 text-xs animate-in fade-in duration-150">
-                <div className="flex items-center gap-2 truncate">
+              <div className="relative border-t border-slate-200 bg-[#F4F6F8] px-3 py-2 animate-in fade-in duration-150">
+                <div className="flex items-start gap-2.5">
+                  {/* Square image thumbnail — always visible */}
                   {attachment.type === "image" ? (
                     <div
-                      className="relative h-7 w-7 shrink-0 cursor-pointer"
+                      className="relative shrink-0 cursor-pointer"
                       onClick={() => !attachment.isUploading && setPreviewImage({ url: attachment.url, name: attachment.name })}
                     >
-                      <img src={attachment.url} alt="Thumbnail" className={`h-7 w-7 object-cover rounded-lg border border-slate-300 ${attachment.isUploading ? "opacity-50" : "hover:opacity-90"}`} />
+                      <img
+                        src={attachment.url}
+                        alt="Preview"
+                        className="h-16 w-16 object-cover rounded-xl border border-[#3E4C59]/20 shadow-sm"
+                      />
+                      {/* Upload overlay with dots — background image stays visible */}
                       {attachment.isUploading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
-                          <Loader2 className="h-3 w-3 animate-spin text-white" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1B222C]/40 backdrop-blur-[1px] rounded-xl">
+                          <div className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-dot-move" style={{ animationDelay: "0ms", animationIterationCount: 4 }} />
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-dot-move" style={{ animationDelay: "200ms", animationIterationCount: 4 }} />
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-dot-move" style={{ animationDelay: "400ms", animationIterationCount: 4 }} />
+                          </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
+                    <div className="h-16 w-16 rounded-xl bg-[#1B222C]/10 flex items-center justify-center shrink-0">
+                      <FileText className="h-6 w-6 text-[#3E4C59]" />
+                    </div>
                   )}
-                  <div className="truncate">
-                    <span className="truncate font-semibold text-slate-700 block">{attachment.name}</span>
-                    <span className="text-[10px] text-slate-400 block">
-                      {attachment.isUploading ? "Optimizing & uploading..." : (attachment.size ? `${Math.round(attachment.size / 1024)} KB` : "Ready to send")}
+                  {/* File info */}
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <span className="truncate font-semibold text-[#1B222C] text-xs block">{attachment.name}</span>
+                    <span className="text-[10px] text-[#3E4C59] block mt-0.5">
+                      {attachment.isUploading ? "Uploading attachment..." : (attachment.size ? `${Math.round(attachment.size / 1024)} KB · Ready to send` : "Ready to send")}
                     </span>
+                    {attachment.isUploading && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="w-1 h-1 bg-[#3E4C59] rounded-full animate-dot-move" style={{ animationDelay: "0ms", animationIterationCount: 4 }} />
+                        <span className="w-1 h-1 bg-[#3E4C59] rounded-full animate-dot-move" style={{ animationDelay: "150ms", animationIterationCount: 4 }} />
+                        <span className="w-1 h-1 bg-[#3E4C59] rounded-full animate-dot-move" style={{ animationDelay: "300ms", animationIterationCount: 4 }} />
+                        <span className="text-[9px] text-[#3E4C59] ml-0.5 font-medium">Uploading attachment</span>
+                      </div>
+                    )}
                   </div>
+                  {/* Remove button */}
+                  <button
+                    type="button"
+                    onClick={() => setAttachment(null)}
+                    className="p-1 text-[#9AA5B1] hover:text-red-500 rounded-full transition-colors cursor-pointer shrink-0 mt-0.5"
+                    title="Remove attachment"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAttachment(null)}
-                  className="p-1 text-slate-400 hover:text-red-500 rounded-full transition-colors cursor-pointer"
-                  title="Remove attachment"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
               </div>
             )}
 
@@ -1679,16 +1711,16 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      {/* ── Full-Screen Image Lightbox Modal with Crisp Square Card Frame ── */}
+      {/* ── Full-Screen High-Resolution Image Lightbox Modal ── */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in zoom-in-95 duration-200 select-none"
+          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-8 animate-in fade-in zoom-in-95 duration-200 select-none"
           onClick={() => setPreviewImage(null)}
         >
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            className="absolute top-5 right-5 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
             aria-label="Close preview"
           >
             <X className="h-6 w-6" />
@@ -1696,17 +1728,17 @@ export function ChatWidget() {
 
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-[380px] sm:max-w-[440px] aspect-square bg-[#111827] rounded-3xl p-3 shadow-2xl border border-white/20 flex items-center justify-center overflow-hidden animate-in zoom-in-95 duration-200"
+            className="relative max-w-[90vw] max-h-[85vh] flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/15"
           >
             <img
-              src={previewImage.url}
+              src={getAttachmentUrl(previewImage.url)}
               alt={previewImage.name}
-              className="w-full h-full object-contain rounded-2xl select-none drop-shadow-md"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl select-none"
             />
           </div>
 
           <a
-            href={previewImage.url}
+            href={getAttachmentUrl(previewImage.url)}
             download={previewImage.name}
             target="_blank"
             rel="noreferrer"

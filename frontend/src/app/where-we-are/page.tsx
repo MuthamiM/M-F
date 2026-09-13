@@ -70,10 +70,10 @@ export default function WhereWeAre() {
               </div>
               <div className="text-xs sm:text-sm text-slate space-y-2">
                 <p>
-                  <strong>Corporate Registry:</strong> Remote-first structure with legal registrations in the United Kingdom.
+                  <strong>Nairobi Engineering Headquarters:</strong> The Pavilion, 4th Floor, Lower Kabete Road, Westlands, Nairobi, Kenya.
                 </p>
                 <p>
-                  <strong>Regional Operations Hubs:</strong> London (UK), Nairobi (Kenya), and Lagos (Nigeria).
+                  <strong>Corporate Registry:</strong> Remote-first structure with legal registrations in the United Kingdom and West African operational hubs in Lagos, Nigeria.
                 </p>
               </div>
             </div>

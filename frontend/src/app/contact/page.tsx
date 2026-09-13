@@ -80,7 +80,8 @@ export default function ContactPage() {
                     <MapPin className="h-4.5 w-4.5 text-[#3E4C59] shrink-0 mt-0.5" />
                     <div>
                       <div className="font-semibold text-graphite">Engineering Headquarters</div>
-                      <div className="mt-1">Nairobi, Kenya &bull; Operational Hubs in London (UK) &amp; Lagos (Nigeria)</div>
+                      <div className="mt-1 font-medium text-[#1B222C]">The Pavilion, 4th Floor, Lower Kabete Road, Westlands</div>
+                      <div className="text-[11px] text-[#6B7684]">Nairobi, Kenya (P.O. Box 45281 - 00100) &bull; Global Hub in London, UK</div>
                     </div>
                   </div>
                 </div>

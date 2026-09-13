@@ -134,3 +134,22 @@ img, svg, video {
   animation: dropdownBlink 1.2s ease-in-out infinite;
 }
 
+@keyframes dotTranslate {
+  0% {
+    transform: translateX(-10px) scale(0.6);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(0px) scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(10px) scale(0.6);
+    opacity: 0.3;
+  }
+}
+
+.animate-dot-move {
+  animation: dotTranslate 0.8s ease-in-out infinite;
+}
+

@@ -25,7 +25,7 @@ export function About() {
                 Engineered for High-Volume Institutional Credit Operations
               </h2>
               <p className="text-sm sm:text-base leading-relaxed text-slate">
-                M&amp;F Technologies develops, integrates, and operates high-performance financial systems for global banking institutions, credit unions, and micro-lending platforms. We bridges the gap between legacy core systems and modern digital interfaces by deploying microservice-driven transaction engines, automated credit scoring, and ultra-secure middleware.
+                M&amp;F Technologies develops, integrates, and operates high-performance financial systems for global banking institutions, credit unions, and micro-lending platforms. We bridge the gap between legacy core systems and modern digital interfaces by deploying microservice-driven transaction engines, automated credit scoring, and ultra-secure middleware.
               </p>
               <p className="text-sm sm:text-base leading-relaxed text-slate">
                 Our architecture is built from the ground up to prevent balance drift, ensure transaction consistency under heavy load, and comply automatically with financial regulations. Through unified APIs, we empower credit providers to automate underwriting pipelines, ingest rich credit bureau payloads, and disperse funds instantly.

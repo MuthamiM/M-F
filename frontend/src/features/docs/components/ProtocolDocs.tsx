@@ -376,6 +376,104 @@ export function ProtocolDocs() {
               </div>
             )}
 
+            {activeId === "resources-overview" && (
+              <div className="space-y-8 max-w-4xl">
+                <div className="space-y-2 border-b border-[#E4E7EB] pb-6">
+                  <span className="text-xs font-bold text-[#1B222C] uppercase tracking-wider">
+                    API Reference
+                  </span>
+                  <h1 className="text-3xl font-bold text-[#1B222C] tracking-tight font-display">
+                    API Resources
+                  </h1>
+                  <p className="text-sm text-[#3E4C59] leading-relaxed">
+                    Browse the resources available in the M&amp;F Technologies API. Select a resource to review its endpoint, authentication requirements, request fields, response shape, and code examples.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    {
+                      id: "create-loan-application",
+                      title: "Lending Applications",
+                      method: "POST",
+                      description: "Create and manage borrower loan applications, collateral details, and origination workflows.",
+                    },
+                    {
+                      id: "get-loan-application",
+                      title: "Application Status",
+                      method: "GET",
+                      description: "Retrieve the current state, decision metadata, and repayment details for an application.",
+                    },
+                    {
+                      id: "evaluate-credit-score",
+                      title: "Credit Scoring",
+                      method: "POST",
+                      description: "Submit borrower financial data for an explainable credit score and risk-band evaluation.",
+                    },
+                    {
+                      id: "get-collections-queue",
+                      title: "CRM & Collections",
+                      method: "GET",
+                      description: "Read delinquency queues, aging buckets, recovery priorities, and assigned collection actions.",
+                    },
+                    {
+                      id: "send-sms-message",
+                      title: "SMS Messaging",
+                      method: "POST",
+                      description: "Send transactional messages and notifications through the connected SMS gateway.",
+                    },
+                    {
+                      id: "list-sms-messages",
+                      title: "Message History",
+                      method: "GET",
+                      description: "List outbound SMS messages with delivery status, timestamps, recipients, and provider metadata.",
+                    },
+                    {
+                      id: "list-sms-devices",
+                      title: "Gateway Devices",
+                      method: "GET",
+                      description: "Inspect connected SIM devices, routing availability, signal health, and gateway capacity.",
+                    },
+                    {
+                      id: "verify-sms-otp",
+                      title: "Mobile OTP Verification",
+                      method: "POST",
+                      description: "Verify a one-time password issued to a borrower or account holder’s mobile number.",
+                    },
+                    {
+                      id: "webhook-verification",
+                      title: "Webhook Events",
+                      method: "POST",
+                      description: "Validate webhook payloads and test event delivery before enabling production integrations.",
+                    },
+                    {
+                      id: "changelog-v2",
+                      title: "Changelog",
+                      method: "GUIDE",
+                      description: "Review API version changes, new capabilities, compatibility notes, and migration guidance.",
+                    },
+                  ].map((resource) => (
+                    <button
+                      key={resource.id}
+                      type="button"
+                      onClick={() => setActiveId(resource.id)}
+                      className="p-5 rounded-2xl border border-[#E4E7EB] hover:border-[#1B222C]/40 bg-white text-left transition-all group cursor-pointer shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <span className="text-sm font-bold text-[#1B222C] group-hover:text-[#3E4C59] transition-colors">
+                          {resource.title}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold bg-[#F4F6F8] text-[#3E4C59] border border-[#9AA5B1]/30 px-2 py-0.5 rounded shrink-0">
+                          {resource.method}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#6B7684] leading-relaxed">{resource.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 2. Quickstart Guide */}
             {activeId === "quickstart" && (
               <div className="space-y-8 max-w-4xl">

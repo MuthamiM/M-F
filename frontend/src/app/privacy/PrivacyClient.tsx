@@ -122,7 +122,44 @@ export function PrivacyClient() {
         </div>
 
         <div className="border-t border-[#9AA5B1]/20 pt-8">
-          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">6. Data Retention Limits &amp; Security Audits</h2>
+          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">6. Third-Party Advertising &amp; Google AdSense</h2>
+          <p className="max-w-4xl">
+            To support open-access technical publications and fintech documentation, our website uses Google AdSense and third-party advertising networks to display relevant advertisements. In compliance with Google AdSense program policies and global privacy regulations:
+          </p>
+          <ul className="list-disc pl-5 mt-4 space-y-2.5 text-xs sm:text-sm text-[#3E4C59] max-w-4xl">
+            <li>
+              <strong>Third-Party Vendor Cookies:</strong> Third-party vendors, including Google, use cookies to serve advertisements based on a user&apos;s previous visits to this website or other websites on the internet.
+            </li>
+            <li>
+              <strong>Personalized Advertising:</strong> Google&apos;s use of advertising cookies enables it and its partners to serve ads to our users based on their visits to our site and/or other sites on the Internet.
+            </li>
+            <li>
+              <strong>Cookie Opt-Out Options:</strong> Users may opt out of personalized advertising by visiting{" "}
+              <a
+                href="https://www.google.com/settings/ads"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#1B222C] underline font-semibold hover:text-[#3E4C59]"
+              >
+                Google Ads Settings
+              </a>. Alternatively, users can opt out of third-party vendors&apos; use of cookies for personalized advertising by visiting{" "}
+              <a
+                href="https://www.aboutads.info"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#1B222C] underline font-semibold hover:text-[#3E4C59]"
+              >
+                www.aboutads.info
+              </a>.
+            </li>
+            <li>
+              If you have not opted out of third-party ad serving, cookies of other third-party vendors or ad networks may also be used to serve ads on our site in accordance with their respective privacy policies.
+            </li>
+          </ul>
+        </div>
+
+        <div className="border-t border-[#9AA5B1]/20 pt-8">
+          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">7. Data Retention Limits &amp; Security Audits</h2>
           <p className="max-w-4xl">
             Developer portal profile data is maintained for the duration of the active partnership agreement. API telemetry and error logs are automatically pruned and deleted after 30 days. Historical financial ledger blocks are retained indefinitely in a read-only state as required to comply with central banking audit laws.
           </p>
@@ -132,14 +169,17 @@ export function PrivacyClient() {
         </div>
 
         <div className="border-t border-[#9AA5B1]/20 pt-8">
-          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">7. Regulatory Contact Information</h2>
+          <h2 className="font-display text-xl font-bold text-[#1B222C] mb-4">8. Regulatory &amp; Corporate Contact Information</h2>
           <p className="max-w-4xl">
             For questions, data access requests, or information regarding regional data isolation policies, please contact our Compliance Office:
           </p>
           <div className="mt-4 p-5 rounded-lg bg-[#F4F6F8] border border-[#9AA5B1]/20 max-w-xl space-y-1.5 text-xs">
             <p className="font-bold text-[#1B222C]">Compliance &amp; Data Protection Office</p>
-            <p className="text-[#3E4C59]">M&amp;F Technologies Inc.</p>
-            <p className="text-[#6B7684]">Email: <span className="font-mono text-[#1B222C] font-semibold">compliance@mandftechnologies.com</span></p>
+            <p className="text-[#3E4C59]">M&amp;F Technologies Ltd.</p>
+            <p className="text-[#6B7684]">Physical Address: <span className="text-[#1B222C] font-medium">The Pavilion, 4th Floor, Lower Kabete Road, Westlands, Nairobi, Kenya</span></p>
+            <p className="text-[#6B7684]">Email: <span className="font-mono text-[#1B222C] font-semibold">compliance@mftechnologies.org</span></p>
+            <p className="text-[#6B7684]">General Inquiries: <span className="font-mono text-[#1B222C] font-semibold">info@mftechnologies.org</span></p>
+            <p className="text-[#6B7684]">Telephone: <span className="text-[#1B222C] font-medium">+254 748 329 410</span></p>
             <p className="text-[#6B7684]">Response SLA: Within 48 business hours for institutional partners.</p>
           </div>
         </div>

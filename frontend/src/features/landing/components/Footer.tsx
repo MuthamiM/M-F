@@ -51,9 +51,9 @@ export function Footer() {
                 </a>
               </div>
 
-              <div className="flex items-center gap-2 text-slate">
+              <div className="flex items-center gap-2 text-slate text-[11px] sm:text-xs">
                 <MapPin className="h-3.5 w-3.5 text-fog shrink-0" />
-                <span>Nairobi Hub &bull; Registered in UK &amp; West Africa</span>
+                <span>The Pavilion, 4th Fl, Lower Kabete Rd, Westlands, Nairobi</span>
               </div>
             </div>
 
@@ -61,7 +61,7 @@ export function Footer() {
             <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-fog/25 text-[10px] sm:text-[11px] text-slate shadow-sm">
               <Clock className="h-3 w-3 text-emerald-500 shrink-0" />
               <span className="font-semibold text-graphite">Hours:</span>
-              <span>Mon–Fri 08:00–17:00 (EACT)</span>
+              <span>Mon–Fri 08:00–17:00 (EAT)</span>
               <span className="text-fog">•</span>
               <span className="text-emerald-600 font-medium">24/7 Monitoring</span>
             </div>
