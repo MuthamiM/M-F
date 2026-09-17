@@ -67,8 +67,18 @@ export function CompanyProfileClient() {
                   className="inline-flex items-center gap-2 rounded-lg bg-graphite px-5 py-3 text-xs sm:text-sm font-bold text-white hover:bg-slate transition-all shadow-sm active:scale-98"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Download Official PDF Profile (8 Pages)</span>
+                  <span>Download Official PDF Profile</span>
                   <span className="text-[11px] font-mono opacity-60 ml-1">~860 KB</span>
+                </a>
+
+                <a
+                  href="/MF_Technologies_Company_Profile.docx"
+                  download="MF_Technologies_Company_Profile.docx"
+                  className="inline-flex items-center gap-2 rounded-lg bg-white border border-graphite/20 px-5 py-3 text-xs sm:text-sm font-bold text-graphite hover:bg-cloud transition-all shadow-sm active:scale-98"
+                >
+                  <FileText className="h-4 w-4 text-slate" />
+                  <span>Download Word Doc (.docx)</span>
+                  <span className="text-[11px] font-mono text-slate/70 ml-1">~77 KB</span>
                 </a>
 
                 <a
@@ -77,7 +87,7 @@ export function CompanyProfileClient() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-fog/40 bg-white px-4 py-3 text-xs sm:text-sm font-semibold text-graphite hover:bg-cloud transition-colors"
                 >
-                  <span>View PDF in Browser</span>
+                  <span>View PDF</span>
                   <ExternalLink className="h-3.5 w-3.5 opacity-60" />
                 </a>
 
@@ -121,14 +131,24 @@ export function CompanyProfileClient() {
                   </div>
                 </div>
 
-                <a
-                  href="/MF_Technologies_Company_Profile.pdf"
-                  download="MF_Technologies_Company_Profile.pdf"
-                  className="w-full flex items-center justify-center gap-2 rounded-md bg-cloud border border-fog/30 py-2.5 text-xs font-bold text-graphite hover:bg-ash transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5 text-graphite" />
-                  <span>Instant PDF Download</span>
-                </a>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <a
+                    href="/MF_Technologies_Company_Profile.pdf"
+                    download="MF_Technologies_Company_Profile.pdf"
+                    className="flex items-center justify-center gap-1.5 rounded-md bg-cloud border border-fog/30 py-2.5 px-2 text-xs font-bold text-graphite hover:bg-ash transition-colors text-center"
+                  >
+                    <Download className="h-3.5 w-3.5 text-graphite shrink-0" />
+                    <span>PDF Dossier</span>
+                  </a>
+                  <a
+                    href="/MF_Technologies_Company_Profile.docx"
+                    download="MF_Technologies_Company_Profile.docx"
+                    className="flex items-center justify-center gap-1.5 rounded-md bg-white border border-fog/40 py-2.5 px-2 text-xs font-bold text-graphite hover:bg-cloud transition-colors text-center"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-slate shrink-0" />
+                    <span>Word Doc</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -268,22 +288,32 @@ export function CompanyProfileClient() {
                 </div>
               </div>
 
-              {/* PDF Banner CTA */}
+              {/* PDF & DOC Banner CTA */}
               <div className="rounded-xl bg-graphite text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
                 <div className="space-y-1 text-center sm:text-left">
                   <h4 className="text-base sm:text-lg font-bold">Review the Complete 8-Page Corporate Dossier</h4>
                   <p className="text-xs sm:text-sm text-fog">
-                    Includes detailed benchmark comparisons, schema breakdowns, and compliance certificates.
+                    Available in print-ready PDF and official editable Microsoft Word (.docx) formats with full document control.
                   </p>
                 </div>
-                <a
-                  href="/MF_Technologies_Company_Profile.pdf"
-                  download="MF_Technologies_Company_Profile.pdf"
-                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-xs font-bold text-graphite hover:bg-ash transition-all shadow-sm"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Download PDF Dossier</span>
-                </a>
+                <div className="shrink-0 flex flex-wrap gap-2.5">
+                  <a
+                    href="/MF_Technologies_Company_Profile.pdf"
+                    download="MF_Technologies_Company_Profile.pdf"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-xs font-bold text-graphite hover:bg-ash transition-all shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download PDF</span>
+                  </a>
+                  <a
+                    href="/MF_Technologies_Company_Profile.docx"
+                    download="MF_Technologies_Company_Profile.docx"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/20 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/20 transition-all shadow-sm"
+                  >
+                    <FileText className="h-4 w-4 text-white" />
+                    <span>Download Word (.docx)</span>
+                  </a>
+                </div>
               </div>
             </div>
           )}
@@ -667,14 +697,22 @@ export function CompanyProfileClient() {
             Financial institutions conducting core modernization feasibility studies or vendor security evaluations 
             can download our complete corporate profile or schedule a direct consultation with our systems leads.
           </p>
-          <div className="pt-2 flex flex-wrap gap-4 justify-center items-center">
+          <div className="pt-2 flex flex-wrap gap-3 justify-center items-center">
             <a
               href="/MF_Technologies_Company_Profile.pdf"
               download="MF_Technologies_Company_Profile.pdf"
-              className="inline-flex items-center gap-2 rounded-lg bg-graphite px-6 py-3 text-xs sm:text-sm font-bold text-white hover:bg-slate transition-all shadow-sm"
+              className="inline-flex items-center gap-2 rounded-lg bg-graphite px-5 py-3 text-xs sm:text-sm font-bold text-white hover:bg-slate transition-all shadow-sm"
             >
               <Download className="h-4 w-4" />
               <span>Download Official PDF Profile</span>
+            </a>
+            <a
+              href="/MF_Technologies_Company_Profile.docx"
+              download="MF_Technologies_Company_Profile.docx"
+              className="inline-flex items-center gap-2 rounded-lg bg-white border border-graphite/20 px-5 py-3 text-xs sm:text-sm font-bold text-graphite hover:bg-cloud transition-all shadow-sm"
+            >
+              <FileText className="h-4 w-4 text-slate" />
+              <span>Download Word Doc (.docx)</span>
             </a>
             <Link
               href="/contact"

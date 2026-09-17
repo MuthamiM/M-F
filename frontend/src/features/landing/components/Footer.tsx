@@ -154,7 +154,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/company-profile" className="hover:text-graphite transition-colors block break-words font-medium text-graphite">
-                  Company Profile (PDF)
+                  Company Profile (PDF / DOC)
                 </Link>
               </li>
               <li>
