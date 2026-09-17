@@ -1,4 +1,14 @@
-// src/app/news/articles.ts
+#!/usr/bin/env python3
+"""
+Generates the authoritative, enriched articles.ts file with 15 in-depth,
+850-1,200+ word technical papers, complete with E-E-A-T metadata and author credentials.
+"""
+
+import sys
+
+output_file = "frontend/src/app/news/articles.ts"
+
+content = '''// src/app/news/articles.ts
 
 export interface Article {
   id: string;
@@ -798,3 +808,9 @@ Every single interaction within the M&F platform is permanently logged in a tamp
 - **Compliance Certification:** This multi-layered isolation and RBAC architecture has been independently tested and verified during our annual SOC 2 Type II audits, providing institutional partners with verified compliance assurance.`
   }
 ];
+'''
+
+with open(output_file, "w", encoding="utf-8") as f:
+    f.write(content)
+
+print(f"Successfully generated {output_file} with {len(content)} characters.")
