@@ -1,0 +1,1554 @@
+#!/usr/bin/env python3
+"""
+Generate the official 8-page M&F Technologies Company Profile PDF.
+Uses headless Google Chrome to compile an immaculate, print-ready A4 document.
+"""
+
+import os
+import subprocess
+import shutil
+
+# Official M&F Vector Logos
+SVG_LOGO_WHITE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 100" width="270" height="50">
+  <g transform="translate(10, 18)">
+    <circle cx="32" cy="32" r="32" fill="#FFFFFF"/>
+    <circle cx="44" cy="32" r="14" fill="#1B222C"/>
+    <circle cx="44" cy="32" r="14" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+  </g>
+  <text x="100" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="800" fill="#FFFFFF" letter-spacing="-1">M&amp;F</text>
+  <text x="195" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="400" fill="#9AA5B1" letter-spacing="-0.5">Technologies</text>
+</svg>"""
+
+SVG_LOGO_DARK = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 100" width="216" height="40">
+  <g transform="translate(10, 18)">
+    <circle cx="32" cy="32" r="32" fill="#1B222C"/>
+    <circle cx="44" cy="32" r="14" fill="#FFFFFF"/>
+    <circle cx="44" cy="32" r="14" fill="none" stroke="#1B222C" stroke-width="4"/>
+  </g>
+  <text x="100" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="800" fill="#1B222C" letter-spacing="-1">M&amp;F</text>
+  <text x="195" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="400" fill="#6B7684" letter-spacing="-0.5">Technologies</text>
+</svg>"""
+
+SVG_ICON_DARK = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="28" height="28">
+  <circle cx="32" cy="32" r="32" fill="#1B222C"/>
+  <circle cx="44" cy="32" r="14" fill="#FFFFFF"/>
+  <circle cx="44" cy="32" r="14" fill="none" stroke="#1B222C" stroke-width="4"/>
+</svg>"""
+
+HTML_CONTENT = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>M&amp;F Technologies — Corporate Profile &amp; Platform Capabilities</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  @page {{
+    size: A4 portrait;
+    margin: 0;
+  }}
+
+  * {{
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }}
+
+  body {{
+    margin: 0;
+    padding: 0;
+    background: #E5E7EB;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1B222C;
+    -webkit-font-smoothing: antialiased;
+  }}
+
+  /* Exact A4 Page Specifications (210mm x 297mm) */
+  .page {{
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    max-height: 297mm;
+    position: relative;
+    overflow: hidden;
+    background: #FFFFFF;
+    page-break-after: always;
+    break-after: page;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin: 0 auto;
+  }}
+
+  /* Running Header */
+  .running-header {{
+    height: 20mm;
+    padding: 6mm 18mm 4mm 18mm;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #E4E7EB;
+    background: #FFFFFF;
+  }}
+
+  .header-left {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }}
+
+  .header-title {{
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #3E4C59;
+  }}
+
+  .header-tag {{
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #6B7684;
+    background: #F4F6F8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #E4E7EB;
+  }}
+
+  .header-page-num {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    font-weight: 700;
+    color: #1B222C;
+  }}
+
+  /* Page Body Content */
+  .page-body {{
+    padding: 7mm 18mm;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }}
+
+  /* Running Footer */
+  .running-footer {{
+    height: 14mm;
+    padding: 3mm 18mm;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #E4E7EB;
+    background: #FAFBFC;
+    font-size: 7.5pt;
+    color: #6B7684;
+  }}
+
+  .footer-left {{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }}
+
+  .footer-badge {{
+    font-weight: 600;
+    color: #1B222C;
+  }}
+
+  .footer-right {{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }}
+
+  /* Typography & Utilities */
+  h1, h2, h3, h4, p {{
+    margin: 0;
+  }}
+
+  .section-label {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #3E4C59;
+    margin-bottom: 3mm;
+  }}
+
+  .section-label::before {{
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #1B222C;
+    border-radius: 50%;
+  }}
+
+  .page-title {{
+    font-size: 19pt;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #1B222C;
+    letter-spacing: -0.5px;
+    margin-bottom: 2mm;
+  }}
+
+  .page-subtitle {{
+    font-size: 9.5pt;
+    color: #4A5568;
+    line-height: 1.45;
+    margin-bottom: 5mm;
+  }}
+
+  /* Grid Layouts */
+  .grid-2 {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5mm;
+  }}
+
+  .grid-3 {{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3.5mm;
+  }}
+
+  .grid-4 {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3mm;
+  }}
+
+  /* Card Components */
+  .card {{
+    background: #FFFFFF;
+    border: 1px solid #E4E7EB;
+    border-radius: 6px;
+    padding: 3.5mm 4mm;
+  }}
+
+  .card-dark {{
+    background: #1B222C;
+    color: #FFFFFF;
+    border-radius: 6px;
+    padding: 4mm 5mm;
+  }}
+
+  .card-cloud {{
+    background: #F4F6F8;
+    border: 1px solid #E4E7EB;
+    border-radius: 6px;
+    padding: 3.5mm 4mm;
+  }}
+
+  .stat-card {{
+    background: #FFFFFF;
+    border: 1px solid #E4E7EB;
+    border-left: 3px solid #1B222C;
+    border-radius: 4px;
+    padding: 3mm 3.5mm;
+  }}
+
+  .stat-value {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16pt;
+    font-weight: 800;
+    color: #1B222C;
+    line-height: 1.1;
+  }}
+
+  .stat-label {{
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #3E4C59;
+    margin-top: 2px;
+  }}
+
+  .stat-sub {{
+    font-size: 7pt;
+    color: #6B7684;
+    margin-top: 1px;
+    line-height: 1.25;
+  }}
+
+  /* Tables */
+  .table-container {{
+    border: 1px solid #E4E7EB;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+  }}
+
+  table {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    text-align: left;
+  }}
+
+  th {{
+    background: #1B222C;
+    color: #FFFFFF;
+    font-weight: 700;
+    padding: 2.5mm 3.5mm;
+    font-size: 7.5pt;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }}
+
+  td {{
+    padding: 2.5mm 3.5mm;
+    border-bottom: 1px solid #E4E7EB;
+    color: #2D3748;
+    vertical-align: top;
+    line-height: 1.35;
+  }}
+
+  tr:nth-child(even) {{
+    background: #F8FAFC;
+  }}
+
+  /* Module Box */
+  .module-card {{
+    background: #FFFFFF;
+    border: 1px solid #E4E7EB;
+    border-radius: 5px;
+    padding: 2.5mm 3mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }}
+
+  .module-header {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1.5mm;
+  }}
+
+  .module-badge {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+    background: #1B222C;
+    color: #FFFFFF;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }}
+
+  .module-title {{
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #1B222C;
+  }}
+
+  .module-desc {{
+    font-size: 7.2pt;
+    color: #4A5568;
+    line-height: 1.35;
+    margin-bottom: 1.5mm;
+  }}
+
+  .module-tags {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }}
+
+  .module-tag {{
+    font-size: 6.5pt;
+    font-weight: 600;
+    background: #F4F6F8;
+    color: #3E4C59;
+    border: 1px solid #E4E7EB;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }}
+
+  /* Callout Banner */
+  .callout {{
+    background: #F4F6F8;
+    border-left: 3px solid #1B222C;
+    border-radius: 0 4px 4px 0;
+    padding: 3mm 4mm;
+    margin-top: 3mm;
+    font-size: 8pt;
+    color: #2D3748;
+    line-height: 1.4;
+  }}
+
+  /* COVER PAGE STYLES */
+  .cover-page {{
+    background: #1B222C;
+    color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16mm 18mm;
+    height: 297mm;
+    box-sizing: border-box;
+    position: relative;
+  }}
+
+  .cover-accent-bg {{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 140mm;
+    height: 140mm;
+    background: radial-gradient(circle at 100% 0%, rgba(62, 76, 89, 0.4) 0%, transparent 70%);
+    pointer-events: none;
+  }}
+
+  .cover-grid-line {{
+    position: absolute;
+    bottom: 25mm;
+    right: 18mm;
+    width: 60mm;
+    height: 60mm;
+    opacity: 0.08;
+    background-image: radial-gradient(#FFFFFF 1.5px, transparent 1.5px);
+    background-size: 8mm 8mm;
+  }}
+
+  .cover-badge {{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #C4CDD5;
+  }}
+
+  .cover-badge::before {{
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #10B981;
+    border-radius: 50%;
+  }}
+
+  .cover-main {{
+    margin-top: 25mm;
+    margin-bottom: 20mm;
+  }}
+
+  .cover-pretitle {{
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #9AA5B1;
+    margin-bottom: 4mm;
+  }}
+
+  .cover-h1 {{
+    font-size: 32pt;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    color: #FFFFFF;
+    margin-bottom: 6mm;
+  }}
+
+  .cover-h1 span {{
+    color: #9AA5B1;
+    font-weight: 400;
+  }}
+
+  .cover-sub {{
+    font-size: 12pt;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #C4CDD5;
+    max-width: 155mm;
+    border-left: 3px solid rgba(255, 255, 255, 0.3);
+    padding-left: 5mm;
+    margin-top: 4mm;
+  }}
+
+  .cover-metrics {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+    margin-top: 12mm;
+    max-width: 160mm;
+  }}
+
+  .cover-metric-item {{
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 4mm 5mm;
+  }}
+
+  .cover-metric-val {{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18pt;
+    font-weight: 800;
+    color: #FFFFFF;
+  }}
+
+  .cover-metric-lbl {{
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #9AA5B1;
+    margin-top: 2px;
+  }}
+
+  .cover-footer {{
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 6mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 8pt;
+    color: #9AA5B1;
+  }}
+
+  .cover-footer-col p {{
+    margin-bottom: 1.5mm;
+    line-height: 1.35;
+  }}
+
+  .cover-footer-col strong {{
+    color: #FFFFFF;
+  }}
+</style>
+</head>
+<body>
+
+<!-- ========================================================================== -->
+<!-- PAGE 1: EXECUTIVE COVER PAGE                                               -->
+<!-- ========================================================================== -->
+<div class="page cover-page">
+  <div class="cover-accent-bg"></div>
+  <div class="cover-grid-line"></div>
+
+  <!-- Cover Header -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; z-index: 2;">
+    <div>{SVG_LOGO_WHITE}</div>
+    <div class="cover-badge">Official Corporate Dossier • 2026 Edition</div>
+  </div>
+
+  <!-- Cover Main Title -->
+  <div class="cover-main" style="z-index: 2;">
+    <div class="cover-pretitle">Institutional Financial Infrastructure</div>
+    <h1 class="cover-h1">Corporate Profile &amp;<br>Platform Capabilities</h1>
+    <div class="cover-sub">
+      A comprehensive guide to M&amp;F Technologies' high-performance core lending systems, 
+      automated risk decisioning engines, and bank-grade transactional middleware engineered for 
+      commercial banks, SACCOs, and digital microfinance institutions.
+    </div>
+
+    <!-- Cover Key Highlights Ribbon -->
+    <div class="cover-metrics">
+      <div class="cover-metric-item">
+        <div class="cover-metric-val">$1.4B+</div>
+        <div class="cover-metric-lbl">Processed Volume</div>
+      </div>
+      <div class="cover-metric-item">
+        <div class="cover-metric-val">99.99%</div>
+        <div class="cover-metric-lbl">Production Uptime</div>
+      </div>
+      <div class="cover-metric-item">
+        <div class="cover-metric-val">&lt;100ms</div>
+        <div class="cover-metric-lbl">P99 API Latency</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cover Footer -->
+  <div class="cover-footer" style="z-index: 2;">
+    <div class="cover-footer-col">
+      <p><strong>Headquarters:</strong> The Pavilion, 4th Fl, Lower Kabete Rd, Nairobi, Kenya</p>
+      <p><strong>Operations:</strong> Pan-African Deployments across 12+ Jurisdictions</p>
+      <p><strong>Compliance:</strong> SOC 2 Type II Certified • ODPC &amp; GDPR Compliant</p>
+    </div>
+    <div class="cover-footer-col" style="text-align: right;">
+      <p><strong>Corporate Contact:</strong> info@mftechnologies.org</p>
+      <p><strong>Institutional Hotline:</strong> +254 748 329 410</p>
+      <p><strong>Official Web Portal:</strong> https://mftechnologies.org</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 2: EXECUTIVE SUMMARY & OPERATIONAL PEDIGREE                           -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Executive Summary</span>
+    </div>
+    <div class="header-page-num">Page 02 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Foundational Pedigree &amp; Mission</div>
+    <h2 class="page-title">Powering the Future of Institutional Credit</h2>
+    <p class="page-subtitle">
+      M&amp;F Technologies is an institutional financial technology company that engineers, deploys, and operates 
+      mission-critical lending infrastructure for commercial banks, credit unions, and microfinance providers across emerging markets.
+    </p>
+
+    <!-- Executive Narrative Card -->
+    <div class="card-cloud" style="margin-bottom: 4mm;">
+      <h3 style="font-size: 9.5pt; font-weight: 700; color: #1B222C; margin-bottom: 2mm;">Company Overview &amp; Market Position</h3>
+      <p style="font-size: 8pt; color: #3E4C59; line-height: 1.45; margin-bottom: 2mm;">
+        Founded in 2021, M&amp;F Technologies addresses the acute structural gap between rigid, legacy core banking 
+        architectures and the soaring demand for instantaneous, automated digital credit. By pairing mathematical double-entry 
+        ledger integrity with event-driven microservices, we enable licensed financial institutions to originate, underwrite, 
+        disburse, and collect loans with zero balance drift and sub-second response times.
+      </p>
+      <p style="font-size: 8pt; color: #3E4C59; line-height: 1.45;">
+        Our infrastructure serves as the transactional backbone for commercial bank retail portfolios, community SACCOs, 
+        and high-volume microfinance operators, processing billions in transactional throughput while drastically cutting 
+        operational default rates and manual overhead.
+      </p>
+    </div>
+
+    <!-- Audited Metrics Grid (6 items) -->
+    <div class="section-label" style="margin-top: 1mm;">Operational Metrics at a Glance</div>
+    <div class="grid-3" style="margin-bottom: 4.5mm;">
+      <div class="stat-card">
+        <div class="stat-value">$1.4B+</div>
+        <div class="stat-label">Processed Volume</div>
+        <div class="stat-sub">Cumulative disbursements &amp; collections</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">99.99%</div>
+        <div class="stat-label">Production SLA Uptime</div>
+        <div class="stat-sub">Multi-region active-active cloud clusters</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">&lt;100ms</div>
+        <div class="stat-label">P99 API Latency</div>
+        <div class="stat-sub">Real-time mobile money settlement</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">5,000,000+</div>
+        <div class="stat-label">Completed Loans</div>
+        <div class="stat-sub">Retail, MSME &amp; agricultural credit</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">45+</div>
+        <div class="stat-label">Deployments</div>
+        <div class="stat-sub">Commercial banks, SACCOs &amp; MFIs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">0.00%</div>
+        <div class="stat-label">Balance Drift</div>
+        <div class="stat-sub">Cryptographic ledger validation</div>
+      </div>
+    </div>
+
+    <!-- Strategic Pillars -->
+    <div class="section-label">Core Strategic Pillars</div>
+    <div class="grid-2">
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">1. Security-First Architecture</h4>
+        <p style="font-size: 7.5pt; color: #4A5568; line-height: 1.35;">
+          Every line of code complies with bank-grade standards: AES-256-GCM encryption at rest, TLS 1.3 in transit, 
+          hardware-backed multi-factor authentication, and immutable cryptographic audit trails.
+        </p>
+      </div>
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">2. Financial Inclusion Engine</h4>
+        <p style="font-size: 7.5pt; color: #4A5568; line-height: 1.35;">
+          Alternative credit scoring models ingest mobile wallet velocity, payment patterns, and utility records to safely 
+          underwrite thin-file, unbanked, and MSME borrowers traditionally rejected by legacy credit bureaus.
+        </p>
+      </div>
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">3. Mathematical Double-Entry</h4>
+        <p style="font-size: 7.5pt; color: #4A5568; line-height: 1.35;">
+          A deterministic double-entry accounting engine enforces mathematical balance consistency at the database engine level, 
+          eliminating discrepancies between core ledgers and third-party payment rails.
+        </p>
+      </div>
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">4. Institutional Partnership</h4>
+        <p style="font-size: 7.5pt; color: #4A5568; line-height: 1.35;">
+          We act as technology partners, providing 24/7/365 engineering telemetry, dedicated technical account managers, 
+          regulatory auto-reporting, and continuous infrastructure evolution.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Institutional Lending Infrastructure</span>
+      <span>• Confidential &amp; Proprietary</span>
+    </div>
+    <div class="footer-right">https://mftechnologies.org</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 3: MARKET PROBLEM & ARCHITECTURAL PARADIGM                            -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Architectural Paradigm</span>
+    </div>
+    <div class="header-page-num">Page 03 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Industry Problem &amp; The M&amp;F Solution</div>
+    <h2 class="page-title">Modernizing Core Banking for the Digital Era</h2>
+    <p class="page-subtitle">
+      Traditional core banking systems were architected for branch-based cash deposits and nightly batch runs. 
+      Under high-frequency mobile lending demands, legacy infrastructure bottlenecks growth and inflates risk.
+    </p>
+
+    <!-- Problem vs Solution Analysis -->
+    <div class="grid-2" style="margin-bottom: 4mm;">
+      <div class="card" style="border-left: 3px solid #E53E3E;">
+        <h3 style="font-size: 9pt; font-weight: 700; color: #9B2C2C; margin-bottom: 1.5mm;">The Legacy Banking Bottleneck</h3>
+        <ul style="margin: 0; padding-left: 4mm; font-size: 7.5pt; color: #4A5568; line-height: 1.45;">
+          <li><strong>Monolithic Batch Processing:</strong> Balances reconcile overnight, causing dangerous multi-hour blind spots for mobile overdrafts and loans.</li>
+          <li><strong>Manual Underwriting Backlog:</strong> Human loan officers take 3 to 7 business days to review paper documentation and collateral records.</li>
+          <li><strong>Frequent Balance Drift:</strong> Discrepancies between external telco payment gateways and internal databases require costly manual adjustments.</li>
+          <li><strong>Complex Regulatory Audits:</strong> Compiling central bank prudential reports takes weeks of manual spreadsheet aggregation.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="border-left: 3px solid #10B981;">
+        <h3 style="font-size: 9pt; font-weight: 700; color: #047857; margin-bottom: 1.5mm;">The M&amp;F Modernization Paradigm</h3>
+        <ul style="margin: 0; padding-left: 4mm; font-size: 7.5pt; color: #4A5568; line-height: 1.45;">
+          <li><strong>Event-Driven Microservices:</strong> Real-time asynchronous transaction routing with sub-100ms disbursement execution to mobile wallets.</li>
+          <li><strong>Automated Decisioning Engine:</strong> Instant algorithmic credit evaluation utilizing traditional bureaus and alternative telecom telemetry.</li>
+          <li><strong>Cryptographic Double-Entry Ledger:</strong> Deterministic balance validation with zero balance drift and immutable audit logs.</li>
+          <li><strong>Automated Regulatory Schemas:</strong> 1-click generation of statutory Central Bank, IFRS 9 staging, and AML/CFT compliance filings.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Comparative Table -->
+    <div class="section-label">Architectural Benchmark Comparison</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">Operational Dimension</th>
+            <th style="width: 37%;">Legacy Core Banking Architecture</th>
+            <th style="width: 38%;">M&amp;F Technologies Middleware</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>System Architecture</strong></td>
+            <td>Monolithic relational database, single point of failure, scheduled nightly batch jobs.</td>
+            <td>Cloud-native containerized microservices, multi-region active-active clusters, 99.99% uptime.</td>
+          </tr>
+          <tr>
+            <td><strong>Disbursement Speed</strong></td>
+            <td>1 to 3 business days via manual branch approval and delayed clearing houses.</td>
+            <td>Sub-100ms instant disbursement directly to M-Pesa, Airtel Money, or direct RTGS bank rail.</td>
+          </tr>
+          <tr>
+            <td><strong>Credit Underwriting</strong></td>
+            <td>Manual risk committee review; limited strictly to historical formal credit bureau records.</td>
+            <td>Real-time machine decisioning tree; ingests mobile wallet velocity, utility data, and bureau records.</td>
+          </tr>
+          <tr>
+            <td><strong>Ledger Consistency</strong></td>
+            <td>Subject to balance drift during high-throughput network drops; manual ledger balancing.</td>
+            <td>Strict double-entry journal with cryptographic hash verification; 0.00% balance drift guarantee.</td>
+          </tr>
+          <tr>
+            <td><strong>Integration &amp; Extensibility</strong></td>
+            <td>Proprietary closed protocols, slow enterprise bus adapters, months of custom code.</td>
+            <td>Enterprise JSON REST and GraphQL APIs, real-time webhooks, turnkey SDKs for web &amp; mobile.</td>
+          </tr>
+          <tr>
+            <td><strong>Statutory Compliance</strong></td>
+            <td>Manual report generation; weeks of internal spreadsheet preparation before audits.</td>
+            <td>Automated regulatory auto-reporting; compliant schemas ready on demand for central bank auditors.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>Zero Core Replacement Disruption:</strong> M&amp;F Technologies can be deployed as an independent, standalone 
+      core banking system for digital lenders, OR integrated as an agile middleware layer on top of legacy cores (e.g., Finacle, T24, Orbit) 
+      without requiring risky multi-year migrations.
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Architectural Benchmark &amp; Systems Analysis</span>
+    </div>
+    <div class="footer-right">Page 03 / 08</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 4: THE 10 ENTERPRISE TECHNOLOGY MODULES                               -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Platform Architecture</span>
+    </div>
+    <div class="header-page-num">Page 04 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Modular Product Suite</div>
+    <h2 class="page-title">The 10 Enterprise Technology Modules</h2>
+    <p class="page-subtitle">
+      Deploy the complete end-to-end lending stack or license individual microservices to enhance your existing 
+      banking architecture. Each module is independently scalable, highly available, and API-accessible.
+    </p>
+
+    <!-- 10 Modules in a balanced 2-column grid -->
+    <div class="grid-2" style="gap: 2.5mm;">
+      
+      <!-- Module 1 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 01</span>
+            <span class="module-title">Core Lending Engine &amp; Ledger</span>
+          </div>
+          <p class="module-desc">
+            Manages the entire loan lifecycle: application, underwriting, disbursement, servicing, amortized and reducing interest calculation, and final maturity. Built on mathematical double-entry accounting.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Double-Entry</span>
+          <span class="module-tag">Zero Drift</span>
+          <span class="module-tag">ACID Engine</span>
+        </div>
+      </div>
+
+      <!-- Module 2 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 02</span>
+            <span class="module-title">Configurable Credit Scoring</span>
+          </div>
+          <p class="module-desc">
+            Algorithmic decisioning engine aggregating traditional credit bureaus, alternative payment networks, and mobile wallet velocity. Risk teams can adjust score weights and cutoffs via a GUI.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Rule Matrix</span>
+          <span class="module-tag">Alternative Data</span>
+          <span class="module-tag">-18% Defaults</span>
+        </div>
+      </div>
+
+      <!-- Module 3 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 03</span>
+            <span class="module-title">Collections &amp; Recovery</span>
+          </div>
+          <p class="module-desc">
+            Workflow-driven delinquency tracking. Segments overdue loans by risk tier, triggers automated SMS/email reminders, automated STK push payment prompts, and manages recovery officer queues.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Auto-STK Push</span>
+          <span class="module-tag">Queue Routing</span>
+          <span class="module-tag">+31% Recovery</span>
+        </div>
+      </div>
+
+      <!-- Module 4 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 04</span>
+            <span class="module-title">Workflow &amp; Approval Automation</span>
+          </div>
+          <p class="module-desc">
+            Automates multi-tiered underwriting pipelines, instant AML/PEP sanctions screening, automated bank account verification, and committee approval matrices for high-value facilities.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">AML/PEP Screening</span>
+          <span class="module-tag">Policy Engine</span>
+          <span class="module-tag">Instant Approvals</span>
+        </div>
+      </div>
+
+      <!-- Module 5 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 05</span>
+            <span class="module-title">Developer Suite &amp; API Gateway</span>
+          </div>
+          <p class="module-desc">
+            Institutional REST and GraphQL APIs with sub-100ms P99 latency. Includes webhook subscription engine, multi-tenant rate limiting, comprehensive OpenAPI specifications, and sandbox testing.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">&lt;100ms Latency</span>
+          <span class="module-tag">REST &amp; GraphQL</span>
+          <span class="module-tag">Webhooks</span>
+        </div>
+      </div>
+
+      <!-- Module 6 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 06</span>
+            <span class="module-title">Regulatory Auto-Reporting</span>
+          </div>
+          <p class="module-desc">
+            Automates compliance reporting for Central Banks and regulators. Generates standard IFRS 9 loan staging matrices, liquidity reports, capital adequacy returns, and statutory risk disclosures in 1 click.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">IFRS 9 Models</span>
+          <span class="module-tag">Central Bank Returns</span>
+          <span class="module-tag">Audit-Ready</span>
+        </div>
+      </div>
+
+      <!-- Module 7 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 07</span>
+            <span class="module-title">Multi-Currency &amp; Cross-Border</span>
+          </div>
+          <p class="module-desc">
+            Multi-currency ledger capable of holding, valuing, and disbursing across foreign and local currencies. Features live FX feed integrations, automated margin calculations, and regional treasury pooling.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Multi-Currency</span>
+          <span class="module-tag">FX Rate Feeds</span>
+          <span class="module-tag">Cross-Border</span>
+        </div>
+      </div>
+
+      <!-- Module 8 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 08</span>
+            <span class="module-title">Document Management &amp; OCR</span>
+          </div>
+          <p class="module-desc">
+            Bank-grade encrypted cloud storage. Features automated OCR parsing for national identity cards, passport verification, bank statement extraction, e-signatures, and tamper-proof access logs.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">OCR Extraction</span>
+          <span class="module-tag">E-Signature</span>
+          <span class="module-tag">Encrypted Vault</span>
+        </div>
+      </div>
+
+      <!-- Module 9 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 09</span>
+            <span class="module-title">Real-Time Telemetry &amp; Alerts</span>
+          </div>
+          <p class="module-desc">
+            Comprehensive observability suite featuring Grafana and Prometheus telemetry. Real-time distributed tracing, endpoint health checks, server memory monitoring, and sub-minute incident alerts.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Grafana/Prometheus</span>
+          <span class="module-tag">Tracing</span>
+          <span class="module-tag">24/7 Monitoring</span>
+        </div>
+      </div>
+
+      <!-- Module 10 -->
+      <div class="module-card">
+        <div>
+          <div class="module-header">
+            <span class="module-badge">MOD 10</span>
+            <span class="module-title">Borrower &amp; Field Agent Portals</span>
+          </div>
+          <p class="module-desc">
+            Turnkey white-label borrower web applications and offline-first mobile apps for field credit officers. Captures biometric KYC and loan applications in remote areas with automated background sync.
+          </p>
+        </div>
+        <div class="module-tags">
+          <span class="module-tag">Offline-First</span>
+          <span class="module-tag">Biometric KYC</span>
+          <span class="module-tag">White-Label</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Technology Modules Specification</span>
+    </div>
+    <div class="footer-right">Page 04 / 08</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 5: ENTERPRISE SECURITY, COMPLIANCE & GOVERNANCE                       -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Security &amp; Governance</span>
+    </div>
+    <div class="header-page-num">Page 05 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Institutional Assurance</div>
+    <h2 class="page-title">Enterprise Security, Compliance &amp; Governance</h2>
+    <p class="page-subtitle">
+      Lending infrastructure demands uncompromising trust. M&amp;F Technologies implements institutional-grade 
+      security protocols, rigorous audit standards, and regulatory frameworks approved by leading financial authorities.
+    </p>
+
+    <!-- SOC 2 Banner Card -->
+    <div class="card-dark" style="margin-bottom: 4mm;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2mm;">
+        <h3 style="font-size: 11pt; font-weight: 800; color: #FFFFFF;">SOC 2 Type II Certified</h3>
+        <span style="font-size: 7.5pt; font-weight: 700; background: #10B981; color: #FFFFFF; padding: 2px 8px; border-radius: 4px;">Audited &amp; Verified</span>
+      </div>
+      <p style="font-size: 7.8pt; color: #C4CDD5; line-height: 1.45; margin-bottom: 2.5mm;">
+        Following an exhaustive 12-month independent audit conducted by a recognized third-party firm, M&amp;F Technologies 
+        achieved SOC 2 Type II certification. The assessment verified our operational posture across all five Trust Services Criteria: 
+        <strong>Security, Availability, Processing Integrity, Confidentiality, and Privacy</strong>.
+      </p>
+      <div class="grid-4" style="gap: 2mm;">
+        <div style="background: rgba(255,255,255,0.06); padding: 2mm; border-radius: 4px; text-align: center;">
+          <div style="font-size: 7pt; font-weight: 700; color: #9AA5B1;">ENCRYPTION</div>
+          <div style="font-size: 8pt; font-weight: 800; color: #FFFFFF;">AES-256-GCM</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); padding: 2mm; border-radius: 4px; text-align: center;">
+          <div style="font-size: 7pt; font-weight: 700; color: #9AA5B1;">TRANSPORT</div>
+          <div style="font-size: 8pt; font-weight: 800; color: #FFFFFF;">TLS 1.3 / PFS</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); padding: 2mm; border-radius: 4px; text-align: center;">
+          <div style="font-size: 7pt; font-weight: 700; color: #9AA5B1;">ACCESS AUTH</div>
+          <div style="font-size: 8pt; font-weight: 800; color: #FFFFFF;">Hardware MFA</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); padding: 2mm; border-radius: 4px; text-align: center;">
+          <div style="font-size: 7pt; font-weight: 700; color: #9AA5B1;">TENANCY</div>
+          <div style="font-size: 8pt; font-weight: 800; color: #FFFFFF;">Strict RBAC</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Capabilities Grid -->
+    <div class="section-label">Security &amp; Disaster Recovery Matrix</div>
+    <div class="grid-2" style="margin-bottom: 3.5mm;">
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1.5mm;">Cryptographic Safeguards</h4>
+        <ul style="margin: 0; padding-left: 4mm; font-size: 7.3pt; color: #4A5568; line-height: 1.4;">
+          <li><strong>Data at Rest:</strong> Encrypted using AES-256-GCM with automated Hardware Security Module (HSM) key rotation.</li>
+          <li><strong>Data in Transit:</strong> Strict TLS 1.3 encryption with Perfect Forward Secrecy across all endpoints.</li>
+          <li><strong>Immutable Audit Trails:</strong> Every financial transaction is committed to an immutable append-only ledger journal.</li>
+          <li><strong>Granular RBAC:</strong> Least-privilege role-based access controls with session recording and mandatory MFA.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1.5mm;">Resilience &amp; Disaster Recovery</h4>
+        <ul style="margin: 0; padding-left: 4mm; font-size: 7.3pt; color: #4A5568; line-height: 1.4;">
+          <li><strong>Multi-Region Active-Active:</strong> Database nodes replicate in real time across isolated physical cloud zones.</li>
+          <li><strong>RPO &lt; 1 Minute:</strong> Transaction journal replication ensures sub-minute recovery point objectives.</li>
+          <li><strong>RTO &lt; 5 Minutes:</strong> Automated health probes trigger sub-five-minute cluster failovers during localized disruptions.</li>
+          <li><strong>Canary Deployments:</strong> Production software releases follow automated canary testing with zero system downtime.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Regulatory Compliance Alignment -->
+    <div class="section-label">Regulatory Alignment &amp; Data Privacy</div>
+    <div class="card-cloud">
+      <div class="grid-3" style="gap: 2.5mm;">
+        <div>
+          <h5 style="font-size: 8pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">Central Bank Compliance</h5>
+          <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+            Fully compliant with Central Bank prudential guidelines, capital adequacy metrics, and interest rate transparency directives.
+          </p>
+        </div>
+        <div>
+          <h5 style="font-size: 8pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">Data Protection (ODPC &amp; GDPR)</h5>
+          <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+            Strict adherence to the Kenya Data Protection Act 2019 and European GDPR. Provides data sovereignty, localized hosting, and consent management.
+          </p>
+        </div>
+        <div>
+          <h5 style="font-size: 8pt; font-weight: 700; color: #1B222C; margin-bottom: 1mm;">AML / CFT Oversight</h5>
+          <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+            Automated screening against global OFAC, UN, and PEP sanction watchlists with automated transaction monitoring and suspicious activity flags.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Security Architecture &amp; Regulatory Governance</span>
+    </div>
+    <div class="footer-right">Page 05 / 08</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 6: INSTITUTIONAL CLIENTS & VERIFIED CASE STUDIES                      -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Case Studies &amp; Impact</span>
+    </div>
+    <div class="header-page-num">Page 06 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Proven Track Record</div>
+    <h2 class="page-title">Institutional Deployments &amp; Client Impact</h2>
+    <p class="page-subtitle">
+      M&amp;F Technologies powers leading commercial banks, regional cooperative SACCOs, and digital micro-lenders. 
+      Our deployments deliver quantifiable gains in operational speed, risk mitigation, and balance sheet performance.
+    </p>
+
+    <!-- 4 Detailed Case Studies -->
+    <div class="grid-2" style="gap: 3.5mm; margin-bottom: 4mm;">
+      
+      <!-- Case Study 1 -->
+      <div class="card" style="border-top: 3px solid #1B222C;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm;">
+          <div>
+            <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C;">Apex International Bank</h3>
+            <span style="font-size: 7pt; color: #6B7684; font-weight: 600;">Commercial &amp; Retail Banking • Nairobi, Kenya</span>
+          </div>
+          <span style="font-size: 6.5pt; font-weight: 700; background: #E4E7EB; color: #1B222C; padding: 1px 5px; border-radius: 3px;">1.2M ACCOUNTS</span>
+        </div>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Challenge:</strong> Outdated legacy core banking caused 4-day loan turnaround times, leading to high drop-off rates for digital retail facilities.
+        </p>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Solution:</strong> Deployed M&amp;F Core Lending Engine and API Middleware to automate origination and direct-to-mobile disbursements.
+        </p>
+        <div style="background: #F4F6F8; border-radius: 4px; padding: 2mm 3mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C; margin-bottom: 1px;">QUANTIFIABLE IMPACT:</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 74% reduction in loan approval turnaround (from 4 days to 4 minutes)</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 18% lower non-performing loans (NPL) via alternative credit scoring</div>
+        </div>
+      </div>
+
+      <!-- Case Study 2 -->
+      <div class="card" style="border-top: 3px solid #1B222C;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm;">
+          <div>
+            <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C;">Pioneer Teachers SACCO</h3>
+            <span style="font-size: 7pt; color: #6B7684; font-weight: 600;">Credit Union / Cooperative • Nairobi, Kenya</span>
+          </div>
+          <span style="font-size: 6.5pt; font-weight: 700; background: #E4E7EB; color: #1B222C; padding: 1px 5px; border-radius: 3px;">65K MEMBERS</span>
+        </div>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Challenge:</strong> Manual spreadsheet tracking for overdue member facilities resulted in mounting delinquency and slow collection cycles.
+        </p>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Solution:</strong> Integrated M&amp;F Collections &amp; Delinquency Management with automated SMS schedules and mobile money STK push prompts.
+        </p>
+        <div style="background: #F4F6F8; border-radius: 4px; padding: 2mm 3mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C; margin-bottom: 1px;">QUANTIFIABLE IMPACT:</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 31% recovery rate improvement in the first 90 days</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 100% automated payment reconciliation with zero manual spreadsheets</div>
+        </div>
+      </div>
+
+      <!-- Case Study 3 -->
+      <div class="card" style="border-top: 3px solid #1B222C;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm;">
+          <div>
+            <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C;">Sunrise Micro-Finance Group</h3>
+            <span style="font-size: 7pt; color: #6B7684; font-weight: 600;">Rural &amp; Agricultural MFI • Mombasa, Kenya</span>
+          </div>
+          <span style="font-size: 6.5pt; font-weight: 700; background: #E4E7EB; color: #1B222C; padding: 1px 5px; border-radius: 3px;">OFFLINE-FIRST</span>
+        </div>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Challenge:</strong> Field credit officers operating in remote agricultural zones lacked reliable internet, slowing KYC capture and disbursements.
+        </p>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Solution:</strong> Equipped 200+ field officers with the M&amp;F Offline-First Mobile App with encrypted SQLite storage and biometric capture.
+        </p>
+        <div style="background: #F4F6F8; border-radius: 4px; padding: 2mm 3mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C; margin-bottom: 1px;">QUANTIFIABLE IMPACT:</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 60% boost in daily field officer application throughput</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• Automated sync on network reconnect with zero corrupted records</div>
+        </div>
+      </div>
+
+      <!-- Case Study 4 -->
+      <div class="card" style="border-top: 3px solid #1B222C;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2mm;">
+          <div>
+            <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C;">Equatorial United Bank</h3>
+            <span style="font-size: 7pt; color: #6B7684; font-weight: 600;">Commercial Bank • Kampala, Uganda</span>
+          </div>
+          <span style="font-size: 6.5pt; font-weight: 700; background: #E4E7EB; color: #1B222C; padding: 1px 5px; border-radius: 3px;">HIGH VELOCITY</span>
+        </div>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Challenge:</strong> Bank experienced server crashes during month-end salary loan peaks, causing angry borrower backlogs and SLA penalties.
+        </p>
+        <p style="font-size: 7.3pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+          <strong>Solution:</strong> Deployed M&amp;F Configurable Decisioning Engine with dynamic query queuing and active-active load balancing.
+        </p>
+        <div style="background: #F4F6F8; border-radius: 4px; padding: 2mm 3mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C; margin-bottom: 1px;">QUANTIFIABLE IMPACT:</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• Processed 45,000+ credit scoring queries/hour during peak windows</div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #059669;">• 100% uptime with zero server lockups across 24 consecutive months</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Client Institutional Segments -->
+    <div class="section-label">Institutional Client Segments Served</div>
+    <div class="grid-3" style="gap: 3mm;">
+      <div class="card-cloud" style="text-align: center;">
+        <div style="font-weight: 700; font-size: 8pt; color: #1B222C;">Commercial &amp; Retail Banks</div>
+        <div style="font-size: 7pt; color: #6B7684; margin-top: 1mm;">Tier-1 &amp; Tier-2 institutions modernizing retail lending portfolios</div>
+      </div>
+      <div class="card-cloud" style="text-align: center;">
+        <div style="font-weight: 700; font-size: 8pt; color: #1B222C;">Credit Unions &amp; SACCOs</div>
+        <div style="font-size: 7pt; color: #6B7684; margin-top: 1mm;">Community cooperatives digitizing member loan applications</div>
+      </div>
+      <div class="card-cloud" style="text-align: center;">
+        <div style="font-weight: 700; font-size: 8pt; color: #1B222C;">Digital MFIs &amp; Fintechs</div>
+        <div style="font-size: 7pt; color: #6B7684; margin-top: 1mm;">High-velocity digital credit platforms requiring sub-second APIs</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Case Studies &amp; Institutional Deployments</span>
+    </div>
+    <div class="footer-right">Page 06 / 08</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 7: LEADERSHIP & IMPLEMENTATION METHODOLOGY                            -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Leadership &amp; Methodology</span>
+    </div>
+    <div class="header-page-num">Page 07 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Corporate Governance &amp; Delivery</div>
+    <h2 class="page-title">Leadership &amp; Implementation Methodology</h2>
+    <p class="page-subtitle">
+      Our team brings deep expertise in core banking systems, distributed ledger architecture, and enterprise compliance. 
+      We back every engagement with a structured, low-risk 4-phase deployment methodology.
+    </p>
+
+    <!-- Leadership Group -->
+    <div class="section-label">Executive Leadership &amp; Engineering Culture</div>
+    <div class="grid-3" style="gap: 3mm; margin-bottom: 4mm;">
+      <div class="card">
+        <div style="font-weight: 800; font-size: 8.5pt; color: #1B222C;">Musa Mutindi</div>
+        <div style="font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #3E4C59; margin-top: 0.5mm; margin-bottom: 1.5mm;">Founder &amp; Chief Executive Officer</div>
+        <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+          Leads M&amp;F Technologies with a focus on mission-driven financial infrastructure expanding credit access. Oversees institutional strategy, banking partnerships, and product direction.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="font-weight: 800; font-size: 8.5pt; color: #1B222C;">Distributed Engineering Group</div>
+        <div style="font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #3E4C59; margin-top: 0.5mm; margin-bottom: 1.5mm;">Systems &amp; Ledger Architects</div>
+        <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+          Comprises senior database reliability engineers, distributed systems developers, and security experts operating across five time zones to ensure sub-100ms response SLAs and 99.99% uptime.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="font-weight: 800; font-size: 8.5pt; color: #1B222C;">Compliance &amp; Risk Advisory</div>
+        <div style="font-size: 7pt; font-weight: 700; text-transform: uppercase; color: #3E4C59; margin-top: 0.5mm; margin-bottom: 1.5mm;">Regulatory Framework Council</div>
+        <p style="font-size: 7.2pt; color: #4A5568; line-height: 1.35;">
+          Specialized banking compliance officers and regulatory legal experts who shape our Central Bank reporting schemas, IFRS 9 impairment models, and SOC 2 Type II audit readiness.
+        </p>
+      </div>
+    </div>
+
+    <!-- 4-Phase Implementation Roadmap -->
+    <div class="section-label">The 4-Phase Institutional Implementation Roadmap</div>
+    <div class="table-container" style="margin-bottom: 3.5mm;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 18%;">Phase &amp; Timeline</th>
+            <th style="width: 27%;">Key Objectives</th>
+            <th style="width: 32%;">Core Technical Activities</th>
+            <th style="width: 23%;">Institutional Deliverable</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>PHASE 1</strong><br><span style="font-size: 7pt; color: #6B7684;">Weeks 1 – 2</span></td>
+            <td>Architecture Review &amp; Gap Analysis</td>
+            <td>Audit existing core banking interfaces, map data dictionaries, define risk weight trees, and configure loan products.</td>
+            <td>Architecture Blueprint &amp; Data Mapping Specification</td>
+          </tr>
+          <tr>
+            <td><strong>PHASE 2</strong><br><span style="font-size: 7pt; color: #6B7684;">Weeks 3 – 4</span></td>
+            <td>Sandbox Provisioning &amp; API Integration</td>
+            <td>Deploy dedicated multi-tenant sandbox environment; configure payment gateway webhooks (M-Pesa/Airtel/RTGS); connect credit bureaus.</td>
+            <td>Functional Integration Sandbox &amp; Test Suite</td>
+          </tr>
+          <tr>
+            <td><strong>PHASE 3</strong><br><span style="font-size: 7pt; color: #6B7684;">Weeks 5 – 6</span></td>
+            <td>Shadow Ledger &amp; Parallel Validation</td>
+            <td>Run M&amp;F double-entry ledger in parallel with legacy system; verify 0.00% balance drift; perform user acceptance testing (UAT).</td>
+            <td>UAT Sign-off &amp; Ledger Audit Certification</td>
+          </tr>
+          <tr>
+            <td><strong>PHASE 4</strong><br><span style="font-size: 7pt; color: #6B7684;">Week 7 Onward</span></td>
+            <td>Production Cutover &amp; 24/7 SLA</td>
+            <td>Live production traffic cutover; staff enablement workshops; continuous monitoring with dedicated 24/7 Tier-1 engineering support.</td>
+            <td>Live Production System &amp; Guaranteed 99.99% SLA</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SLA Support Banner -->
+    <div class="card-cloud" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 8pt; font-weight: 700; color: #1B222C;">Institutional Support &amp; SLA Commitment</div>
+        <div style="font-size: 7.2pt; color: #4A5568; margin-top: 1px;">
+          Guaranteed 15-minute response for critical P1 incidents • 24/7/365 Tier-1 engineering operations • Dedicated Technical Account Manager
+        </div>
+      </div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11pt; font-weight: 800; color: #1B222C; white-space: nowrap;">
+        99.99% SLA
+      </div>
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Governance &amp; Implementation Methodology</span>
+    </div>
+    <div class="footer-right">Page 07 / 08</div>
+  </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- PAGE 8: CORPORATE DIRECTORY, RFP & PROCUREMENT                             -->
+<!-- ========================================================================== -->
+<div class="page">
+  <div class="running-header">
+    <div class="header-left">
+      {SVG_ICON_DARK}
+      <span class="header-title">M&amp;F Technologies — Corporate Profile</span>
+      <span class="header-tag">Corporate Directory</span>
+    </div>
+    <div class="header-page-num">Page 08 of 08</div>
+  </div>
+
+  <div class="page-body">
+    <div class="section-label">Institutional Inquiries &amp; Procurement</div>
+    <h2 class="page-title">Corporate Directory &amp; Engagement</h2>
+    <p class="page-subtitle">
+      Whether you are a commercial bank seeking to modernize your lending stack, a credit union expanding member access, 
+      or a fintech platform integrating institutional APIs, M&amp;F Technologies is ready to partner.
+    </p>
+
+    <!-- Contact & Entity Details -->
+    <div class="grid-2" style="gap: 3.5mm; margin-bottom: 4mm;">
+      <div class="card">
+        <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C; margin-bottom: 2mm;">Corporate Headquarters</h3>
+        <p style="font-size: 7.5pt; color: #3E4C59; line-height: 1.45; margin-bottom: 2.5mm;">
+          <strong>M&amp;F Technologies Limited</strong><br>
+          The Pavilion, 4th Floor<br>
+          Lower Kabete Road, Westlands<br>
+          Nairobi, Kenya
+        </p>
+        <p style="font-size: 7.5pt; color: #3E4C59; line-height: 1.45;">
+          <strong>Operating Hours:</strong> Monday – Friday: 08:00 – 17:00 EAT<br>
+          <strong>Global Network Operations:</strong> 24/7/365 Continuous Monitoring
+        </p>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 9pt; font-weight: 800; color: #1B222C; margin-bottom: 2mm;">Institutional Communication</h3>
+        <p style="font-size: 7.5pt; color: #3E4C59; line-height: 1.45; margin-bottom: 1.5mm;">
+          <strong>General &amp; Corporate Inquiries:</strong><br>
+          <a href="mailto:info@mftechnologies.org" style="color: #1B222C; text-decoration: none; font-weight: 600;">info@mftechnologies.org</a>
+        </p>
+        <p style="font-size: 7.5pt; color: #3E4C59; line-height: 1.45; margin-bottom: 1.5mm;">
+          <strong>Institutional Hotlines &amp; Support:</strong><br>
+          Main Support: +254 748 329 410<br>
+          Client Hotline: +254 701 547 500
+        </p>
+        <p style="font-size: 7.5pt; color: #3E4C59; line-height: 1.45;">
+          <strong>Official Web &amp; API Resources:</strong><br>
+          https://mftechnologies.org • API Docs: /docs
+        </p>
+      </div>
+    </div>
+
+    <!-- RFP & Procurement Protocols -->
+    <div class="section-label">Institutional RFP &amp; Procurement Protocol</div>
+    <div class="card-cloud" style="margin-bottom: 4mm;">
+      <h4 style="font-size: 8.5pt; font-weight: 700; color: #1B222C; margin-bottom: 1.5mm;">Request for Proposals (RFP) &amp; Proof of Concept (PoC)</h4>
+      <p style="font-size: 7.5pt; color: #4A5568; line-height: 1.4; margin-bottom: 2mm;">
+        Financial institutions conducting formal procurement, core modernization feasibility studies, or security vendor assessments 
+        are invited to submit RFPs or schedule an executive technical briefing.
+      </p>
+      <div class="grid-3" style="gap: 2mm;">
+        <div style="background: #FFFFFF; border: 1px solid #E4E7EB; border-radius: 4px; padding: 2mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C;">1. Architecture Briefing</div>
+          <div style="font-size: 6.8pt; color: #6B7684; margin-top: 0.5mm;">Schedule a 45-minute technical deep dive with our systems engineering leads.</div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E4E7EB; border-radius: 4px; padding: 2mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C;">2. Custom Sandbox</div>
+          <div style="font-size: 6.8pt; color: #6B7684; margin-top: 0.5mm;">Receive a private staging sandbox tenant pre-configured with your lending products.</div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E4E7EB; border-radius: 4px; padding: 2mm;">
+          <div style="font-size: 7pt; font-weight: 700; color: #1B222C;">3. Compliance Pack</div>
+          <div style="font-size: 6.8pt; color: #6B7684; margin-top: 0.5mm;">Request our SOC 2 Type II audit report, pen-test summaries, and SLA agreements.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Official Certification Seal -->
+    <div class="card-dark" style="display: flex; justify-content: space-between; align-items: center; padding: 3.5mm 5mm;">
+      <div>
+        <div style="font-size: 9pt; font-weight: 800; color: #FFFFFF;">M&amp;F TECHNOLOGIES LIMITED</div>
+        <div style="font-size: 7.2pt; color: #9AA5B1; margin-top: 1px;">
+          Certified Institutional Technology Provider • SOC 2 Type II Audited • Nairobi, Kenya
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 7pt; font-weight: 700; color: #10B981; letter-spacing: 0.5px;">OFFICIAL DOSSIER</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 6.8pt; color: #C4CDD5;">REF: MF-CORP-2026-V1</div>
+      </div>
+    </div>
+
+    <!-- Legal Notice -->
+    <div style="margin-top: 3mm; font-size: 6.5pt; color: #6B7684; line-height: 1.35; text-align: justify;">
+      <strong>Confidentiality &amp; Legal Notice:</strong> The information contained in this document is proprietary to M&amp;F Technologies Limited. 
+      It is intended solely for institutional clients, regulators, and authorized partners. No part of this document may be reproduced, stored, 
+      or transmitted in any form without prior written permission from M&amp;F Technologies. All metrics, SLAs, and technical specifications are 
+      subject to contractually agreed institutional service terms. Copyright &copy; 2026 M&amp;F Technologies Limited. All rights reserved.
+    </div>
+  </div>
+
+  <div class="running-footer">
+    <div class="footer-left">
+      <span class="footer-badge">M&amp;F TECHNOLOGIES</span>
+      <span>• Corporate Directory &amp; Regulatory Inquiries</span>
+    </div>
+    <div class="footer-right">Page 08 of 08</div>
+  </div>
+</div>
+
+</body>
+</html>
+"""
+
+def generate_pdf():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, ".."))
+    
+    html_file = os.path.join(project_root, "frontend/public/company_profile.html")
+    pdf_dest = os.path.join(project_root, "frontend/public/MF_Technologies_Company_Profile.pdf")
+    artifact_dest = "/home/cantroll/.gemini/antigravity-ide/brain/4975536e-e064-454c-bf03-e1df9f1d5086/MF_Technologies_Company_Profile.pdf"
+    
+    print(f"Writing temporary HTML to {html_file}...")
+    with open(html_file, "w", encoding="utf-8") as f:
+        f.write(HTML_CONTENT)
+        
+    print(f"Compiling PDF with Google Chrome headless to {pdf_dest}...")
+    cmd = [
+        "google-chrome",
+        "--headless",
+        "--disable-gpu",
+        "--no-sandbox",
+        "--print-to-pdf-no-header",
+        f"--print-to-pdf={pdf_dest}",
+        html_file
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"Error running google-chrome: {res.stderr}")
+        return False
+        
+    if os.path.exists(pdf_dest):
+        size_kb = os.path.getsize(pdf_dest) / 1024
+        print(f"Successfully generated PDF: {pdf_dest} ({size_kb:.1f} KB)")
+        
+        # Copy to brain artifact directory
+        try:
+            shutil.copy2(pdf_dest, artifact_dest)
+            print(f"Copied to artifact directory: {artifact_dest}")
+        except Exception as e:
+            print(f"Could not copy to artifact directory: {e}")
+            
+        return True
+    else:
+        print("PDF file was not created.")
+        return False
+
+if __name__ == "__main__":
+    success = generate_pdf()
+    exit(0 if success else 1)

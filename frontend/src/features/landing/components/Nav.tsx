@@ -26,6 +26,7 @@ const SERVICES_LIST = [
 ];
 
 const ABOUT_LIST = [
+  { label: "Company Profile (PDF)", href: "/company-profile", desc: "Official corporate dossier & platform capabilities" },
   { label: "About M&F", href: "/about", desc: "Company mission, leadership & milestones" },
   { label: "Who We Are", href: "/where-we-are", desc: "Our engineering leadership & vision" },
   { label: "Get Involved", href: "/get-involved", desc: "Partner program & institutional advisory" },
