@@ -163,11 +163,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/careers" className="hover:text-graphite transition-colors inline-flex flex-wrap items-center gap-1 break-words">
-                  <span>Careers</span>
-                  <span className="rounded bg-emerald-100 text-emerald-700 px-1 py-0.2 text-[8px] sm:text-[9px] font-bold border border-emerald-200/60">
-                    Hiring
-                  </span>
+                <Link href="/careers" className="hover:text-graphite transition-colors block break-words">
+                  Careers
                 </Link>
               </li>
               <li>

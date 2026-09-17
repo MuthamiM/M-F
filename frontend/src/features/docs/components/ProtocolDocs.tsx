@@ -30,7 +30,24 @@ export function ProtocolDocs() {
   const [activeId, setActiveId] = useState<string>("introduction");
   const [searchModalOpen, setSearchModalOpen] = useState<boolean>(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("mf_docs_theme") === "dark";
+    }
+    return false;
+  });
+
+  // Sync theme with localStorage and html class
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mf_docs_theme", isDarkMode ? "dark" : "light");
+      if (isDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, [isDarkMode]);
 
   // Global keyboard shortcut for Command+K
   useEffect(() => {
@@ -54,19 +71,33 @@ export function ProtocolDocs() {
   }, [activeId]);
 
   return (
-    <div className="min-h-screen bg-white text-[#1B222C] selection:bg-[#1B222C]/10 selection:text-[#1B222C] font-sans relative">
+    <div className={`min-h-screen font-sans relative transition-colors duration-200 ${
+      isDarkMode
+        ? "bg-[#0B0F14] text-[#E6EDF3] selection:bg-[#58A6FF]/20 selection:text-[#58A6FF]"
+        : "bg-white text-[#1B222C] selection:bg-[#1B222C]/10 selection:text-[#1B222C]"
+    }`}>
       {/* M&F Soft Atmospheric Glow */}
-      <div className="absolute top-0 right-0 left-0 h-[420px] bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(27,34,44,0.04),rgba(255,255,255,0))] pointer-events-none -z-10" />
+      <div className={`absolute top-0 right-0 left-0 h-[420px] pointer-events-none -z-10 ${
+        isDarkMode
+          ? "bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(88,166,255,0.06),rgba(11,15,20,0))]"
+          : "bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(27,34,44,0.04),rgba(255,255,255,0))]"
+      }`} />
 
-      {/* ── Fixed / Sticky M&F Navigation Bar ── */}
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-[#E4E7EB]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+      {/* ── Fixed / Sticky M&F Navigation Bar (Full Width) ── */}
+      <header className={`sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors ${
+        isDarkMode
+          ? "bg-[#0E1217]/95 border-[#21262D]"
+          : "bg-white/95 border-[#E4E7EB]"
+      }`}>
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 h-14 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="lg:hidden p-1.5 -ml-1.5 text-[#3E4C59] hover:text-[#1B222C] rounded-lg cursor-pointer"
+              className={`lg:hidden p-1.5 -ml-1.5 rounded-lg cursor-pointer transition-colors ${
+                isDarkMode ? "text-[#8B949E] hover:text-[#F0F6FC]" : "text-[#3E4C59] hover:text-[#1B222C]"
+              }`}
               aria-label="Open Navigation Menu"
             >
               <Menu className="h-5 w-5" />
@@ -74,12 +105,22 @@ export function ProtocolDocs() {
 
             <Link href="/" className="flex items-center gap-2.5 group">
               <span className="relative flex h-7 w-7 items-center justify-center">
-                <span className="absolute h-7 w-7 rounded-full bg-[#1B222C] group-hover:scale-105 transition-transform" />
-                <span className="absolute right-0 h-3.5 w-3.5 rounded-full bg-white border-2 border-[#1B222C]" />
+                <span className={`absolute h-7 w-7 rounded-full transition-transform group-hover:scale-105 ${
+                  isDarkMode ? "bg-[#58A6FF]" : "bg-[#1B222C]"
+                }`} />
+                <span className={`absolute right-0 h-3.5 w-3.5 rounded-full border-2 ${
+                  isDarkMode ? "bg-[#0B0F14] border-[#58A6FF]" : "bg-white border-[#1B222C]"
+                }`} />
               </span>
-              <span className="font-display font-bold text-base tracking-tight text-[#1B222C] flex items-center gap-1.5">
-                M&amp;F <span className="font-normal text-[#6B7684]">Technologies</span>
-                <span className="text-[10px] font-mono font-semibold text-[#1B222C] bg-[#E4E7EB] border border-[#9AA5B1]/40 px-1.5 py-0.5 rounded">
+              <span className={`font-display font-bold text-base tracking-tight flex items-center gap-1.5 ${
+                isDarkMode ? "text-[#F0F6FC]" : "text-[#1B222C]"
+              }`}>
+                M&amp;F <span className={`font-normal ${isDarkMode ? "text-[#8B949E]" : "text-[#6B7684]"}`}>Technologies</span>
+                <span className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded border ${
+                  isDarkMode
+                    ? "text-[#58A6FF] bg-[#161B22] border-[#30363D]"
+                    : "text-[#1B222C] bg-[#E4E7EB] border-[#9AA5B1]/40"
+                }`}>
                   API v2.4
                 </span>
               </span>
@@ -91,20 +132,30 @@ export function ProtocolDocs() {
             <button
               type="button"
               onClick={() => setSearchModalOpen(true)}
-              className="w-full h-9 rounded-full bg-[#F4F6F8] hover:bg-[#E4E7EB]/60 border border-[#9AA5B1]/30 px-3.5 flex items-center justify-between text-xs text-[#6B7684] transition-colors cursor-pointer group"
+              className={`w-full h-9 rounded-full px-3.5 flex items-center justify-between text-xs transition-colors cursor-pointer group border ${
+                isDarkMode
+                  ? "bg-[#161B22] hover:bg-[#21262D] border-[#30363D] text-[#8B949E]"
+                  : "bg-[#F4F6F8] hover:bg-[#E4E7EB]/60 border-[#9AA5B1]/30 text-[#6B7684]"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-[#9AA5B1] group-hover:text-[#1B222C] transition-colors" />
+                <Search className={`h-4 w-4 transition-colors ${
+                  isDarkMode ? "text-[#8B949E] group-hover:text-[#58A6FF]" : "text-[#9AA5B1] group-hover:text-[#1B222C]"
+                }`} />
                 <span>Find endpoints, guides, parameters...</span>
               </div>
-              <kbd className="font-mono text-[10px] bg-white border border-[#9AA5B1]/40 text-[#6B7684] rounded px-1.5 py-0.5 shadow-2xs">
+              <kbd className={`font-mono text-[10px] rounded px-1.5 py-0.5 border shadow-2xs ${
+                isDarkMode
+                  ? "bg-[#21262D] border-[#30363D] text-[#8B949E]"
+                  : "bg-white border-[#9AA5B1]/40 text-[#6B7684]"
+              }`}>
                 ⌘K
               </kbd>
             </button>
           </div>
 
           {/* Right Header Navigation & Actions */}
-          <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium text-[#3E4C59]">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium">
             <button
               type="button"
               onClick={() => {
@@ -113,7 +164,11 @@ export function ProtocolDocs() {
               }}
               className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 currentEndpoint
-                  ? "bg-[#1B222C] text-white shadow-xs"
+                  ? isDarkMode
+                    ? "bg-[#F0F6FC] text-[#0E1217] shadow-xs"
+                    : "bg-[#1B222C] text-white shadow-xs"
+                  : isDarkMode
+                  ? "text-[#8B949E] hover:text-[#F0F6FC] hover:bg-[#161B22]"
                   : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]"
               }`}
             >
@@ -127,25 +182,42 @@ export function ProtocolDocs() {
               }}
               className={`hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 !currentEndpoint
-                  ? "bg-[#1B222C] text-white shadow-xs"
+                  ? isDarkMode
+                    ? "bg-[#F0F6FC] text-[#0E1217] shadow-xs"
+                    : "bg-[#1B222C] text-white shadow-xs"
+                  : isDarkMode
+                  ? "text-[#8B949E] hover:text-[#F0F6FC] hover:bg-[#161B22]"
                   : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]"
               }`}
             >
               Documentation
             </button>
-            <Link
-              href="/contact"
-              className="hidden sm:inline-block hover:text-[#1B222C] transition-colors px-2 py-1"
+
+            {/* Support - Opens Live ChatBot directly */}
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("mf-open-chat"));
+              }}
+              className={`hidden sm:inline-block transition-colors px-2 py-1 cursor-pointer font-medium ${
+                isDarkMode ? "text-[#8B949E] hover:text-[#F0F6FC]" : "text-[#3E4C59] hover:text-[#1B222C]"
+              }`}
+              title="Open Live Support Chat"
             >
               Support
-            </Link>
+            </button>
 
             {/* Light / Dark Mode Toggle */}
             <button
               type="button"
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-1.5 text-[#6B7684] hover:text-[#1B222C] rounded-lg cursor-pointer"
-              title="Toggle theme"
+              onClick={() => setIsDarkMode((prev) => !prev)}
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                isDarkMode
+                  ? "text-amber-400 hover:bg-[#21262D]"
+                  : "text-[#6B7684] hover:text-[#1B222C] hover:bg-[#F4F6F8]"
+              }`}
+              title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
             >
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -153,7 +225,11 @@ export function ProtocolDocs() {
             {/* Get API Key Button */}
             <Link
               href="/request-demo"
-              className="rounded-full bg-[#1B222C] hover:bg-[#3E4C59] text-white px-4 py-1.5 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold shadow-xs transition-colors cursor-pointer ${
+                isDarkMode
+                  ? "bg-[#58A6FF] text-[#0B0F14] hover:bg-[#79C0FF]"
+                  : "bg-[#1B222C] text-white hover:bg-[#3E4C59]"
+              }`}
             >
               Get API Key
             </Link>
@@ -161,13 +237,14 @@ export function ProtocolDocs() {
         </div>
       </header>
 
-      {/* ── Main Container: Sidebar + Content ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex">
+      {/* ── Main Container: Sidebar + Content (Full Width Edge-to-Edge) ── */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="flex w-full">
           {/* Left Desktop Sticky Sidebar */}
           <div className="hidden lg:block w-64 shrink-0 py-8 pr-6 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto scrollbar-thin">
             <ProtocolSidebar
               activeId={activeId}
+              isDarkMode={isDarkMode}
               onSelect={(id) => {
                 setActiveId(id);
                 window.scrollTo({ top: 0, behavior: "smooth" });
@@ -175,8 +252,8 @@ export function ProtocolDocs() {
             />
           </div>
 
-          {/* Main Content Area */}
-          <main className="flex-1 min-w-0 py-10 lg:pl-10">
+          {/* Main Content Area (Fills entire screen from left to right) */}
+          <main className="flex-1 min-w-0 py-8 lg:pl-8 xl:pl-10 w-full">
             {/* 1. Introduction / Hero Documentation View */}
             {activeId === "introduction" && (
               <div className="space-y-12">
