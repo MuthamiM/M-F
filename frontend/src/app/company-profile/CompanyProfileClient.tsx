@@ -206,9 +206,9 @@ export function CompanyProfileClient() {
         </div>
       </section>
 
-      {/* Tab Content Body */}
+      {/* Tab Content Body - Edge to Edge */}
       <section className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full">
           
           {/* TAB 1: EXECUTIVE SUMMARY */}
           {activeTab === "overview" && (
@@ -686,7 +686,7 @@ export function CompanyProfileClient() {
 
       {/* Institutional Procurement & Download Box */}
       <section className="bg-cloud border-t border-fog/20 py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-6">
+        <div className="w-full px-4 sm:px-8 lg:px-12 text-center space-y-6">
           <div className="h-12 w-12 rounded-xl bg-graphite text-white flex items-center justify-center mx-auto shadow-md">
             <FileText className="h-6 w-6" />
           </div>

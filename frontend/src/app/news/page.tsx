@@ -82,9 +82,9 @@ export default function NewsPage() {
       <Nav />
 
       <main className="min-h-screen bg-white">
-        {/* Hero Section */}
-        <section className="bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
-          <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20 max-w-5xl mx-auto">
+        {/* Hero Section - Edge to Edge */}
+        <section className="w-full bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
+          <div className="w-full px-4 sm:px-8 lg:px-12 py-12 sm:py-18">
             <Breadcrumbs items={[{ label: "News & Insights" }]} />
 
             <div className="flex items-center gap-3 mb-4">
@@ -96,15 +96,15 @@ export default function NewsPage() {
               </span>
             </div>
 
-            <h1 className="font-display text-3xl font-bold tracking-tight text-[#1B222C] sm:text-4xl md:text-5xl leading-tight">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-[#1B222C] sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
               Engineering Publications, Architecture &amp; Technical Announcements
             </h1>
-            <p className="mt-4 text-sm sm:text-base text-[#3E4C59] max-w-3xl leading-relaxed">
+            <p className="mt-4 text-sm sm:text-base text-[#3E4C59] max-w-4xl leading-relaxed">
               Explore in-depth technical whitepapers, distributed double-entry ledger specifications, high-throughput credit scoring benchmarks, and institutional compliance standards authored by the M&amp;F Technologies engineering group.
             </p>
 
             {/* Credibility & E-E-A-T Highlights */}
-            <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-[#3E4C59] pt-6 border-t border-[#9AA5B1]/20">
+            <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-[#3E4C59] pt-6 border-t border-[#9AA5B1]/20">
               <div className="flex items-center gap-1.5 font-medium text-[#1B222C]">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 <span>Production-Validated Telemetry</span>
@@ -123,60 +123,122 @@ export default function NewsPage() {
           </div>
         </section>
 
-        {/* Articles Directory Section */}
-        <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24 max-w-5xl mx-auto">
-          <div className="flex flex-col gap-8">
-            {ARTICLES.map((article) => (
-              <article
-                key={article.id}
-                className="group rounded-2xl border border-[#9AA5B1]/25 bg-white p-6 sm:p-10 transition-all duration-300 hover:border-[#1B222C] hover:shadow-lg"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-[#6B7684]">
-                  <span className="rounded-full bg-[#F4F6F8] px-3.5 py-1 font-semibold text-[#1B222C] border border-[#9AA5B1]/25">
-                    {article.category}
-                  </span>
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1">
+        {/* Articles Directory Section - Full Width Front Edge to Edge */}
+        <section className="w-full px-4 sm:px-8 lg:px-12 py-10 sm:py-16">
+          {/* Top Featured Article - Full Width Banner */}
+          {ARTICLES.length > 0 && (
+            <article className="group rounded-2xl border-2 border-[#1B222C]/15 bg-white p-6 sm:p-10 transition-all duration-300 hover:border-[#1B222C] hover:shadow-xl w-full mb-8 sm:mb-12">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-[#6B7684]">
+                    <span className="rounded-full bg-[#1B222C] px-3.5 py-1 font-semibold text-white text-[11px] uppercase tracking-wider">
+                      Featured Publication
+                    </span>
+                    <span className="rounded-full bg-[#F4F6F8] px-3 py-1 font-semibold text-[#1B222C] border border-[#9AA5B1]/25 text-[11px]">
+                      {ARTICLES[0].category}
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px]">
                       <Calendar className="h-3.5 w-3.5" />
-                      <time dateTime={article.date}>{article.date}</time>
+                      <time dateTime={ARTICLES[0].date}>{ARTICLES[0].date}</time>
                     </span>
                     <span className="text-[#9AA5B1]">&bull;</span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 text-[11px]">
                       <Clock className="h-3.5 w-3.5" />
-                      <span>{article.readTime}</span>
+                      <span>{ARTICLES[0].readTime}</span>
                     </span>
                   </div>
+
+                  <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1B222C] group-hover:text-[#3E4C59] transition-colors leading-tight">
+                    <Link href={`/news/${ARTICLES[0].id}`} className="hover:underline">
+                      {ARTICLES[0].title}
+                    </Link>
+                  </h2>
+
+                  <p className="text-sm sm:text-base text-[#3E4C59] leading-relaxed">
+                    {ARTICLES[0].summary}
+                  </p>
                 </div>
 
-                <h2 className="mt-4 font-display text-xl sm:text-2xl font-bold text-[#1B222C] group-hover:text-[#3E4C59] transition-colors leading-snug">
-                  <Link href={`/news/${article.id}`} className="hover:underline">
-                    {article.title}
-                  </Link>
-                </h2>
+                <div className="lg:col-span-5 bg-[#F8FAFC] border border-[#9AA5B1]/20 rounded-xl p-6 space-y-4">
+                  <div className="text-xs text-[#6B7684] space-y-2">
+                    <div className="font-semibold text-[#1B222C]">Architecture Review &amp; Specification</div>
+                    <p className="text-[11px] leading-relaxed text-[#3E4C59]">
+                      Includes complete benchmark telemetry, API route specifications, and distributed ledger transaction diagrams.
+                    </p>
+                  </div>
 
-                <p className="mt-3 text-sm sm:text-base text-[#3E4C59] leading-relaxed">
-                  {article.summary}
-                </p>
+                  <div className="pt-4 border-t border-[#9AA5B1]/15 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-[#6B7684]">
+                      By <strong className="text-[#1B222C]">Musa Mutindi &amp; Engineering Board</strong>
+                    </span>
+                    <Link
+                      href={`/news/${ARTICLES[0].id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#1B222C] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-all shadow-sm"
+                    >
+                      <span>Read Publication</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </article>
+          )}
 
-                <div className="mt-6 pt-5 border-t border-[#9AA5B1]/15 flex flex-wrap items-center justify-between gap-4">
-                  <span className="text-xs text-[#6B7684]">
-                    Authored by <strong className="text-[#1B222C] font-semibold">Musa Mutindi &amp; Engineering Review Board</strong>
+          {/* Grid of Remaining Technical Publications - Edge to Edge */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 w-full">
+            {ARTICLES.slice(1).map((article) => (
+              <article
+                key={article.id}
+                className="group rounded-2xl border border-[#9AA5B1]/25 bg-white p-6 sm:p-8 transition-all duration-300 hover:border-[#1B222C] hover:shadow-xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6B7684]">
+                    <span className="rounded-full bg-[#F4F6F8] px-3 py-1 font-semibold text-[#1B222C] border border-[#9AA5B1]/25 text-[11px]">
+                      {article.category}
+                    </span>
+                    <div className="flex items-center gap-2.5 text-[11px]">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <time dateTime={article.date}>{article.date}</time>
+                      </span>
+                      <span className="text-[#9AA5B1]">&bull;</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{article.readTime}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <h2 className="mt-4 font-display text-lg sm:text-xl font-bold text-[#1B222C] group-hover:text-[#3E4C59] transition-colors leading-snug">
+                    <Link href={`/news/${article.id}`} className="hover:underline">
+                      {article.title}
+                    </Link>
+                  </h2>
+
+                  <p className="mt-3 text-xs sm:text-sm text-[#3E4C59] leading-relaxed line-clamp-4">
+                    {article.summary}
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#9AA5B1]/15 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[11px] text-[#6B7684]">
+                    By <strong className="text-[#1B222C] font-semibold">Musa Mutindi</strong>
                   </span>
 
                   <Link
                     href={`/news/${article.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#1B222C] hover:text-[#3E4C59] group-hover:translate-x-0.5 transition-all"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#1B222C] hover:text-[#3E4C59] group-hover:translate-x-0.5 transition-all"
                   >
-                    <span>Read Full Technical Publication</span>
-                    <ArrowRight className="h-4 w-4" />
+                    <span>Read Publication</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </article>
             ))}
           </div>
 
-          {/* Institutional Engineering Resource Card */}
-          <div className="mt-16 rounded-2xl border border-[#9AA5B1]/25 bg-[#F8FAFC] p-8 sm:p-10">
+          {/* Institutional Engineering Resource Card - Edge to Edge */}
+          <div className="mt-16 sm:mt-20 w-full rounded-2xl border border-[#9AA5B1]/25 bg-[#F8FAFC] p-8 sm:p-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               <div className="md:col-span-2 space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#6B7684]">

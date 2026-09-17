@@ -130,9 +130,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
       <Nav />
 
       <main className="min-h-screen bg-white">
-        {/* Header Banner */}
-        <header className="bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
-          <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20 max-w-5xl mx-auto">
+        {/* Header Banner - Edge to Edge */}
+        <header className="w-full bg-[#F4F6F8] border-b border-[#9AA5B1]/20">
+          <div className="w-full px-4 sm:px-8 lg:px-12 py-10 sm:py-16">
             <Breadcrumbs
               items={[
                 { label: "News & Insights", href: "/news" },
@@ -171,11 +171,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           </div>
         </header>
 
-        {/* Main Article Body & Sidebar Layout */}
-        <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-16 max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
+        {/* Main Article Body & Sidebar Layout - Edge to Edge */}
+        <div className="w-full px-4 sm:px-8 lg:px-12 py-10 sm:py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             {/* Main Article Text */}
-            <article className="lg:col-span-3 space-y-6 text-[#3E4C59] text-sm sm:text-base leading-relaxed">
+            <article className="lg:col-span-8 xl:col-span-9 space-y-6 text-[#3E4C59] text-sm sm:text-base leading-relaxed">
               {article.body.split("\n\n").map((block, bIdx) => {
                 // Subheadings: lines wrapped in **
                 if (block.startsWith("**") && block.endsWith("**") && !block.includes("\n")) {
@@ -309,7 +309,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
             </article>
 
             {/* Sticky Aside / Article Info */}
-            <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24">
+            <aside className="lg:col-span-4 xl:col-span-3 space-y-6 lg:sticky lg:top-24">
               <div className="rounded-xl border border-[#9AA5B1]/25 bg-[#F8FAFC] p-5 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#6B7684]">
                   Publication Details
@@ -387,10 +387,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {/* Related Articles Section */}
+        {/* Related Articles Section - Edge to Edge */}
         {related.length > 0 && (
-          <section className="w-full bg-[#F4F6F8] border-t border-[#9AA5B1]/20 py-16 sm:py-20">
-            <div className="w-full px-4 sm:px-8 lg:px-12 max-w-5xl mx-auto space-y-8">
+          <section className="w-full bg-[#F4F6F8] border-t border-[#9AA5B1]/20 py-12 sm:py-18">
+            <div className="w-full px-4 sm:px-8 lg:px-12 space-y-8">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-[#6B7684]">
