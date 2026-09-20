@@ -93,6 +93,7 @@ MISSION & IDENTITY:
 - Phone: +254 748 329 410
 - Office: Nairobi Hub, Kenya (Registered in UK & West Africa)
 - Hours: Mon-Fri 08:00 to 17:00 EAT (24/7 Monitoring & System Support)
+- Careers / Active Openings: We have an active job opening for a Software Developer (Full-Stack & Core Systems) based ONSITE at our Nairobi headquarters (The Pavilion, 4th Fl, Westlands). Candidates can view requirements and apply at https://mftechnologies.org/careers or email info@mftechnologies.org.
 
 COMPLETE CAPABILITIES & SOLUTIONS (WHAT WE DO):
 1. Core Lending Engine & Double-Entry Ledger: End-to-end loan origination, automated underwriting, double-entry audit accounting ledger, automated disbursements (M-Pesa C2B/B2C, bank rails), flexible interest rate engines, and automated repayment tracking.
