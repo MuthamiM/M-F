@@ -1,5 +1,6 @@
 #!/bin/bash
 # M&F Technologies Platform - VPS Setup & Configuration Script
+# Works on any Ubuntu VPS (Linode, Vultr, DigitalOcean, etc.)
 # Must be executed as root/sudo
 
 set -euo pipefail
@@ -14,7 +15,7 @@ echo "========================================================"
 echo " Starting M&F Technologies Deployment Setup on Ubuntu"
 echo "========================================================"
 
-# 1. CONFIGURE SWAP SPACE (Essential for low-memory VPS instances e.g. Vultr Cloud Compute)
+# 1. CONFIGURE SWAP SPACE (Essential for low-memory VPS instances e.g. 1-2GB plans)
 echo "[+] Configuring swap space to prevent compiler memory crashes..."
 if [ -f /swapfile ]; then
   echo "[*] Swap file already exists. Skipping allocation."
@@ -57,7 +58,7 @@ echo "[+] Configuring environment variables..."
 PROJECT_DIR="$(pwd)"
 ENV_FILE="$PROJECT_DIR/.env"
 
-# Auto-detect public IP on Vultr VPS
+# Auto-detect public IP on VPS
 DETECTED_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 icanhazip.com 2>/dev/null || ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || echo "")
 
 if [ -f "$ENV_FILE" ]; then
@@ -139,8 +140,8 @@ echo "[+] Nginx site configured and reloaded."
 
 # 7. GENERATE SSL CERTIFICATE VIA CERTBOT
 # Check if DOMAIN is a raw IP or default hostname that can't get Let's Encrypt
-if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || "$DOMAIN" == *"vultrusercontent.com" ]]; then
-  echo "[*] Using raw IP or Vultr default hostname. Skipping Certbot SSL configuration."
+if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || "$DOMAIN" == *".ip.linodeusercontent.com" || "$DOMAIN" == *"vultrusercontent.com" ]]; then
+  echo "[*] Using raw IP or provider default hostname. Skipping Certbot SSL configuration."
 else
   echo "[+] Obtaining SSL Certificate for $DOMAIN..."
   if [ "${NON_INTERACTIVE:-false}" = "true" ]; then
