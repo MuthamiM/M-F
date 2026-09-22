@@ -83,7 +83,7 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
         method: endpoint.method || "GET",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": "your_api_key",
+          "X-API-Key": apiKey,
         },
         body:
           endpoint.method && endpoint.method !== "GET" && parsedBody
