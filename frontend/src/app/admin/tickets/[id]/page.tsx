@@ -62,7 +62,7 @@ interface CallLog {
 
 interface TicketDetail {
   id: string;
-  type: "chatbot" | "demo" | "contact";
+  type: "chatbot" | "demo" | "contact" | "application";
   name: string;
   email: string;
   phone?: string;
@@ -304,6 +304,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setErrorMsg("Failed to connect to support endpoint.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openApplicationDocument = async (kind: "cv" | "resume") => {
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const response = await fetch(`/api/tickets/${id}/application-documents/${kind}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Unable to load document");
+      const fileUrl = URL.createObjectURL(await response.blob());
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60_000);
+    } catch {
+      setErrorMsg("Could not open the application document.");
     }
   };
 
@@ -631,6 +646,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <div>
                     <span className="text-[10px] text-slate-400 block font-semibold">Company / Organization</span>
                     <span className="font-bold text-slate-700">{ticket.company}</span>
+                  </div>
+                </div>
+              )}
+
+              {ticket.type === "application" && (
+                <div className="sm:col-span-2 border-t border-slate-100 pt-4">
+                  <span className="text-[10px] text-slate-400 block font-semibold mb-2">APPLICATION DOCUMENTS</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => openApplicationDocument("cv")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                      <FileText className="h-4 w-4 text-[#007AFF]" /> View CV
+                    </button>
+                    <button type="button" onClick={() => openApplicationDocument("resume")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                      <FileText className="h-4 w-4 text-[#007AFF]" /> View Résumé
+                    </button>
                   </div>
                 </div>
               )}

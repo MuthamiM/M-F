@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ticketStatusSchema = z.enum(["open", "in_progress", "resolved", "closed"]);
 export const ticketPrioritySchema = z.enum(["low", "medium", "high"]);
-export const ticketTypeSchema = z.enum(["chatbot", "demo", "contact"]);
+export const ticketTypeSchema = z.enum(["chatbot", "demo", "contact", "application"]);
 
 export const noteSchema = z.object({
   id: z.string(),
@@ -119,4 +119,3 @@ export const logCallSchema = z.object({
     notes: z.string().optional(),
   }),
 });
-

@@ -15,79 +15,32 @@ interface ApplicationInput {
   coverNote: string;
 }
 
-export async function submitApplication(
+function getSafeCandidateName(name: string) {
+  return name.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_") || "Candidate";
+}
+
+function getStoredDocumentName(prefix: "CV" | "Resume", candidateName: string, originalName: string) {
+  return `${prefix}_${candidateName}${path.extname(originalName).toLowerCase()}`;
+}
+
+async function sendApplicationEmail(
+  applicationId: string,
   input: ApplicationInput,
   upload: { cv: PendingUpload; resume: PendingUpload },
   clientIp?: string
 ) {
-  logger.info("Submitting job application", {
-    name: input.name,
-    email: input.email,
-    phone: input.phone,
-    experience: input.experience,
-    hasCv: !!upload.cv,
-    hasResume: !!upload.resume,
-    ip: clientIp,
-  });
-
   const attachments: { filename: string; content: Buffer }[] = [];
-  const applicationId = `career_${crypto.randomBytes(10).toString("hex")}`;
-  const safeCandidateName =
-    input.name.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_") || "Candidate";
+  const safeCandidateName = getSafeCandidateName(input.name);
 
-  const cvExt = path.extname(upload.cv.originalName).toLowerCase();
-  const safeCvName = `CV_${safeCandidateName}${cvExt}`;
+  const safeCvName = getStoredDocumentName("CV", safeCandidateName, upload.cv.originalName);
   attachments.push({ filename: safeCvName, content: upload.cv.content });
 
-  const resumeExt = path.extname(upload.resume.originalName).toLowerCase();
-  const safeResumeName = `Resume_${safeCandidateName}${resumeExt}`;
+  const safeResumeName = getStoredDocumentName(
+    "Resume",
+    safeCandidateName,
+    upload.resume.originalName
+  );
   attachments.push({ filename: safeResumeName, content: upload.resume.content });
-
-  const client = await pgPool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      `INSERT INTO career_applications
-        (id, name, email, phone, experience, portfolio, cover_note, client_ip)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        applicationId,
-        input.name,
-        input.email,
-        input.phone,
-        input.experience,
-        input.portfolio || null,
-        input.coverNote,
-        clientIp || null,
-      ]
-    );
-    await client.query(
-      `INSERT INTO career_application_documents
-        (application_id, kind, original_name, stored_name, mime_type, file_size, content)
-       VALUES
-        ($1, 'cv', $2, $3, $4, $5, $6),
-        ($1, 'resume', $7, $8, $9, $10, $11)`,
-      [
-        applicationId,
-        upload.cv.originalName,
-        safeCvName,
-        upload.cv.mimeType,
-        upload.cv.size,
-        upload.cv.content,
-        upload.resume.originalName,
-        safeResumeName,
-        upload.resume.mimeType,
-        upload.resume.size,
-        upload.resume.content,
-      ]
-    );
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
 
   // Build attachment summary lines
   const fileLines: string[] = [];
@@ -155,20 +108,111 @@ export async function submitApplication(
 
   if (!emailSent) {
     logger.error("Failed to send application email", {
+      applicationId,
       name: input.name,
       email: input.email,
     });
   }
+
   await pgPool.query("UPDATE career_applications SET email_sent = $1 WHERE id = $2", [
     emailSent,
     applicationId,
   ]);
+}
+
+export async function submitApplication(
+  input: ApplicationInput,
+  upload: { cv: PendingUpload; resume: PendingUpload },
+  clientIp?: string
+) {
+  logger.info("Submitting job application", {
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    experience: input.experience,
+    hasCv: !!upload.cv,
+    hasResume: !!upload.resume,
+    ip: clientIp,
+  });
+
+  const applicationId = `career_${crypto.randomBytes(10).toString("hex")}`;
+  const safeCandidateName = getSafeCandidateName(input.name);
+  const ticketMessage = [
+    "New career application — Software Developer (Backend & Core Systems)",
+    `Experience: ${input.experience}`,
+    `Portfolio: ${input.portfolio || "Not provided"}`,
+    "",
+    "Summary & qualifications:",
+    input.coverNote,
+    "",
+    `CV: ${upload.cv.originalName}`,
+    `Résumé/Cover Letter: ${upload.resume.originalName}`,
+  ].join("\n");
+
+  const client = await pgPool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `INSERT INTO career_applications
+        (id, name, email, phone, experience, portfolio, cover_note, client_ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        applicationId,
+        input.name,
+        input.email,
+        input.phone,
+        input.experience,
+        input.portfolio || null,
+        input.coverNote,
+        clientIp || null,
+      ]
+    );
+    await client.query(
+      `INSERT INTO career_application_documents
+        (application_id, kind, original_name, stored_name, mime_type, file_size, content)
+       VALUES
+        ($1, 'cv', $2, $3, $4, $5, $6),
+        ($1, 'resume', $7, $8, $9, $10, $11)`,
+      [
+        applicationId,
+        upload.cv.originalName,
+        getStoredDocumentName("CV", safeCandidateName, upload.cv.originalName),
+        upload.cv.mimeType,
+        upload.cv.size,
+        upload.cv.content,
+        upload.resume.originalName,
+        getStoredDocumentName("Resume", safeCandidateName, upload.resume.originalName),
+        upload.resume.mimeType,
+        upload.resume.size,
+        upload.resume.content,
+      ]
+    );
+    await client.query(
+      `INSERT INTO tickets
+        (id, type, name, email, phone, company, message, status, priority, ip_address, created_at, updated_at)
+       VALUES ($1, 'application', $2, $3, $4, 'Career Application', $5, 'open', 'high', $6, NOW(), NOW())`,
+      [applicationId, input.name, input.email, input.phone, ticketMessage, clientIp || null]
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  void sendApplicationEmail(applicationId, input, upload, clientIp).catch((error) => {
+    logger.error("Application email background task failed", {
+      applicationId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  });
 
   return {
     applicationId,
     status: "received",
     message:
       "Thank you for your application. Our recruitment team will review your documents and reach out to qualified candidates.",
-    emailSent,
+    emailStatus: "queued",
   };
 }

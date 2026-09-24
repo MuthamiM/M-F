@@ -70,7 +70,7 @@ export function CareersClient() {
 
   const cvInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
-  const documentsReady = Boolean(cvUpload && resumeUpload);
+  const documentsReady = Boolean(cvUpload || resumeUpload);
 
   // ── Step 2: Submission state ───────────────────────────────────────────────
   const [submitStatus, setSubmitStatus] = useState<
@@ -102,14 +102,17 @@ export function CareersClient() {
 
   const validateDocument = (label: string, file: File) => {
     const allowedTypes = [
+      "",
       "application/pdf",
+      "application/x-pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/octet-stream",
+      "binary/octet-stream",
     ];
     const extension = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
 
-    if (![".pdf", ".doc", ".docx"].includes(extension) || !allowedTypes.includes(file.type)) {
+    if (![".pdf", ".doc", ".docx"].includes(extension) || (file.type && !allowedTypes.includes(file.type))) {
       return `${label} must be a PDF, DOC, or DOCX document.`;
     }
     if (file.size === 0) {
@@ -209,8 +212,8 @@ export function CareersClient() {
       return;
     }
 
-    if (!documentsReady || !cvUpload || !resumeUpload) {
-      setSubmitError("Please upload both your CV and résumé before submitting.");
+    if (!documentsReady || (!cvUpload && !resumeUpload)) {
+      setSubmitError("Please upload your CV before submitting.");
       setSubmitStatus("error");
       return;
     }
@@ -229,8 +232,8 @@ export function CareersClient() {
           experience: form.experience,
           portfolio: form.portfolio.trim(),
           coverNote: form.coverNote.trim(),
-          cvUploadToken: cvUpload.token,
-          resumeUploadToken: resumeUpload.token,
+          cvUploadToken: cvUpload?.token || resumeUpload?.token || "",
+          resumeUploadToken: resumeUpload?.token || "",
         }),
       });
 
@@ -676,7 +679,7 @@ export function CareersClient() {
                     </div>
                     <h3 className="text-base font-bold text-emerald-900">Application Received Successfully</h3>
                     <p className="text-xs text-emerald-800 max-w-md mx-auto leading-relaxed">
-                      Thank you for applying. Your details, CV, and Resume have been dispatched to our engineering
+                      Thank you for applying. Your details, CV, and Resume have been saved and queued for our engineering
                       leadership at{" "}
                       <span className="font-semibold">info@mftechnologies.org</span>.
                       Shortlisted candidates will be contacted for technical interviews.

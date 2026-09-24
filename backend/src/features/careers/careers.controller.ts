@@ -10,9 +10,11 @@ import {
 
 const ALLOWED_MIME_TYPES = [
   "application/pdf",
+  "application/x-pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/octet-stream", // Some browsers use this for DOCX files.
+  "binary/octet-stream",
 ];
 const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -164,38 +166,50 @@ export async function submitApplicationHandler(
       return;
     }
 
-    // uploadToken supports the earlier combined-upload API during rollout.
-    const cvToken = asToken(cvUploadToken) || asToken(uploadToken);
-    const resumeToken = asToken(resumeUploadToken) || asToken(uploadToken);
+    // Support single document upload (CV) or both CV and resume
+    const rawCvToken = asToken(cvUploadToken) || asToken(uploadToken);
+    const rawResumeToken = asToken(resumeUploadToken);
 
-    if (!cvToken || !resumeToken) {
+    if (!rawCvToken && !rawResumeToken) {
       res.status(400).json({
         success: false,
-        error: "Please upload both your CV and résumé before submitting.",
+        error: "Please upload your CV before submitting.",
       });
       return;
     }
 
-    const cvUpload = await getPendingUpload(cvToken, "cv");
-    const resumeUpload = await getPendingUpload(resumeToken, "resume");
-    if (!cvUpload || !resumeUpload) {
+    let cvUpload = rawCvToken
+      ? (await getPendingUpload(rawCvToken, "cv")) || (await getPendingUpload(rawCvToken))
+      : null;
+    let resumeUpload = rawResumeToken
+      ? (await getPendingUpload(rawResumeToken, "resume")) || (await getPendingUpload(rawResumeToken))
+      : null;
+
+    if (!cvUpload && !resumeUpload) {
       res.status(400).json({
         success: false,
         error:
-          "Your CV or résumé is missing or has expired. Please upload both documents again.",
+          "Your document is missing or has expired. Please choose your document again.",
       });
       return;
     }
 
+    // If only one document was provided, reuse it gracefully for both slots
+    if (!cvUpload && resumeUpload) {
+      cvUpload = resumeUpload;
+    } else if (cvUpload && !resumeUpload) {
+      resumeUpload = cvUpload;
+    }
+
     const upload: PendingUpload = {
-      token: `${cvToken}:${resumeToken}`,
+      token: `${rawCvToken || rawResumeToken}:${rawResumeToken || rawCvToken}`,
       kind: "cv",
-      originalName: cvUpload.originalName,
-      mimeType: cvUpload.mimeType,
-      size: cvUpload.size,
-      content: cvUpload.content,
-      createdAt: cvUpload.createdAt,
-      expiresAt: cvUpload.expiresAt,
+      originalName: cvUpload!.originalName,
+      mimeType: cvUpload!.mimeType,
+      size: cvUpload!.size,
+      content: cvUpload!.content,
+      createdAt: cvUpload!.createdAt,
+      expiresAt: cvUpload!.expiresAt,
     };
 
     const result = await careersService.submitApplication(
@@ -209,11 +223,11 @@ export async function submitApplicationHandler(
       },
       {
         cv: upload,
-        resume: resumeUpload,
+        resume: resumeUpload!,
       },
       rawIp
     );
-    await deletePendingUploads([cvToken, resumeToken]);
+    await deletePendingUploads([rawCvToken, rawResumeToken].filter(Boolean));
 
     res.status(201).json({ success: true, data: result });
   } catch (error) {

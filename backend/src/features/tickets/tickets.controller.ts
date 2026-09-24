@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as ticketsService from "./tickets.service";
 import { TicketStatus, TicketPriority, TicketType } from "./tickets.schema";
+import { pgPool } from "../../db/pgClient";
 
 export async function getTicketsHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -24,6 +25,37 @@ export async function getTicketByIdHandler(req: Request, res: Response, next: Ne
     const typing = ticketsService.getTypingStatus(id as string);
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.status(200).json({ success: true, data: { ...ticket, ...typing } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getApplicationDocumentHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id, kind } = req.params;
+    if (kind !== "cv" && kind !== "resume") {
+      res.status(400).json({ success: false, error: "Invalid document type." });
+      return;
+    }
+
+    const result = await pgPool.query(
+      `SELECT d.original_name, d.mime_type, d.content
+         FROM career_application_documents d
+         JOIN tickets t ON t.id = d.application_id
+        WHERE d.application_id = $1 AND d.kind = $2 AND t.type = 'application'`,
+      [id, kind]
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ success: false, error: "Application document not found." });
+      return;
+    }
+
+    const document = result.rows[0];
+    const safeName = String(document.original_name).replace(/[\\r\\n\"]/g, "_");
+    res.setHeader("Content-Type", document.mime_type || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(document.content);
   } catch (err) {
     next(err);
   }

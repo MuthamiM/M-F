@@ -290,6 +290,7 @@ export async function getStats() {
   let typeChatbot = 0;
   let typeDemo = 0;
   let typeContact = 0;
+  let typeApplication = 0;
 
   for (const row of res.rows) {
     const count = parseInt(row.count, 10) || 0;
@@ -302,6 +303,7 @@ export async function getStats() {
     if (row.type === "chatbot") typeChatbot += count;
     else if (row.type === "demo") typeDemo += count;
     else if (row.type === "contact") typeContact += count;
+    else if (row.type === "application") typeApplication += count;
   }
 
   const stats = {
@@ -313,6 +315,7 @@ export async function getStats() {
     typeChatbot,
     typeDemo,
     typeContact,
+    typeApplication,
   };
 
   await setWithTtl(cacheKey, JSON.stringify(stats), 3);

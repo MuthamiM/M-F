@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight, MapPin, Globe } from "lucide-react";
+import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight, MapPin, Globe, BriefcaseBusiness } from "lucide-react";
 
 interface TicketItem {
   id: string;
-  type: "chatbot" | "demo" | "contact";
+  type: "chatbot" | "demo" | "contact" | "application";
   name: string;
   email: string;
   phone?: string;
@@ -173,6 +173,7 @@ export default function AdminTicketsPage() {
                          {t.type === "chatbot" && <Phone className="h-2.5 w-2.5" />}
                          {t.type === "demo" && <FileText className="h-2.5 w-2.5" />}
                          {t.type === "contact" && <Mail className="h-2.5 w-2.5" />}
+                        {t.type === "application" && <BriefcaseBusiness className="h-2.5 w-2.5" />}
                          {t.type.toUpperCase()}
                        </span>
                      </td>
@@ -269,6 +270,7 @@ export default function AdminTicketsPage() {
                   <option value="chatbot">Chatbot Callback</option>
                   <option value="demo">Demo Request</option>
                   <option value="contact">Contact Message</option>
+                  <option value="application">Job Application</option>
                 </select>
               </div>
 
