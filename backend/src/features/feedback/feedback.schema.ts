@@ -18,6 +18,9 @@ export const createFeedbackSchema = z.object({
 });
 
 export const updateFeedbackSchema = z.object({
+  params: z.object({
+    id: z.string().min(1),
+  }),
   body: z.object({
     status: z.enum(["new", "reviewed", "resolved", "archived"]).optional(),
   }),
