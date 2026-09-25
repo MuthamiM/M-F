@@ -65,7 +65,7 @@ export function FloatingFaq() {
 
   /* ── DRAG STATE ── */
   const [dragOffsetX, setDragOffsetX] = useState(0);
-  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartXRef = useRef(0);
   const dragStartOffsetRef = useRef(0);
 
@@ -75,7 +75,47 @@ export function FloatingFaq() {
     pathname?.startsWith("/docs") ||
     pathname?.startsWith("/api-reference");
 
-  // Hover handlers: open on hover, autohide when cursor moves away IF NOT CLICKED
+  // Start dragging from a given clientX coordinate
+  const startDrag = useCallback((clientX: number) => {
+    setIsDragging(true);
+    setIsPinned(true);
+    dragStartXRef.current = clientX;
+    dragStartOffsetRef.current = dragOffsetX;
+  }, [dragOffsetX]);
+
+  // Global window pointer listeners for completely smooth, uninterrupted dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onPointerMove = (e: PointerEvent) => {
+      const delta = e.clientX - dragStartXRef.current;
+      const newOffset = dragStartOffsetRef.current + delta;
+
+      // Calculate max leftward drag so panel doesn't go off screen left
+      const panelWidth = windowRef.current?.offsetWidth || 380;
+      const maxLeftward = -(window.innerWidth - panelWidth - 24);
+
+      // Only allow dragging left (negative offset) and back to right (up to 0)
+      const clamped = Math.min(0, Math.max(maxLeftward, newOffset));
+      setDragOffsetX(clamped);
+    };
+
+    const onPointerUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [isDragging]);
+
+  // Hover handlers: open on hover, autohide when cursor moves away IF NOT CLICKED/DRAGGING
   const handleMouseEnter = () => {
     isHoveredRef.current = true;
     if (closeTimerRef.current) {
@@ -88,13 +128,13 @@ export function FloatingFaq() {
   const handleMouseLeave = () => {
     isHoveredRef.current = false;
     if (isPinned) return; // If clicked/pinned, do NOT autohide on mouse leave
-    if (isDraggingRef.current) return; // Don't autohide while dragging
+    if (isDragging) return; // Don't autohide while dragging
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
     }
     // Autohide promptly once cursor moves away from trigger & window
     closeTimerRef.current = setTimeout(() => {
-      if (!isHoveredRef.current && !isPinned && !isDraggingRef.current) {
+      if (!isHoveredRef.current && !isPinned && !isDragging) {
         setIsOpen(false);
       }
     }, 180);
@@ -109,41 +149,13 @@ export function FloatingFaq() {
     isHoveredRef.current = false;
     setIsOpen(false);
     setIsPinned(false);
+    setIsDragging(false);
     setDragOffsetX(0); // Reset drag position on close
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
   };
-
-  /* ── DRAG HANDLERS ── */
-  const handleDragStart = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    isDraggingRef.current = true;
-    dragStartXRef.current = e.clientX;
-    dragStartOffsetRef.current = dragOffsetX;
-    // Pin the window so it doesn't autohide while dragging
-    setIsPinned(true);
-    // Capture pointer to track movement even outside the element
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [dragOffsetX]);
-
-  const handleDragMove = useCallback((e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
-    const delta = e.clientX - dragStartXRef.current;
-    // Only allow dragging to the LEFT (negative offset), clamp at 0 (original position)
-    const newOffset = Math.min(0, dragStartOffsetRef.current + delta);
-    // Limit max leftward drag so panel stays at least 60px visible from right edge
-    const panelWidth = windowRef.current?.offsetWidth || 380;
-    const maxLeftward = -(window.innerWidth - panelWidth - 24); // keep 24px from left edge
-    setDragOffsetX(Math.max(maxLeftward, newOffset));
-  }, []);
-
-  const handleDragEnd = useCallback((e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
 
   // Only auto-focus search if the user clicked/pinned the window (prevents focus trapping on simple hover)
   useEffect(() => {
@@ -310,7 +322,7 @@ export function FloatingFaq() {
 
   return (
     <>
-      {/* ── GREY TAB TRIGGER WITH THREE VISIBLE HAMBURGER LINES (OPENS ON HOVER) ── */}
+      {/* ── GREY TAB TRIGGER WITH THREE VISIBLE HAMBURGER LINES (OPENS ON HOVER OR DRAG LEFT) ── */}
       <aside
         ref={triggerRef}
         aria-label="FAQ & Feedback"
@@ -320,6 +332,32 @@ export function FloatingFaq() {
       >
         <button
           type="button"
+          onPointerDown={(e) => {
+            if (e.button !== 0 && e.pointerType === "mouse") return;
+            const startX = e.clientX;
+            let didDrag = false;
+
+            const onMove = (moveEvt: PointerEvent) => {
+              const diff = moveEvt.clientX - startX;
+              // If pulled left by 6px or more, open FAQ and smoothly drag!
+              if (diff < -6 && !didDrag) {
+                didDrag = true;
+                setIsOpen(true);
+                setIsPinned(true);
+                startDrag(moveEvt.clientX);
+                cleanup();
+              }
+            };
+
+            const onUp = () => cleanup();
+            const cleanup = () => {
+              window.removeEventListener("pointermove", onMove);
+              window.removeEventListener("pointerup", onUp);
+            };
+
+            window.addEventListener("pointermove", onMove);
+            window.addEventListener("pointerup", onUp);
+          }}
           onClick={() => {
             if (isOpen && isPinned) {
               handleClose();
@@ -331,8 +369,8 @@ export function FloatingFaq() {
           id="floating-faq-hamburger-btn"
           aria-expanded={isOpen}
           aria-label="Frequently Asked Questions & Feedback"
-          title="FAQ & Feedback"
-          className="group relative flex flex-col items-center justify-center bg-[#475569] hover:bg-[#334155] active:bg-[#1E293B] text-white border-l border-t border-b border-slate-400/50 shadow-xl cursor-pointer transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-slate-300 w-4 sm:w-5 hover:w-6 h-14 sm:h-16 rounded-l-md px-1"
+          title="FAQ & Feedback (Click or drag left to open)"
+          className="group relative flex flex-col items-center justify-center bg-[#475569] hover:bg-[#334155] active:bg-[#1E293B] text-white border-l border-t border-b border-slate-400/50 shadow-xl cursor-grab active:cursor-grabbing transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-slate-300 w-4 sm:w-5 hover:w-6 h-14 sm:h-16 rounded-l-md px-1"
         >
           {/* Three visible hamburger lines */}
           <div className="flex flex-col items-center justify-center gap-1.5 w-full">
@@ -351,76 +389,105 @@ export function FloatingFaq() {
       {/* ── CHATBOT-SIZED FLOATING FAQ & FEEDBACK WINDOW (MATCHES CHATWIDGET AESTHETIC) ── */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            ref={windowRef}
-            id="floating-faq-window"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="faq-window-title"
-            initial={{ opacity: 0, x: 25, scale: 0.96 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 25, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+          <div
+            id="floating-faq-outer-positioner"
+            className="fixed right-2 sm:right-6 top-1/2 z-[100000] select-none"
+            style={{
+              transform: `translateY(-50%) translateX(${dragOffsetX}px)`,
+              willChange: "transform",
+              touchAction: "none",
+            }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onClick={handleWindowClick}
-            style={{ transform: `translateY(-50%) translateX(${dragOffsetX}px)` }}
-            className="fixed right-2 sm:right-6 top-1/2 z-[100000] w-[350px] sm:w-[380px] max-w-[calc(100vw-16px)] h-[520px] max-h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1B222C] font-sans before:absolute before:left-full before:top-0 before:bottom-0 before:w-8 before:content-['']"
           >
-            {/* Header — acts as drag handle (hold & drag left) */}
-            <div
-              className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0 select-none"
-              style={{ cursor: isDraggingRef.current ? "grabbing" : "grab", touchAction: "none" }}
-              onPointerDown={handleDragStart}
-              onPointerMove={handleDragMove}
-              onPointerUp={handleDragEnd}
-              onPointerCancel={handleDragEnd}
+            <motion.div
+              ref={windowRef}
+              id="floating-faq-window"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="faq-window-title"
+              initial={{ opacity: 0, x: 25, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 25, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="w-[350px] sm:w-[380px] max-w-[calc(100vw-16px)] h-[520px] max-h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1B222C] font-sans before:absolute before:left-full before:top-0 before:bottom-0 before:w-8 before:content-['']"
             >
-              <div className="flex items-center gap-2">
-                {/* Drag grip indicator */}
-                <GripVertical className="h-3.5 w-3.5 text-[#9AA5B1]/60 shrink-0 -ml-1" />
-                <MfLogo size={26} />
-                <div>
-                  <h3 id="faq-window-title" className="text-xs font-bold tracking-tight">
-                    M&amp;F FAQ &amp; Feedback
-                  </h3>
-                  <span className="text-[9px] text-[#9AA5B1] block -mt-0.5">
-                    Online Knowledge Base
-                  </span>
+              {/* Header — acts as drag handle (hold & drag left) */}
+              <div
+                className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0 select-none cursor-grab active:cursor-grabbing border-b border-white/10"
+                style={{ cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
+                onPointerDown={(e) => {
+                  if (e.button !== 0 && e.pointerType === "mouse") return;
+                  if ((e.target as HTMLElement).closest("button")) return;
+                  e.preventDefault();
+                  startDrag(e.clientX);
+                }}
+                onDoubleClick={() => setDragOffsetX(0)}
+                title="Hold and drag left to reposition window (double-click to reset)"
+              >
+                <div className="flex items-center gap-2">
+                  {/* Drag grip indicator */}
+                  <div className="flex items-center justify-center p-1 rounded hover:bg-white/10 text-slate-300 hover:text-white transition-colors">
+                    <GripVertical className="h-3.5 w-3.5" />
+                  </div>
+                  <MfLogo size={26} />
+                  <div>
+                    <h3 id="faq-window-title" className="text-xs font-bold tracking-tight">
+                      M&amp;F FAQ &amp; Feedback
+                    </h3>
+                    <span className="text-[9px] text-[#9AA5B1] block -mt-0.5">
+                      Hold &amp; drag left to reposition
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {dragOffsetX < -20 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDragOffsetX(0);
+                      }}
+                      className="text-[10px] text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                      title="Reset position to right edge"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleClose(); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="text-[#9AA5B1] hover:text-white transition-colors rounded-lg p-1 cursor-pointer"
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); handleClose(); }}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="text-[#9AA5B1] hover:text-white transition-colors rounded-lg p-1 cursor-pointer"
-                title="Close"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Sub-Header Tabs Switcher */}
-            <div className="bg-slate-50 px-3 pt-2 pb-1.5 border-b border-slate-200 shrink-0 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPinned(true);
-                  setActiveTab("questions");
-                }}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeTab === "questions"
-                    ? "bg-white text-[#1B222C] shadow-xs border border-slate-200"
-                    : "text-slate-500 hover:text-[#1B222C] hover:bg-white/60"
-                }`}
-              >
-                <span>Answered Questions</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-[#3E4C59]">
-                  {FAQ_ITEMS.length}
-                </span>
-              </button>
+              {/* Sub-Header Tabs Switcher */}
+              <div className="bg-slate-50 px-3 pt-2 pb-1.5 border-b border-slate-200 shrink-0 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPinned(true);
+                    setActiveTab("questions");
+                  }}
+                  className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    activeTab === "questions"
+                      ? "bg-white text-[#1B222C] shadow-xs border border-slate-200"
+                      : "text-slate-500 hover:text-[#1B222C] hover:bg-white/60"
+                  }`}
+                >
+                  <span>Answered Questions</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-[#3E4C59]">
+                    {FAQ_ITEMS.length}
+                  </span>
+                </button>
 
               <button
                 type="button"
@@ -821,6 +888,7 @@ export function FloatingFaq() {
               </div>
             )}
           </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

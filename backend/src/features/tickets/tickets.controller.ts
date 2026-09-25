@@ -1,7 +1,9 @@
+import fs from "fs";
 import { Request, Response, NextFunction } from "express";
 import * as ticketsService from "./tickets.service";
 import { TicketStatus, TicketPriority, TicketType } from "./tickets.schema";
 import { pgPool } from "../../db/pgClient";
+import { saveUploadedFileToDb } from "../uploads/uploads.service";
 
 export async function getTicketsHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -155,6 +157,23 @@ export async function uploadAttachmentHandler(req: Request, res: Response, next:
     const file = req.file;
     const fileUrl = `/uploads/${file.filename}`;
     const isImage = file.mimetype.startsWith("image/");
+
+    // Persist file into PostgreSQL bytea immediately
+    try {
+      const content = await fs.promises.readFile(file.path);
+      await saveUploadedFileToDb(
+        file.filename,
+        file.originalname,
+        file.mimetype,
+        file.size,
+        content
+      );
+    } catch (saveErr: any) {
+      // Log error but continue so the user still gets their upload response
+      const { logger } = require("../../config/logger");
+      logger.error(`Failed to persist file in PostgreSQL: ${saveErr.message}`);
+    }
+
     res.status(200).json({
       success: true,
       data: {

@@ -18,6 +18,7 @@ import { chatbotRouter } from "./features/chatbot/chatbot.routes";
 import { v1Router } from "./features/api-v1/v1.routes";
 import { careersRouter } from "./features/careers/careers.routes";
 import { feedbackRouter } from "./features/feedback/feedback.routes";
+import { serveUploadedFileHandler } from "./features/uploads/uploads.service";
 
 export function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp() {
   applySecurityMiddleware(app);
   app.use(express.json({ limit: "25mb" }));
   app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+  app.get("/uploads/:filename", serveUploadedFileHandler);
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   // Health and Status routes (unlimited for monitoring/uptime probes)

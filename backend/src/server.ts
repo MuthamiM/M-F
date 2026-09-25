@@ -12,6 +12,15 @@ import { ticketStore } from "./features/tickets/tickets.store";
     // continue even if persistence init fails
   }
 
+  // Auto-restore any files from uploads directory into PostgreSQL database
+  try {
+    const { restoreUploadedFilesFromDisk } = await import("./features/uploads/uploads.service");
+    const path = await import("path");
+    await restoreUploadedFilesFromDisk(path.join(process.cwd(), "uploads"));
+  } catch (err: any) {
+    logger.warn(`Uploads auto-restore notice: ${err?.message}`);
+  }
+
   const app = createApp();
 
   function listen() {
