@@ -19,8 +19,18 @@ import {
   Play,
   Pause,
   Timer,
-  PhoneCall
+  PhoneCall,
+  Paperclip,
+  Smile,
+  FileText,
+  Download,
+  Loader2,
+  X,
+  Globe,
+  MapPin,
+  ExternalLink
 } from "lucide-react";
+import { IosEmojiPicker } from "@/shared/components/IosEmojiPicker";
 
 
 interface Note {
@@ -34,6 +44,9 @@ interface ChatMessage {
   sender: "client" | "agent";
   senderName: string;
   text: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: "image" | "document";
   timestamp: string;
 }
 
@@ -49,7 +62,7 @@ interface CallLog {
 
 interface TicketDetail {
   id: string;
-  type: "chatbot" | "demo" | "contact";
+  type: "chatbot" | "demo" | "contact" | "application";
   name: string;
   email: string;
   phone?: string;
@@ -58,9 +71,17 @@ interface TicketDetail {
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high";
   assignedAgent?: string;
+  latitude?: number;
+  longitude?: number;
+  ipAddress?: string;
+  geoCity?: string;
+  geoCountry?: string;
+  geoRegion?: string;
   notes: Note[];
   messages: ChatMessage[];
   callLogs: CallLog[];
+  isClientTyping?: boolean;
+  isAgentTyping?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +109,139 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [quickMessage, setQuickMessage] = useState("");
   const [sendingQuick, setSendingQuick] = useState(false);
   const [prevMsgCount, setPrevMsgCount] = useState<number | null>(null);
+
+  // Live typing state
+  const [isClientTyping, setIsClientTyping] = useState(false);
+  const adminTypingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Attachment & Emoji state
+  const [showAdminEmojiPicker, setShowAdminEmojiPicker] = useState(false);
+  const [adminAttachment, setAdminAttachment] = useState<{ url: string; name: string; type: "image" | "document"; size?: number; isUploading?: boolean } | null>(null);
+  const [adminUploading, setAdminUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const compressImageForUpload = async (file: File): Promise<File> => {
+    if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
+      return file;
+    }
+    return new Promise((resolve) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDim = 1200;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) {
+              resolve(file);
+              return;
+            }
+            const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+            resolve(new File([blob], safeName, { type: "image/jpeg", lastModified: Date.now() }));
+          },
+          "image/jpeg",
+          0.75
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+      img.src = objectUrl;
+    });
+  };
+
+  const uploadAdminAttachment = async (file: File) => {
+    if (adminUploading) return;
+    setAdminUploading(true);
+
+    // Instant local preview thumbnail while optimizing & uploading
+    const localUrl = URL.createObjectURL(file);
+    setAdminAttachment({
+      url: localUrl,
+      name: file.name,
+      type: file.type.startsWith("image/") ? "image" : "document",
+      size: file.size,
+      isUploading: true,
+    });
+
+    try {
+      const optimizedFile = await compressImageForUpload(file);
+      const formData = new FormData();
+      formData.append("file", optimizedFile);
+
+      const response = await fetch("/api/tickets/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.data) {
+        setAdminAttachment({
+          ...data.data,
+          isUploading: false,
+        });
+      } else {
+        setAdminAttachment(null);
+      }
+    } catch (err) {
+      console.error("Failed to upload attachment:", err);
+      setAdminAttachment(null);
+    } finally {
+      setAdminUploading(false);
+    }
+  };
+
+  const handleAdminInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNewChatMessage(val);
+
+    if (adminTypingTimeoutRef.current) clearTimeout(adminTypingTimeoutRef.current);
+    const isTypingNow = val.trim().length > 0;
+
+    fetch(`/api/tickets/${id}/typing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sender: "agent", isTyping: isTypingNow }),
+    }).catch(() => {});
+
+    if (isTypingNow) {
+      adminTypingTimeoutRef.current = setTimeout(() => {
+        fetch(`/api/tickets/${id}/typing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sender: "agent", isTyping: false }),
+        }).catch(() => {});
+      }, 3000);
+    }
+  };
+
+  const handleAdminPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      e.preventDefault();
+      uploadAdminAttachment(file);
+    }
+  };
 
   // Call logging fields
   const [callOutcome, setCallOutcome] = useState<string>("answered");
@@ -129,9 +283,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const fetchDetail = async () => {
     try {
       const token = sessionStorage.getItem("adminToken");
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = { 
+        Authorization: `Bearer ${token}`,
+        "Cache-Control": "no-cache",
+      };
 
-      const response = await fetch(`/api/tickets/${id}`, { headers });
+      const response = await fetch(`/api/tickets/${id}`, { headers, cache: "no-store" });
       const resData = await response.json();
 
       if (response.ok && resData.success) {
@@ -139,6 +296,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         setStatus(resData.data.status);
         setPriority(resData.data.priority);
         setAssignedAgent(resData.data.assignedAgent || "");
+        setIsClientTyping(Boolean(resData.data.isClientTyping));
       } else {
         setErrorMsg(resData.error || "Failed to load ticket details.");
       }
@@ -149,16 +307,31 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const openApplicationDocument = async (kind: "cv" | "resume") => {
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const response = await fetch(`/api/tickets/${id}/application-documents/${kind}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Unable to load document");
+      const fileUrl = URL.createObjectURL(await response.blob());
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 60_000);
+    } catch {
+      setErrorMsg("Could not open the application document.");
+    }
+  };
+
   useEffect(() => {
     fetchDetail();
-    // Live polling: reload details and chat messages every 4 seconds
-    const interval = setInterval(fetchDetail, 4000);
+    // Live polling: reload details, messages, and typing status every 700ms
+    const interval = setInterval(fetchDetail, 700);
     return () => clearInterval(interval);
   }, [id]);
 
   const handleSendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newChatMessage.trim()) return;
+    if (!newChatMessage.trim() && !adminAttachment) return;
 
     setSendingChat(true);
     try {
@@ -174,12 +347,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({
           text: newChatMessage.trim(),
           senderName: agentName,
+          attachmentUrl: adminAttachment?.url,
+          attachmentName: adminAttachment?.name,
+          attachmentType: adminAttachment?.type,
         }),
       });
 
       const resData = await response.json();
       if (response.ok && resData.success) {
         setNewChatMessage("");
+        setAdminAttachment(null);
+        setShowAdminEmojiPicker(false);
         fetchDetail();
       } else {
         setErrorMsg(resData.error || "Failed to send message.");
@@ -405,7 +583,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   if (!ticket) return null;
 
   return (
-    <div className="space-y-6 font-sans antialiased text-[#1B222C]">
+    <>
+      <div className="space-y-6 font-sans antialiased text-[#1B222C]">
       {/* Top Nav and ID */}
       <div className="space-y-2">
         <Link href="/admin/tickets" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
@@ -471,6 +650,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 </div>
               )}
 
+              {ticket.type === "application" && (
+                <div className="sm:col-span-2 border-t border-slate-100 pt-4">
+                  <span className="text-[10px] text-slate-400 block font-semibold mb-2">APPLICATION DOCUMENTS</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => openApplicationDocument("cv")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                      <FileText className="h-4 w-4 text-[#007AFF]" /> View CV
+                    </button>
+                    <button type="button" onClick={() => openApplicationDocument("resume")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                      <FileText className="h-4 w-4 text-[#007AFF]" /> View Résumé
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2.5 text-xs">
                 <Clock className="h-4 w-4 text-slate-400 shrink-0" />
                 <div>
@@ -478,6 +671,59 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <span className="font-bold text-slate-700">{new Date(ticket.createdAt).toLocaleString()}</span>
                 </div>
               </div>
+
+              {ticket.ipAddress && (
+                <div className="flex items-center gap-2.5 text-xs">
+                  <Globe className="h-4 w-4 text-slate-400 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Visitor IP Address</span>
+                    <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200">{ticket.ipAddress}</span>
+                  </div>
+                </div>
+              )}
+
+              {(ticket.geoCity || ticket.geoCountry || ticket.geoRegion || (ticket.latitude !== undefined && ticket.longitude !== undefined)) && (
+                <div className="flex flex-col gap-2.5 text-xs sm:col-span-2 bg-slate-50 border border-[#E4E7EB] rounded-xl p-4">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="space-y-1 flex-1">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Geolocation Origin</span>
+                      <div className="font-bold text-slate-800 text-xs">
+                        {[ticket.geoCity, ticket.geoRegion, ticket.geoCountry].filter(Boolean).join(", ")}
+                      </div>
+                      {ticket.latitude !== undefined && ticket.longitude !== undefined && (
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-normal">
+                          <span>Coordinates: {ticket.latitude.toFixed(4)}, {ticket.longitude.toFixed(4)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${ticket.latitude},${ticket.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#1B222C] font-bold underline hover:text-[#3E4C59] inline-flex items-center gap-0.5"
+                          >
+                            Open Google Maps <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {ticket.latitude !== undefined && ticket.longitude !== undefined && (
+                    <div className="mt-1 h-44 w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100 relative">
+                      <iframe
+                        title="Interactive Geolocation Map"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        scrolling="no"
+                        marginHeight={0}
+                        marginWidth={0}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${ticket.longitude - 0.05}%2C${ticket.latitude - 0.05}%2C${ticket.longitude + 0.05}%2C${ticket.latitude + 0.05}&layer=mapnik&marker=${ticket.latitude}%2C${ticket.longitude}`}
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-[#E4E7EB]/60 pt-4 space-y-2">
@@ -644,7 +890,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           )}
 
           {/* Live Chat Communication Hub (Real-time chat client interface) */}
-          {ticket.type === "chatbot" && (
+          {(ticket.type === "chatbot" || (ticket.messages && ticket.messages.length > 0)) && (
             <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-[#E4E7EB]/60 pb-3">
                 <div className="flex items-center gap-2">
@@ -663,12 +909,41 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   ticket.messages.map((msg) => (
                     <div key={msg.id} className="space-y-1">
                       <div className={`flex ${msg.sender === "agent" ? "justify-end" : "justify-start"}`}>
-                        <div className={`p-3 text-xs font-semibold leading-relaxed rounded-2xl shadow-sm ${
+                        <div className={`p-3 text-xs font-semibold leading-relaxed rounded-2xl shadow-sm max-w-[85%] ${
                           msg.sender === "agent"
                             ? "bg-[#1B222C] text-white rounded-tr-none"
                             : "bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200/60"
                         }`}>
-                          {msg.text}
+                          {msg.attachmentUrl && (
+                            <div className="mb-2">
+                              {msg.attachmentType === "image" || /\.(png|jpe?g|webp|gif)$/i.test(msg.attachmentUrl) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImage({ url: msg.attachmentUrl!, name: msg.attachmentName || "Attached Image" })}
+                                  className="block overflow-hidden rounded-xl group text-left cursor-zoom-in"
+                                >
+                                  <img
+                                    src={msg.attachmentUrl}
+                                    alt={msg.attachmentName || "Attached screenshot or photo"}
+                                    className="max-h-60 max-w-full rounded-xl object-cover hover:opacity-95 transition-opacity border border-black/10 shadow-sm"
+                                  />
+                                </button>
+                              ) : (
+                                <a
+                                  href={msg.attachmentUrl}
+                                  download={msg.attachmentName || "download"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-2 p-2 rounded-xl bg-black/5 hover:bg-black/10 transition-colors text-xs font-medium"
+                                >
+                                  <FileText className="h-4 w-4 shrink-0 text-[#007AFF]" />
+                                  <span className="truncate flex-1 underline">{msg.attachmentName || "Attached File"}</span>
+                                  <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {msg.text && <div>{msg.text}</div>}
                         </div>
                       </div>
                       <span className={`text-[9px] font-bold text-slate-400 block ${
@@ -687,20 +962,117 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 )}
               </div>
 
+              {/* Real-time Visitor Typing Notification */}
+              {isClientTyping && (
+                <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 animate-pulse">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>💬 Visitor ({ticket.name}) is typing right now...</span>
+                </div>
+              )}
+
+              {/* Admin Attached File Preview Strip */}
+              {adminAttachment && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    {adminAttachment.type === "image" ? (
+                      <div
+                        className="relative h-9 w-9 shrink-0 cursor-pointer"
+                        onClick={() => !adminAttachment.isUploading && setPreviewImage({ url: adminAttachment.url, name: adminAttachment.name })}
+                      >
+                        <img src={adminAttachment.url} alt="Thumbnail" className={`h-9 w-9 object-cover rounded-lg border border-slate-300 ${adminAttachment.isUploading ? "opacity-50" : "hover:opacity-90"}`} />
+                        {adminAttachment.isUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <FileText className="h-4 w-4 text-[#007AFF] shrink-0" />
+                    )}
+                    <div className="truncate">
+                      <span className="truncate font-semibold text-slate-700 block">{adminAttachment.name}</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        {adminAttachment.isUploading ? "Optimizing & uploading..." : (adminAttachment.size ? `${Math.round(adminAttachment.size / 1024)} KB` : "Ready to send")}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAdminAttachment(null)}
+                    className="p-1 text-slate-400 hover:text-red-500 rounded-full transition-colors cursor-pointer shrink-0"
+                    title="Remove attachment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Chat Input Bar */}
-              <form onSubmit={handleSendChatMessage} className="flex gap-2 border-t border-[#E4E7EB]/60 pt-4">
+              <form onSubmit={handleSendChatMessage} className="relative flex items-center gap-2 border-t border-[#E4E7EB]/60 pt-4">
+                {/* iPhone Emoji Picker Popover */}
+                {showAdminEmojiPicker && (
+                  <IosEmojiPicker
+                    position="top-left"
+                    onSelect={(emoji) => {
+                      setNewChatMessage((prev) => prev + emoji);
+                      setShowAdminEmojiPicker(false);
+                    }}
+                    onClose={() => setShowAdminEmojiPicker(false)}
+                  />
+                )}
+
+                {/* Hidden File Input for Screenshots, Photos, and Documents */}
+                <input
+                  ref={adminFileInputRef}
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      uploadAdminAttachment(e.target.files[0]);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+
+                {/* Paperclip Button */}
+                <button
+                  type="button"
+                  onClick={() => adminFileInputRef.current?.click()}
+                  disabled={adminUploading || sendingChat}
+                  title="Attach screenshot, photo, or document"
+                  className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-[#1B222C] hover:bg-slate-100 disabled:opacity-40 transition-colors cursor-pointer shrink-0 border border-slate-200"
+                >
+                  {adminUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#007AFF]" /> : <Paperclip className="h-4 w-4" />}
+                </button>
+
+                {/* Apple Emoji Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdminEmojiPicker((prev) => !prev)}
+                  disabled={sendingChat}
+                  title="iPhone Emojis"
+                  className={`h-10 w-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200 ${
+                    showAdminEmojiPicker ? "bg-slate-200 text-[#007AFF]" : "text-slate-500 hover:text-[#1B222C] hover:bg-slate-100"
+                  }`}
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
+
                 <input
                   type="text"
                   value={newChatMessage}
-                  onChange={(e) => setNewChatMessage(e.target.value)}
-                  placeholder={`Reply to ${ticket.name}...`}
+                  onChange={handleAdminInputChange}
+                  onPaste={handleAdminPaste}
+                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
+                  placeholder={`Reply to ${ticket.name} or paste screenshot...`}
                   className="flex-1 text-xs px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold bg-slate-50/50"
                   disabled={sendingChat}
                 />
                 <button
                   type="submit"
-                  disabled={sendingChat || !newChatMessage.trim()}
-                  className="px-4 bg-[#1B222C] hover:bg-[#3E4C59] text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  disabled={sendingChat || (!newChatMessage.trim() && !adminAttachment) || adminUploading}
+                  className="px-5 py-3 bg-[#1B222C] hover:bg-[#3E4C59] text-white font-bold text-xs rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
                 >
                   {sendingChat ? (
                     <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -813,6 +1185,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <textarea
                     value={quickMessage}
                     onChange={(e) => setQuickMessage(e.target.value)}
+                    onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                     placeholder="Short message to send to the client..."
                     rows={2}
                     className="w-full text-xs px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B222C] font-semibold resize-none"
@@ -871,5 +1244,40 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
     </div>
+
+      {/* ── Full-Screen Image Lightbox Modal ── */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+            aria-label="Close preview"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={previewImage.url}
+            alt={previewImage.name}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain select-none"
+          />
+          <a
+            href={previewImage.url}
+            download={previewImage.name}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 right-6 flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-[#1B222C] font-bold text-xs rounded-xl shadow-lg transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download</span>
+          </a>
+        </div>
+      )}
+    </>
   );
 }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 100" width="540" height="100">
+  <g transform="translate(10, 18)">
+    <circle cx="32" cy="32" r="32" fill="#1B222C"/>
+    <circle cx="44" cy="32" r="14" fill="#FFFFFF"/>
+    <circle cx="44" cy="32" r="14" fill="none" stroke="#1B222C" stroke-width="4"/>
+  </g>
+  <text x="100" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="800" fill="#1B222C" letter-spacing="-1">M&amp;F</text>
+  <text x="195" y="60" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="400" fill="#6B7684" letter-spacing="-0.5">Technologies</text>
+</svg>

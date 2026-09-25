@@ -5,12 +5,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "localhost",
     "127.0.0.1",
-    "100.87.92.72",
     "192.168.1.158",
     "192.168.1.247",
     "*.trycloudflare.com",
-    "*.ts.net",
-    "*.tail953a25.ts.net",
   ],
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL || "http://localhost:4000";
@@ -18,6 +15,24 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: "/v1/:path*",
+        destination: `${backendUrl}/v1/:path*`,
+      },
+      {
+        source: "/uploads/:path*",
+        destination: `${backendUrl}/uploads/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
       },
     ];
   },

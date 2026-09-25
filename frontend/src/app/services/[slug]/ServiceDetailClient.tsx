@@ -1,10 +1,10 @@
-// src/app/services/[slug]/ServiceDetailClient.tsx
 "use client";
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Service } from "@/features/landing/data/services";
 import { ScrollAnimate } from "@/shared/components/ScrollAnimate";
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
 
 interface ServiceDetailClientProps {
   service: Service;
@@ -16,14 +16,13 @@ export function ServiceDetailClient({ service, related }: ServiceDetailClientPro
     <main className="min-h-screen bg-white">
       {/* Hero Banner */}
       <section className="bg-cloud border-b border-fog/20 px-0">
-        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
-          <Link
-            href="/#services"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate hover:text-graphite transition-colors mb-6 sm:mb-8"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Services
-          </Link>
+        <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
+          <Breadcrumbs
+            items={[
+              { label: "Services", href: "/services" },
+              { label: service.title },
+            ]}
+          />
 
           <h1 className="font-display text-3xl font-bold tracking-tight text-graphite sm:text-4xl md:text-5xl animate-fade-in-up leading-tight max-w-3xl">
             {service.title}

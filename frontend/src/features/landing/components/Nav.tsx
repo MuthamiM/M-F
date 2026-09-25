@@ -9,14 +9,17 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const NAV_LINKS = [
   { label: "Home", href: "/", hash: "#home" },
-  { label: "About", href: "/#about", hash: "#about" },
-  { label: "Services", href: "/#services", hash: "#services" },
+  { label: "About", href: "/about", hash: "" },
+  { label: "Services", href: "/services", hash: "" },
+  { label: "News", href: "/news", hash: "" },
   { label: "Clients", href: "/our-clients", hash: "" },
+  { label: "FAQ", href: "/faq", hash: "" },
   { label: "Careers", href: "/careers", hash: "" },
   { label: "Contact", href: "/contact", hash: "" },
 ];
 
 const SERVICES_LIST = [
+  { label: "All Services Overview", href: "/services", desc: "Complete 10-module infrastructure catalog" },
   { label: "Workflow Automation", href: "/services/workflow-automation", desc: "Intelligent credit approval pipelines" },
   { label: "Developer API & Docs", href: "/docs", desc: "REST & GraphQL integration suites" },
   { label: "Security & Compliance", href: "/security", desc: "Bank-grade AES-256 & SOC 2 audit readiness" },
@@ -24,7 +27,7 @@ const SERVICES_LIST = [
 ];
 
 const ABOUT_LIST = [
-  { label: "About M&F", href: "/#about", desc: "Institutional lending technology overview" },
+  { label: "About M&F", href: "/about", desc: "Company mission, leadership & milestones" },
   { label: "Who We Are", href: "/where-we-are", desc: "Our engineering leadership & vision" },
   { label: "Get Involved", href: "/get-involved", desc: "Partner program & institutional advisory" },
 ];
@@ -77,7 +80,11 @@ export function Nav() {
   const isActive = useCallback(
     (link: (typeof NAV_LINKS)[0]) => {
       if (!pathname) return false;
+      if (link.href === "/about") return pathname === "/about";
+      if (link.href === "/services") return pathname.startsWith("/services");
+      if (link.href === "/news") return pathname.startsWith("/news");
       if (link.href === "/our-clients") return pathname === "/our-clients";
+      if (link.href === "/faq") return pathname === "/faq";
       if (link.href === "/careers") return pathname === "/careers";
       if (link.href === "/contact") return pathname === "/contact";
       if (pathname === "/" && link.hash) return activeHash === link.hash;
@@ -86,7 +93,7 @@ export function Nav() {
     [pathname, activeHash]
   );
 
-  const apiDocsUrl = "/api/docs/sitemap";
+  const apiDocsUrl = "/docs";
 
   return (
     <>
@@ -106,16 +113,16 @@ export function Nav() {
 
           {/* Header Controls */}
           <div className="flex items-center gap-3">
-            {/* Desktop API CTA */}
-            <a
-              href={apiDocsUrl}
+            {/* Desktop API CTA - Opens in a new tab */}
+            <Link
+              href="/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-md bg-[#1B222C] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#3E4C59] transition-colors"
             >
               <span>API Reference</span>
               <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
-            </a>
+            </Link>
 
             {/* Hamburger Menu Trigger Button */}
             <button
@@ -270,6 +277,8 @@ export function Nav() {
                           <Link
                             key={item.label}
                             href={item.href}
+                            target={item.href === "/docs" ? "_blank" : undefined}
+                            rel={item.href === "/docs" ? "noopener noreferrer" : undefined}
                             onClick={() => handleNavClick(item.href)}
                             className="block p-3 rounded-lg bg-white hover:bg-[#F1F5F9] border border-[#9AA5B1]/20 transition-colors group"
                           >

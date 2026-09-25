@@ -4,11 +4,11 @@
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$PROJECT_DIR/logs"
 
-echo "🛑 Stopping M&F Technologies services..."
+echo " Stopping M&F Technologies services..."
 
 # Kill backend
 if [ -f "$LOG_DIR/backend.pid" ]; then
-    kill "$(cat "$LOG_DIR/backend.pid")" 2>/dev/null && echo "   ✅ Backend stopped" || echo "   ℹ️  Backend was not running"
+    kill "$(cat "$LOG_DIR/backend.pid")" 2>/dev/null && echo "    Backend stopped" || echo "   ℹ️  Backend was not running"
     rm -f "$LOG_DIR/backend.pid"
 fi
 
@@ -21,9 +21,6 @@ fi
 # Also kill by port in case PIDs are stale
 lsof -ti:4000 2>/dev/null | xargs -r kill 2>/dev/null || true
 lsof -ti:3000 2>/dev/null | xargs -r kill 2>/dev/null || true
-
-# Reset Tailscale Funnel
-sudo tailscale funnel reset 2>/dev/null && echo "   ✅ Tailscale Funnel stopped" || echo "   ℹ️  Funnel was not active"
 
 echo ""
 echo "All services stopped."

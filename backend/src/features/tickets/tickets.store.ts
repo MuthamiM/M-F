@@ -43,6 +43,12 @@ class TicketStore {
       status: row.status as any,
       priority: row.priority as any,
       assignedAgent: row.assigned_agent || undefined,
+      latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : undefined,
+      longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : undefined,
+      ipAddress: row.ip_address || undefined,
+      geoCity: row.geo_city || undefined,
+      geoCountry: row.geo_country || undefined,
+      geoRegion: row.geo_region || undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       notes: notesRes.rows.map((n: any) => ({
@@ -55,6 +61,9 @@ class TicketStore {
         sender: m.sender as any,
         senderName: m.sender_name,
         text: m.text,
+        attachmentUrl: m.attachment_url || undefined,
+        attachmentName: m.attachment_name || undefined,
+        attachmentType: m.attachment_type || undefined,
         timestamp: new Date(m.timestamp),
       })),
       callLogs: callsRes.rows.map((c: any) => ({
@@ -93,6 +102,9 @@ class TicketStore {
         sender: m.sender as any,
         senderName: m.sender_name,
         text: m.text,
+        attachmentUrl: m.attachment_url || undefined,
+        attachmentName: m.attachment_name || undefined,
+        attachmentType: m.attachment_type || undefined,
         timestamp: new Date(m.timestamp),
       });
     }
@@ -122,6 +134,12 @@ class TicketStore {
       status: row.status as any,
       priority: row.priority as any,
       assignedAgent: row.assigned_agent || undefined,
+      latitude: row.latitude !== null && row.latitude !== undefined ? Number(row.latitude) : undefined,
+      longitude: row.longitude !== null && row.longitude !== undefined ? Number(row.longitude) : undefined,
+      ipAddress: row.ip_address || undefined,
+      geoCity: row.geo_city || undefined,
+      geoCountry: row.geo_country || undefined,
+      geoRegion: row.geo_region || undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       notes: notesMap[row.id] || [],
@@ -137,12 +155,18 @@ class TicketStore {
 
       // 1. Upsert ticket
       const ticketQuery = `
-        INSERT INTO tickets (id, type, name, email, phone, company, message, status, priority, assigned_agent, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO tickets (id, type, name, email, phone, company, message, status, priority, assigned_agent, latitude, longitude, ip_address, geo_city, geo_country, geo_region, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         ON CONFLICT (id) DO UPDATE SET
           status = EXCLUDED.status,
           priority = EXCLUDED.priority,
           assigned_agent = EXCLUDED.assigned_agent,
+          latitude = COALESCE(EXCLUDED.latitude, tickets.latitude),
+          longitude = COALESCE(EXCLUDED.longitude, tickets.longitude),
+          ip_address = COALESCE(EXCLUDED.ip_address, tickets.ip_address),
+          geo_city = COALESCE(EXCLUDED.geo_city, tickets.geo_city),
+          geo_country = COALESCE(EXCLUDED.geo_country, tickets.geo_country),
+          geo_region = COALESCE(EXCLUDED.geo_region, tickets.geo_region),
           updated_at = EXCLUDED.updated_at
       `;
       await client.query(ticketQuery, [
@@ -156,6 +180,12 @@ class TicketStore {
         ticket.status,
         ticket.priority,
         ticket.assignedAgent || null,
+        ticket.latitude !== undefined ? ticket.latitude : null,
+        ticket.longitude !== undefined ? ticket.longitude : null,
+        ticket.ipAddress || null,
+        ticket.geoCity || null,
+        ticket.geoCountry || null,
+        ticket.geoRegion || null,
         ticket.createdAt,
         ticket.updatedAt,
       ]);
@@ -176,10 +206,20 @@ class TicketStore {
       if (ticket.messages && ticket.messages.length > 0) {
         for (const msg of ticket.messages) {
           await client.query(
-            `INSERT INTO ticket_messages (id, ticket_id, sender, sender_name, text, timestamp)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO ticket_messages (id, ticket_id, sender, sender_name, text, attachment_url, attachment_name, attachment_type, timestamp)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              ON CONFLICT (id) DO NOTHING`,
-            [msg.id, ticket.id, msg.sender, msg.senderName, msg.text, msg.timestamp]
+            [
+              msg.id,
+              ticket.id,
+              msg.sender,
+              msg.senderName,
+              msg.text || "",
+              msg.attachmentUrl || null,
+              msg.attachmentName || null,
+              msg.attachmentType || null,
+              msg.timestamp,
+            ]
           );
         }
       }

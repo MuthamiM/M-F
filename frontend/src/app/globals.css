@@ -31,6 +31,14 @@
 /* ── Global Base ── */
 * {
   box-sizing: border-box;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
 }
 
 html {
@@ -38,6 +46,14 @@ html {
   scroll-behavior: smooth;
   color-scheme: light;
   overscroll-behavior-y: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 body {
@@ -48,6 +64,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   min-height: 100dvh;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── Mobile-first image handling ── */
@@ -108,5 +132,24 @@ img, svg, video {
 
 .animate-dropdown-blink {
   animation: dropdownBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes dotTranslate {
+  0% {
+    transform: translateX(-10px) scale(0.6);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(0px) scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(10px) scale(0.6);
+    opacity: 0.3;
+  }
+}
+
+.animate-dot-move {
+  animation: dotTranslate 0.8s ease-in-out infinite;
 }
 

@@ -2,7 +2,7 @@
 // Single place all backend calls go through — sets consistent headers,
 // timeouts, and error shape so features don't each reinvent fetch.
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -18,7 +18,7 @@ export async function apiFetch<T>(
   const timeout = setTimeout(() => controller.abort(), 10_000);
 
   // Dynamically resolve backend API address: use relative path on client (Next.js proxy)
-  let apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  let apiBase = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   if (typeof window !== "undefined") {
     apiBase = "";
   }

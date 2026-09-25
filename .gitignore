@@ -12,11 +12,28 @@ build/
 .env.local
 .env.*
 
-# Logs
+# Private keys, backups, and local database exports
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.bak
+*.dump
+*.sql
+backend/src/db/init.sql
+
+# Logs & PIDs
+logs/
 *.log
+*.pid
 npm-debug.log*
 
 # System Files
 .DS_Store
 Thumbs.db
 cloudflared.deb
+backend/uploads/
+*.mjs
+*.code-workspace

@@ -1,6 +1,5 @@
 #!/bin/bash
-# M&F Technologies - Start all services with Tailscale Funnel
-# Services persist even when the laptop lid is closed (via systemd-inhibit + nohup)
+# M&F Technologies - Start all services (local dev)
 
 set -e
 
@@ -48,16 +47,6 @@ start_frontend() {
     echo "   📄 Logs: $LOG_DIR/frontend.log"
 }
 
-# --- Start Tailscale Funnel ---
-start_funnel() {
-    echo "🌐 Starting Tailscale Funnel (exposing port 3000 to the internet)..."
-    # Reset any existing funnel config
-    sudo tailscale funnel reset 2>/dev/null || true
-    # Start funnel in background mode - this creates a public HTTPS URL
-    sudo tailscale funnel --bg 3000
-    echo "   ✅ Tailscale Funnel active!"
-}
-
 # --- Wait for services to be healthy ---
 wait_for_services() {
     echo ""
@@ -93,24 +82,26 @@ cleanup
 start_backend
 start_frontend
 sleep 3
-start_funnel
 wait_for_services
 
 echo ""
 echo "======================================="
-echo "🎉 ALL SERVICES RUNNING!"
+echo "ALL SERVICES RUNNING!"
 echo "======================================="
 echo ""
-echo "📱 PUBLIC URL (share this!): https://technoblade.tail953a25.ts.net"
+echo " PRODUCTION (VPS):"
+echo "   Website:        https://mftechnologies.org"
+echo "   Admin Login:    https://mftechnologies.org/admin/login"
 echo ""
-echo "🔗 Local URLs:"
-echo "   Frontend:  http://localhost:3000"
-echo "   Backend:   http://localhost:4000"
+echo " LOCAL URLS:"
+echo "   Frontend:       http://localhost:3000"
+echo "   Admin Login:    http://localhost:3000/admin/login"
+echo "   Backend API:    http://localhost:4000/api"
 echo ""
-echo "📄 Logs:"
+echo " Logs:"
 echo "   Backend:   tail -f $LOG_DIR/backend.log"
 echo "   Frontend:  tail -f $LOG_DIR/frontend.log"
 echo ""
-echo "🛑 To stop everything:"
+echo " To stop everything:"
 echo "   bash $PROJECT_DIR/stop-services.sh"
 echo "======================================="

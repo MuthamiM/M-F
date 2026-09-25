@@ -4,6 +4,7 @@ import "./globals.css";
 import type { Viewport } from "next";
 import { CookieBanner } from "@/shared/components/CookieBanner";
 import { ChatWidget } from "@/shared/components/ChatWidget";
+import { FloatingFaq } from "@/shared/components/FloatingFaq";
 import { ServiceWorkerRegister } from "@/shared/components/ServiceWorkerRegister";
 import { InstallBanner } from "@/shared/components/InstallBanner";
 
@@ -12,6 +13,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: "#FFFFFF",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: import("next").Metadata = {
@@ -22,16 +24,24 @@ export const metadata: import("next").Metadata = {
   },
   description: "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware for modern financial institutions.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "M&F Technologies",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon-v2.ico", sizes: "any" },
+      { url: "/favicon-v2.svg", type: "image/svg+xml" },
+      { url: "/icon-v2-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-v2-96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icon-v2-144.png", sizes: "144x144", type: "image/png" },
+      { url: "/icon-v2-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-v2-512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: ["/favicon.ico"],
+    shortcut: ["/favicon-v2.ico"],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/apple-touch-icon-v2.png", sizes: "180x180", type: "image/png" },
     ],
   },
   openGraph: {
@@ -62,6 +72,9 @@ export const metadata: import("next").Metadata = {
     description: "Lending technology for banks and credit unions.",
     images: ["https://mftechnologies.org/og-image.png"],
   },
+  other: {
+    "google-adsense-account": "ca-pub-8996168943533702",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -75,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "url": "https://mftechnologies.org",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://mftechnologies.org/icon-512.png",
+          "url": "https://mftechnologies.org/icon-v2-512.png",
           "width": 512,
           "height": 512,
           "caption": "M&F Technologies Logo"
@@ -83,18 +96,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         "image": "https://mftechnologies.org/og-image.png",
         "sameAs": [
           "https://mftechnologies.org"
-        ]
+        ],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "The Pavilion, 4th Floor, Lower Kabete Road, Westlands",
+          "addressLocality": "Nairobi",
+          "postalCode": "00100",
+          "addressCountry": "KE"
+        }
       },
       {
         "@type": "FinancialService",
         "@id": "https://mftechnologies.org/#service",
         "name": "M&F Technologies",
         "url": "https://mftechnologies.org",
-        "logo": "https://mftechnologies.org/icon-512.png",
+        "logo": "https://mftechnologies.org/icon-v2-512.png",
         "image": "https://mftechnologies.org/og-image.png",
         "description": "Institutional-grade lending technology, credit scoring frameworks, and secure transactional middleware.",
         "telephone": "+254748329410",
         "email": "info@mftechnologies.org",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "The Pavilion, 4th Floor, Lower Kabete Road, Westlands",
+          "addressLocality": "Nairobi",
+          "postalCode": "00100",
+          "addressCountry": "KE"
+        },
         "openingHoursSpecification": [
           {
             "@type": "OpeningHoursSpecification",
@@ -102,30 +129,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             "opens": "08:00",
             "closes": "17:00"
           }
-        ],
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "24",
-          "bestRating": "5"
-        }
+        ]
       }
     ]
   };
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="google-adsense-account" content="ca-pub-8996168943533702" />
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4133643892676755"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996168943533702"
           crossOrigin="anonymous"
         ></script>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" sizes="192x192" href="/icon-192.png" type="image/png" />
-        <link rel="icon" sizes="512x512" href="/icon-512.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon-v2.ico" sizes="any" />
+        <link rel="icon" href="/favicon-v2.svg" type="image/svg+xml" />
+        <link rel="icon" sizes="48x48" href="/icon-v2-48.png" type="image/png" />
+        <link rel="icon" sizes="96x96" href="/icon-v2-96.png" type="image/png" />
+        <link rel="icon" sizes="144x144" href="/icon-v2-144.png" type="image/png" />
+        <link rel="icon" sizes="192x192" href="/icon-v2-192.png" type="image/png" />
+        <link rel="icon" sizes="512x512" href="/icon-v2-512.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -137,10 +162,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-body text-graphite">
+      <body className="font-body text-graphite" suppressHydrationWarning>
         {children}
         <CookieBanner />
         <ChatWidget />
+        <FloatingFaq />
         <ServiceWorkerRegister />
         <InstallBanner />
       </body>

@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight } from "lucide-react";
+import { Search, Filter, AlertCircle, Phone, FileText, Mail, RefreshCw, ArrowUpRight, MapPin, Globe, BriefcaseBusiness } from "lucide-react";
 
 interface TicketItem {
   id: string;
-  type: "chatbot" | "demo" | "contact";
+  type: "chatbot" | "demo" | "contact" | "application";
   name: string;
   email: string;
   phone?: string;
@@ -15,6 +15,12 @@ interface TicketItem {
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high";
   assignedAgent?: string;
+  latitude?: number;
+  longitude?: number;
+  ipAddress?: string;
+  geoCity?: string;
+  geoCountry?: string;
+  geoRegion?: string;
   createdAt: string;
 }
 
@@ -91,7 +97,7 @@ export default function AdminTicketsPage() {
           <div className="px-6 flex flex-wrap gap-2 items-center justify-between border-b border-[#E4E7EB]/60 pb-4">
             <div className="flex items-center gap-1.5">
               {/* Quick Status Filters */}
-              {["all", "open", "in_progress", "resolved"].map((st) => (
+              {["all", "open", "in_progress", "resolved", "closed"].map((st) => (
                 <button
                   key={st}
                   onClick={() => setSelectedStatus(st)}
@@ -149,9 +155,15 @@ export default function AdminTicketsPage() {
                        {t.message}
                      </td>
                      <td className="px-6 py-4 text-xs">
-                       <div className="font-bold">{t.name}</div>
-                       <div className="text-[10px] text-slate-400 font-medium">{t.company}</div>
-                     </td>
+                        <div className="font-bold">{t.name}</div>
+                        <div className="text-[10px] text-slate-400 font-medium">{t.company}</div>
+                        {(t.geoCity || t.geoCountry || t.ipAddress) && (
+                          <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium mt-1" title={t.ipAddress ? `IP: ${t.ipAddress}` : undefined}>
+                            <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span>{[t.geoCity, t.geoCountry].filter(Boolean).join(", ") || t.ipAddress}</span>
+                          </div>
+                        )}
+                      </td>
                      <td className="px-6 py-4 text-xs">
                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
                          t.type === "chatbot" ? "bg-purple-50 text-purple-700 border-purple-200" :
@@ -161,6 +173,7 @@ export default function AdminTicketsPage() {
                          {t.type === "chatbot" && <Phone className="h-2.5 w-2.5" />}
                          {t.type === "demo" && <FileText className="h-2.5 w-2.5" />}
                          {t.type === "contact" && <Mail className="h-2.5 w-2.5" />}
+                        {t.type === "application" && <BriefcaseBusiness className="h-2.5 w-2.5" />}
                          {t.type.toUpperCase()}
                        </span>
                      </td>
@@ -257,6 +270,7 @@ export default function AdminTicketsPage() {
                   <option value="chatbot">Chatbot Callback</option>
                   <option value="demo">Demo Request</option>
                   <option value="contact">Contact Message</option>
+                  <option value="application">Job Application</option>
                 </select>
               </div>
 

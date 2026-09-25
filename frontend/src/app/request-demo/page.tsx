@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, Sparkles, Building, Layers } from "lucide-react";
+import { Send, Sparkles, Building, Layers, Loader2 } from "lucide-react";
+import { Nav } from "@/features/landing/components/Nav";
+import { Footer } from "@/features/landing/components/Footer";
+import { Breadcrumbs } from "@/shared/components/Breadcrumbs";
+import { apiFetch, ApiError } from "@/shared/lib/apiClient";
 
 export default function RequestDemoPage() {
   const [form, setForm] = useState(() => {
@@ -21,26 +25,40 @@ export default function RequestDemoPage() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await apiFetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          company: `${form.company} (Institutional Demo)`,
+          message: `[DEMO EVALUATION REQUEST]\nOrganization: ${form.company}\nObjectives: ${form.message}`,
+        }),
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitError(err instanceof ApiError ? err.message : "Failed to submit demo request. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Hero Header */}
-      <section className="bg-cloud border-b border-fog/20">
-        <div className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
-          <div className="mb-6 sm:mb-8">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3E4C59] hover:text-[#1B222C] transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Home
-            </Link>
-          </div>
+    <>
+      <Nav />
+      <main className="min-h-screen bg-white">
+        {/* Hero Header */}
+        <section className="bg-cloud border-b border-fog/20">
+          <div className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
+            <Breadcrumbs items={[{ label: "Request Demo" }]} />
 
           <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl md:text-5xl leading-tight">
             Schedule an Institutional Platform Demo
@@ -125,13 +143,28 @@ export default function RequestDemoPage() {
                     placeholder="e.g. automating underwriting, scaling transactional ledger"
                   />
                 </div>
+                {submitError && (
+                  <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg border border-red-200">
+                    {submitError}
+                  </div>
+                )}
                 <div>
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-graphite hover:bg-[#3E4C59] text-white px-5 py-3 text-xs font-bold transition-all shadow-sm active:scale-98 cursor-pointer"
+                    disabled={submitting}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-graphite hover:bg-[#3E4C59] disabled:opacity-60 text-white px-5 py-3 text-xs font-bold transition-all shadow-sm active:scale-98 cursor-pointer"
                   >
-                    <Send className="h-3.5 w-3.5" />
-                    <span>Submit Demo Request</span>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-3.5 w-3.5" />
+                        <span>Submit Demo Request</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -169,5 +202,7 @@ export default function RequestDemoPage() {
         </div>
       </section>
     </main>
+    <Footer />
+  </>
   );
 }

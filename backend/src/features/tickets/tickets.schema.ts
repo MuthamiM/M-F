@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ticketStatusSchema = z.enum(["open", "in_progress", "resolved", "closed"]);
 export const ticketPrioritySchema = z.enum(["low", "medium", "high"]);
-export const ticketTypeSchema = z.enum(["chatbot", "demo", "contact"]);
+export const ticketTypeSchema = z.enum(["chatbot", "demo", "contact", "application"]);
 
 export const noteSchema = z.object({
   id: z.string(),
@@ -14,7 +14,10 @@ export const chatMessageSchema = z.object({
   id: z.string(),
   sender: z.enum(["client", "agent"]),
   senderName: z.string(),
-  text: z.string(),
+  text: z.string().default(""),
+  attachmentUrl: z.string().optional(),
+  attachmentName: z.string().optional(),
+  attachmentType: z.string().optional(),
   timestamp: z.date(),
 });
 
@@ -38,6 +41,10 @@ export const ticketSchema = z.object({
   message: z.string(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  ipAddress: z.string().optional(),
+  geoCity: z.string().optional(),
+  geoCountry: z.string().optional(),
+  geoRegion: z.string().optional(),
   status: ticketStatusSchema,
   priority: ticketPrioritySchema,
   assignedAgent: z.string().optional(),
@@ -77,8 +84,11 @@ export const sendMessageSchema = z.object({
     id: z.string().min(1),
   }),
   body: z.object({
-    text: z.string().min(1),
+    text: z.string().default(""),
     senderName: z.string().min(1),
+    attachmentUrl: z.string().optional(),
+    attachmentName: z.string().optional(),
+    attachmentType: z.string().optional(),
   }),
 });
 
@@ -88,8 +98,11 @@ export const clientSendMessageSchema = z.object({
     id: z.string().min(1),
   }),
   body: z.object({
-    text: z.string().min(1),
+    text: z.string().default(""),
     senderName: z.string().min(1),
+    attachmentUrl: z.string().optional(),
+    attachmentName: z.string().optional(),
+    attachmentType: z.string().optional(),
   }),
 });
 
@@ -106,4 +119,3 @@ export const logCallSchema = z.object({
     notes: z.string().optional(),
   }),
 });
-
