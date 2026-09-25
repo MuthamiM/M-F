@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Star,
   Send,
-  HelpCircle,
   MessageSquarePlus,
   Minus,
 } from "lucide-react";
@@ -24,7 +23,7 @@ import { FAQ_ITEMS, FAQ_CATEGORIES } from "@/shared/data/faqData";
 export function FloatingFaq() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const [activeTab, setActiveTab] = useState<"questions" | "feedback">("questions");
 
   // FAQ state
@@ -46,12 +45,45 @@ export function FloatingFaq() {
   const [submitError, setSubmitError] = useState("");
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hide on admin, docs, or api-reference routes to maintain dedicated workspaces
   const isHiddenRoute =
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/docs") ||
     pathname?.startsWith("/api-reference");
+
+  // Hover handlers to open on hover with graceful transition timeout
+  const handleMouseEnter = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (isPinned) return; // Do not auto-close if pinned/clicked
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 450);
+  };
+
+  const handleWindowClick = () => {
+    setIsPinned(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setIsPinned(false);
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
 
   // Focus search input when questions tab is active and open
   useEffect(() => {
@@ -66,14 +98,13 @@ export function FloatingFaq() {
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (isOpen) setIsOpen(false);
-        if (showPrompt) setShowPrompt(false);
+      if (e.key === "Escape" && isOpen) {
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, showPrompt]);
+  }, [isOpen]);
 
   // Filter items based on active category and search query
   const filteredItems = useMemo(() => {
@@ -95,6 +126,7 @@ export function FloatingFaq() {
 
   // Toggle single item accordion
   const toggleItem = (id: string) => {
+    setIsPinned(true);
     setOpenItems((prev) => ({
       ...prev,
       [id]: !prev[id],
@@ -103,8 +135,7 @@ export function FloatingFaq() {
 
   // Open Chat Widget from FAQ
   const handleOpenChat = () => {
-    setIsOpen(false);
-    setShowPrompt(false);
+    handleClose();
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("open-mf-chat"));
     }
@@ -120,23 +151,57 @@ export function FloatingFaq() {
 
     setIsSubmitting(true);
     setSubmitError("");
+    setIsPinned(true);
+
+    const payload = {
+      rating,
+      feedback: feedbackText.trim(),
+      category: feedbackCategory,
+      name: feedbackName.trim() || undefined,
+      email: feedbackEmail.trim() || undefined,
+    };
 
     try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rating,
-          feedback: feedbackText.trim(),
-          category: feedbackCategory,
-          name: feedbackName.trim() || undefined,
-          email: feedbackEmail.trim() || undefined,
-        }),
-      });
+      let resData: any = null;
+      let ok = false;
 
-      const resData = await res.json();
-      if (!res.ok || !resData.success) {
-        throw new Error(resData.message || "Failed to submit feedback.");
+      // 1. Try primary /api/feedback
+      try {
+        const res = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const text = await res.text();
+        try {
+          resData = JSON.parse(text);
+          ok = res.ok && resData?.success;
+        } catch {
+          // If non-JSON returned, fallback below
+        }
+      } catch {
+        // network failure on primary endpoint
+      }
+
+      // 2. Direct fallback to https://api.mftechnologies.org/api/feedback if needed
+      if (!ok) {
+        try {
+          const directRes = await fetch("https://api.mftechnologies.org/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const directText = await directRes.text();
+          resData = JSON.parse(directText);
+          ok = directRes.ok && resData?.success;
+        } catch {}
+      }
+
+      if (!ok || !resData || !resData.success) {
+        throw new Error(
+          (resData && resData.message) ||
+          "Unable to record feedback right now. Please try again."
+        );
       }
 
       setSubmitSuccess(true);
@@ -154,29 +219,31 @@ export function FloatingFaq() {
 
   return (
     <>
-      {/* ── MINIMAL LINE TRIGGER ON EDGE OF SCREEN (NO SQUARE BUTTON) ── */}
+      {/* ── GREY TAB TRIGGER WITH THREE VISIBLE HAMBURGER LINES (OPENS ON HOVER) ── */}
       <aside
-        aria-label="FAQ & Help Trigger"
+        aria-label="FAQ & Help Access"
         className="fixed right-0 top-1/2 -translate-y-1/2 z-[99990] select-none"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <button
           type="button"
           onClick={() => {
-            if (isOpen) {
-              setIsOpen(false);
-              setShowPrompt(false);
-            } else {
-              setShowPrompt((prev) => !prev);
-            }
+            setIsPinned(true);
+            setIsOpen((prev) => !prev);
           }}
-          id="floating-faq-line-btn"
-          aria-expanded={isOpen || showPrompt}
+          id="floating-faq-hamburger-btn"
+          aria-expanded={isOpen}
           aria-label="Frequently Asked Questions & Feedback"
-          title="Frequently Asked Questions & Feedback"
-          className="group relative flex items-center justify-center bg-[#1B222C] hover:bg-[#3E4C59] active:bg-[#111827] text-white border-l border-t border-b border-[#9AA5B1]/40 shadow-lg cursor-pointer transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-[#9AA5B1] w-1.5 hover:w-2.5 h-16 sm:h-20 rounded-l"
+          title="FAQ & Feedback"
+          className="group relative flex flex-col items-center justify-center bg-[#475569] hover:bg-[#334155] active:bg-[#1E293B] text-white border-l border-t border-b border-slate-400/50 shadow-xl cursor-pointer transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-slate-300 w-4 sm:w-5 hover:w-6 h-14 sm:h-16 rounded-l-md px-1"
         >
-          {/* Subtle indicator bar */}
-          <span className="w-full h-full bg-[#1B222C] group-hover:bg-[#3E4C59] rounded-l" />
+          {/* Three visible hamburger lines */}
+          <div className="flex flex-col items-center justify-center gap-1.5 w-full">
+            <span className="w-2.5 sm:w-3.5 h-0.5 bg-white/95 rounded-full transition-transform duration-150 group-hover:scale-x-110" />
+            <span className="w-2.5 sm:w-3.5 h-0.5 bg-white/95 rounded-full transition-transform duration-150 group-hover:scale-x-110" />
+            <span className="w-2.5 sm:w-3.5 h-0.5 bg-white/95 rounded-full transition-transform duration-150 group-hover:scale-x-110" />
+          </div>
 
           {/* Hover tooltip label */}
           <span className="absolute right-full mr-2 px-2 py-1 bg-[#1B222C] text-white text-[11px] font-semibold rounded shadow-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:inline-block">
@@ -184,70 +251,6 @@ export function FloatingFaq() {
           </span>
         </button>
       </aside>
-
-      {/* ── SLEEK PROMPT DIALOG THAT ASKS TO OPEN FAQ ── */}
-      <AnimatePresence>
-        {showPrompt && !isOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: 20, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 20, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-[99995] w-[290px] sm:w-[320px] bg-white border border-[#CBD2D9] rounded-xl shadow-2xl overflow-hidden text-[#1B222C]"
-          >
-            {/* Header */}
-            <div className="bg-[#1B222C] text-white px-3.5 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-[#CBD2D9]" />
-                <span className="text-xs font-bold tracking-tight">M&amp;F Knowledge &amp; FAQ</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPrompt(false)}
-                className="text-[#9AA5B1] hover:text-white p-0.5 rounded transition-colors cursor-pointer"
-                aria-label="Dismiss prompt"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Prompt Body */}
-            <div className="p-3.5 space-y-3">
-              <p className="text-xs text-[#3E4C59] leading-relaxed">
-                Have questions about M&amp;F lending infrastructure, automated scoring, APIs, or SLAs?
-              </p>
-
-              <div className="flex flex-col gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPrompt(false);
-                    setActiveTab("questions");
-                    setIsOpen(true);
-                  }}
-                  className="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] text-white transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Open Frequently Asked Questions</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPrompt(false);
-                    setActiveTab("feedback");
-                    setIsOpen(true);
-                  }}
-                  className="w-full py-1.5 px-3 text-xs font-medium rounded-lg bg-[#F4F6F8] hover:bg-[#E4E7EB] text-[#3E4C59] hover:text-[#1B222C] border border-[#CBD2D9] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <MessageSquarePlus className="h-3.5 w-3.5 text-[#3E4C59]" />
-                  <span>Leave Direct Feedback</span>
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── CHATBOT-SIZED FLOATING FAQ & FEEDBACK WINDOW ── */}
       <AnimatePresence>
@@ -257,17 +260,22 @@ export function FloatingFaq() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="faq-window-title"
-            initial={{ opacity: 0, y: 15, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 15, scale: 0.96 }}
+            initial={{ opacity: 0, x: 20, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 20, scale: 0.96 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleWindowClick}
             className="fixed right-2 sm:right-6 top-1/2 -translate-y-1/2 z-[100000] w-[350px] sm:w-[380px] max-w-[calc(100vw-16px)] h-[520px] max-h-[85vh] bg-white border border-[#CBD2D9] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1B222C]"
           >
             {/* Top Header (Institutional Slate/Navy) */}
             <div className="bg-[#1B222C] text-white px-4 py-3 shrink-0 flex items-center justify-between border-b border-white/10 select-none">
               <div className="flex items-center gap-2.5">
-                <div className="h-6 w-6 rounded bg-[#3E4C59] border border-white/15 flex items-center justify-center text-xs font-bold text-white">
-                  ?
+                <div className="h-6 w-6 rounded bg-[#475569] border border-white/20 flex flex-col items-center justify-center gap-0.8 px-1">
+                  <span className="w-3 h-[1.5px] bg-white rounded-full" />
+                  <span className="w-3 h-[1.5px] bg-white rounded-full" />
+                  <span className="w-3 h-[1.5px] bg-white rounded-full" />
                 </div>
                 <div>
                   <h3 id="faq-window-title" className="text-xs sm:text-sm font-bold tracking-tight">
@@ -282,7 +290,7 @@ export function FloatingFaq() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="h-6 w-6 rounded hover:bg-white/10 text-[#9AA5B1] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                   title="Minimize"
                   aria-label="Minimize FAQ window"
@@ -291,10 +299,7 @@ export function FloatingFaq() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    setShowPrompt(false);
-                  }}
+                  onClick={handleClose}
                   className="h-6 w-6 rounded hover:bg-white/10 text-[#9AA5B1] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                   title="Close"
                   aria-label="Close FAQ window"
@@ -308,7 +313,10 @@ export function FloatingFaq() {
             <div className="bg-[#F4F6F8] px-3 pt-2 pb-1.5 border-b border-[#E4E7EB] shrink-0 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setActiveTab("questions")}
+                onClick={() => {
+                  setIsPinned(true);
+                  setActiveTab("questions");
+                }}
                 className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   activeTab === "questions"
                     ? "bg-white text-[#1B222C] shadow-xs border border-[#CBD2D9]"
@@ -324,6 +332,7 @@ export function FloatingFaq() {
               <button
                 type="button"
                 onClick={() => {
+                  setIsPinned(true);
                   setActiveTab("feedback");
                   setSubmitSuccess(false);
                   setSubmitError("");
@@ -350,7 +359,10 @@ export function FloatingFaq() {
                       ref={searchInputRef}
                       type="text"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setIsPinned(true);
+                        setSearchQuery(e.target.value);
+                      }}
                       placeholder="Search lending, scoring, APIs, security..."
                       className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-[#CBD2D9] rounded-lg text-[#1B222C] placeholder:text-[#9AA5B1] focus:outline-none focus:ring-1 focus:ring-[#1B222C] focus:border-[#1B222C] transition-all shadow-2xs"
                     />
@@ -373,7 +385,10 @@ export function FloatingFaq() {
                         <button
                           key={cat.id}
                           type="button"
-                          onClick={() => setActiveCategory(cat.id)}
+                          onClick={() => {
+                            setIsPinned(true);
+                            setActiveCategory(cat.id);
+                          }}
                           className={`shrink-0 px-2 py-0.8 rounded text-[11px] font-medium transition-all cursor-pointer ${
                             isActive
                               ? "bg-[#1B222C] text-white shadow-2xs"
@@ -402,6 +417,7 @@ export function FloatingFaq() {
                         <button
                           type="button"
                           onClick={() => {
+                            setIsPinned(true);
                             setActiveTab("feedback");
                             setFeedbackText(`Inquiry regarding: ${searchQuery}`);
                           }}
@@ -480,7 +496,7 @@ export function FloatingFaq() {
                                     <div className="pt-1">
                                       <Link
                                         href={item.actionLink.href}
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={handleClose}
                                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1B222C] hover:text-[#3E4C59] underline underline-offset-2 decoration-[#CBD2D9] hover:decoration-[#1B222C] group"
                                       >
                                         <span>{item.actionLink.label}</span>
@@ -502,7 +518,7 @@ export function FloatingFaq() {
                 <div className="p-2.5 bg-[#F4F6F8] border-t border-[#E4E7EB] shrink-0 flex items-center justify-between text-[11px]">
                   <Link
                     href="/faq"
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleClose}
                     className="font-medium text-[#6B7684] hover:text-[#1B222C] hover:underline flex items-center gap-1"
                   >
                     <span>Full FAQ Page</span>
@@ -539,6 +555,7 @@ export function FloatingFaq() {
                         onClick={() => {
                           setSubmitSuccess(false);
                           setFeedbackText("");
+                          setIsPinned(true);
                         }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#F4F6F8] hover:bg-[#E4E7EB] text-[#1B222C] border border-[#CBD2D9] transition-colors"
                       >
@@ -546,7 +563,10 @@ export function FloatingFaq() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setActiveTab("questions")}
+                        onClick={() => {
+                          setActiveTab("questions");
+                          setIsPinned(true);
+                        }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#1B222C] hover:bg-[#3E4C59] text-white transition-colors"
                       >
                         Back to FAQ
@@ -574,7 +594,10 @@ export function FloatingFaq() {
                             <button
                               key={star}
                               type="button"
-                              onClick={() => setRating(star)}
+                              onClick={() => {
+                                setIsPinned(true);
+                                setRating(star);
+                              }}
                               onMouseEnter={() => setHoverRating(star)}
                               onMouseLeave={() => setHoverRating(null)}
                               className="p-1 text-[#CBD2D9] hover:scale-110 transition-transform cursor-pointer"
@@ -609,7 +632,10 @@ export function FloatingFaq() {
                       </label>
                       <select
                         value={feedbackCategory}
-                        onChange={(e) => setFeedbackCategory(e.target.value)}
+                        onChange={(e) => {
+                          setIsPinned(true);
+                          setFeedbackCategory(e.target.value);
+                        }}
                         className="w-full text-xs bg-white border border-[#CBD2D9] rounded-lg px-2.5 py-1.5 text-[#1B222C] focus:outline-none focus:ring-1 focus:ring-[#1B222C]"
                       >
                         <option value="general">General &amp; Usability</option>
@@ -629,7 +655,10 @@ export function FloatingFaq() {
                       <textarea
                         rows={3}
                         value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
+                        onChange={(e) => {
+                          setIsPinned(true);
+                          setFeedbackText(e.target.value);
+                        }}
                         placeholder="What question were you trying to answer? How can we improve our platform?"
                         className="w-full text-xs p-2.5 bg-white border border-[#CBD2D9] rounded-lg text-[#1B222C] placeholder:text-[#9AA5B1] focus:outline-none focus:ring-1 focus:ring-[#1B222C] resize-none"
                         required
@@ -645,7 +674,10 @@ export function FloatingFaq() {
                         <input
                           type="text"
                           value={feedbackName}
-                          onChange={(e) => setFeedbackName(e.target.value)}
+                          onChange={(e) => {
+                            setIsPinned(true);
+                            setFeedbackName(e.target.value);
+                          }}
                           placeholder="Your name"
                           className="w-full text-xs px-2.5 py-1.5 bg-white border border-[#CBD2D9] rounded-lg text-[#1B222C] placeholder:text-[#9AA5B1] focus:outline-none focus:ring-1 focus:ring-[#1B222C]"
                         />
@@ -657,7 +689,10 @@ export function FloatingFaq() {
                         <input
                           type="email"
                           value={feedbackEmail}
-                          onChange={(e) => setFeedbackEmail(e.target.value)}
+                          onChange={(e) => {
+                            setIsPinned(true);
+                            setFeedbackEmail(e.target.value);
+                          }}
                           placeholder="you@company.com"
                           className="w-full text-xs px-2.5 py-1.5 bg-white border border-[#CBD2D9] rounded-lg text-[#1B222C] placeholder:text-[#9AA5B1] focus:outline-none focus:ring-1 focus:ring-[#1B222C]"
                         />
