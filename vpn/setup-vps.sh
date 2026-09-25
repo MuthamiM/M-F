@@ -1,11 +1,12 @@
 #!/bin/bash
 # ============================================
-# M&F Technologies - VPS WireGuard VPN Setup
-# Run this ON YOUR VPS (18.188.142.27)
+# M&F Technologies - Vultr VPS WireGuard VPN Setup
+# Run this ON YOUR VULTR VPS
 # ============================================
 set -e
 
-VPS_PUBLIC_IP="18.188.142.27"
+# Auto-detect Vultr VPS public IP or allow passing as $1
+VPS_PUBLIC_IP="${1:-$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 icanhazip.com 2>/dev/null || ip route get 1.1.1.1 2>/dev/null | awk '{print $7}')}"
 WG_PORT=51820
 WG_INTERFACE="wg0"
 SERVER_SUBNET="10.66.66.1/24"
@@ -127,10 +128,10 @@ if command -v ufw &>/dev/null; then
 fi
 echo "   ✅ Port ${WG_PORT}/udp opened"
 
-# --- AWS Security Group reminder ---
+# --- Vultr Firewall reminder ---
 echo ""
-echo "⚠️  IMPORTANT: Make sure your AWS Security Group allows:"
-echo "   Inbound UDP port ${WG_PORT} from 0.0.0.0/0"
+echo "⚠️  IMPORTANT: Make sure your Vultr Firewall Group allows:"
+echo "   Inbound UDP port ${WG_PORT} from 0.0.0.0/0 (or anywhere)"
 echo ""
 
 # --- Start and enable WireGuard ---

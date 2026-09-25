@@ -11,8 +11,18 @@ build/
 .env
 .env.local
 .env.*
-!.env.example
-!*.env.example
+
+# Private keys, backups, and local database exports
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.bak
+*.dump
+*.sql
+backend/src/db/init.sql
 
 # Logs & PIDs
 logs/
@@ -26,3 +36,4 @@ Thumbs.db
 cloudflared.deb
 backend/uploads/
 *.mjs
+*.code-workspace

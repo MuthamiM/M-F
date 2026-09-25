@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Ticket, PhoneCall, LogOut, Shield, Menu, X, Bell } from "lucide-react";
+import { LayoutDashboard, Ticket, PhoneCall, BriefcaseBusiness, LogOut, Shield, Menu, X, Bell, MessageSquareQuote } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AdminNotification {
@@ -230,6 +230,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Tickets Console", href: "/admin/tickets", icon: Ticket },
+    { label: "Feedback", href: "/admin/feedback", icon: MessageSquareQuote },
+    { label: "Jobs", href: "/admin/jobs", icon: BriefcaseBusiness },
     { label: "Call Center Queue", href: "/admin/call-center", icon: PhoneCall },
   ];
 

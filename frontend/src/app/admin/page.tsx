@@ -10,7 +10,8 @@ import {
   ArrowUpRight, 
   Clock, 
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  BriefcaseBusiness
 } from "lucide-react";
 
 interface Stats {
@@ -22,11 +23,12 @@ interface Stats {
   typeChatbot: number;
   typeDemo: number;
   typeContact: number;
+  typeApplication?: number;
 }
 
 interface TicketItem {
   id: string;
-  type: "chatbot" | "demo" | "contact";
+  type: "chatbot" | "demo" | "contact" | "application";
   name: string;
   email: string;
   phone?: string;
@@ -171,7 +173,21 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Ticket Source Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/admin/jobs" className="bg-white border border-[#E4E7EB] hover:border-[#1B222C] rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4 transition-all group">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-blue-600 transition-colors">Job Applications</h3>
+              <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">Inbound engineering CVs, candidate portfolios, and hiring screening.</p>
+          </div>
+          <div className="flex items-end justify-between">
+            <span className="text-2xl font-bold text-[#1B222C]">{stats?.typeApplication || 0}</span>
+            <BriefcaseBusiness className="h-10 w-10 text-amber-500/30 group-hover:text-amber-500 transition-colors" />
+          </div>
+        </Link>
+
         <div className="bg-white border border-[#E4E7EB] rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Chatbot Callback</h3>
@@ -244,9 +260,10 @@ export default function AdminDashboardPage() {
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
                       t.type === "chatbot" ? "bg-purple-50 text-purple-700 border-purple-200" :
                       t.type === "demo" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                      t.type === "application" ? "bg-amber-50 text-amber-700 border-amber-200" :
                       "bg-slate-50 text-slate-700 border-slate-200"
                     }`}>
-                      {t.type}
+                      {t.type === "application" ? "JOB APPLICATION" : t.type.toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-xs">
@@ -272,12 +289,11 @@ export default function AdminDashboardPage() {
                     {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </td>
                   <td className="px-6 py-4 text-xs">
-                    {/* Link to detail page alone */}
                     <Link
-                      href={`/admin/tickets/${t.id}`}
-                      className="px-2.5 py-1.5 border border-[#E4E7EB] hover:border-[#1B222C] text-[#3E4C59] hover:text-[#1B222C] text-[10px] font-bold rounded-lg transition-colors inline-block cursor-pointer"
+                      href={t.type === "application" ? "/admin/jobs" : `/admin/tickets/${t.id}`}
+                      className="px-2.5 py-1.5 border border-[#E4E7EB] hover:border-[#1B222C] text-[#3E4C59] hover:text-[#1B222C] text-[10px] font-bold rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
                     >
-                      Manage alone
+                      {t.type === "application" ? "Review Candidate" : "Manage"} <ArrowUpRight className="h-3 w-3" />
                     </Link>
                   </td>
                 </tr>

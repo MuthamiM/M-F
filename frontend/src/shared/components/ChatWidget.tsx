@@ -386,18 +386,6 @@ export function ChatWidget() {
     }
   }, [isOpen]);
 
-  // Listen for global open chat events (e.g. from Docs Support button)
-  useEffect(() => {
-    const handleOpenChat = () => {
-      setIsOpen(true);
-      setPromptState("dismissed");
-    };
-    window.addEventListener("mf-open-chat", handleOpenChat);
-    return () => {
-      window.removeEventListener("mf-open-chat", handleOpenChat);
-    };
-  }, []);
-
   // Detect when user is typing anywhere on phone to suppress pop-ups & avoid overlapping
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
@@ -712,13 +700,21 @@ export function ChatWidget() {
     setMessages([greetMsg]);
   }, [messages]);
 
-  const handleOpenChat = () => {
+  const handleOpenChat = useCallback(() => {
     touchActivity();
     setPromptState("dismissed");
     setIosBanner(null);
     setIsOpen(true);
     initChat();
-  };
+  }, [initChat]);
+
+  useEffect(() => {
+    const handleCustomOpen = () => {
+      handleOpenChat();
+    };
+    window.addEventListener("open-mf-chat", handleCustomOpen);
+    return () => window.removeEventListener("open-mf-chat", handleCustomOpen);
+  }, [handleOpenChat]);
 
   const handleMinimize = () => {
     touchActivity();

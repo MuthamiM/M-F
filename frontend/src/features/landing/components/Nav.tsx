@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { label: "Services", href: "/services", hash: "" },
   { label: "News", href: "/news", hash: "" },
   { label: "Clients", href: "/our-clients", hash: "" },
+  { label: "FAQ", href: "/faq", hash: "" },
   { label: "Careers", href: "/careers", hash: "" },
   { label: "Contact", href: "/contact", hash: "" },
 ];
@@ -26,8 +27,6 @@ const SERVICES_LIST = [
 ];
 
 const ABOUT_LIST = [
-  { label: "Company Profile (PDF / DOC)", href: "/company-profile", desc: "Official corporate dossier & platform capabilities" },
-  { label: "News & Insights", href: "/news", desc: "Technical system benchmarks & corporate press releases" },
   { label: "About M&F", href: "/about", desc: "Company mission, leadership & milestones" },
   { label: "Who We Are", href: "/where-we-are", desc: "Our engineering leadership & vision" },
   { label: "Get Involved", href: "/get-involved", desc: "Partner program & institutional advisory" },
@@ -85,6 +84,7 @@ export function Nav() {
       if (link.href === "/services") return pathname.startsWith("/services");
       if (link.href === "/news") return pathname.startsWith("/news");
       if (link.href === "/our-clients") return pathname === "/our-clients";
+      if (link.href === "/faq") return pathname === "/faq";
       if (link.href === "/careers") return pathname === "/careers";
       if (link.href === "/contact") return pathname === "/contact";
       if (pathname === "/" && link.hash) return activeHash === link.hash;
@@ -110,31 +110,6 @@ export function Nav() {
               M&amp;F <span className="font-normal text-[#6B7684]">Technologies</span>
             </span>
           </Link>
-
-          {/* Desktop Semantic Nav Bar */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate" aria-label="Main Navigation">
-            <Link href="/services" className="hover:text-graphite transition-colors">
-              Services
-            </Link>
-            <Link href="/company-profile" className="hover:text-graphite transition-colors">
-              Company Profile
-            </Link>
-            <Link href="/news" className="hover:text-graphite transition-colors">
-              News &amp; Insights
-            </Link>
-            <Link href="/about" className="hover:text-graphite transition-colors">
-              About
-            </Link>
-            <Link href="/our-clients" className="hover:text-graphite transition-colors">
-              Clients
-            </Link>
-            <Link href="/careers" className="hover:text-graphite transition-colors">
-              Careers
-            </Link>
-            <Link href="/contact" className="hover:text-graphite transition-colors">
-              Contact
-            </Link>
-          </nav>
 
           {/* Header Controls */}
           <div className="flex items-center gap-3">

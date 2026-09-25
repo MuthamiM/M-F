@@ -3,7 +3,7 @@
 set -e
 
 WG_INTERFACE="wg0"
-VPS_IP="18.188.142.27"
+VPS_IP=$(sudo grep -oP 'Endpoint\s*=\s*\K[^:]+' "/etc/wireguard/${WG_INTERFACE}.conf" 2>/dev/null || echo "${VPS_PUBLIC_IP:-}")
 
 case "${1:-status}" in
     status)

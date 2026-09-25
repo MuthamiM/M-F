@@ -31,15 +31,15 @@ export default function ServicesIndexPage() {
               </span>
             </div>
 
-            <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
+            <h1 className="font-display text-3xl font-bold text-graphite sm:text-4xl md:text-5xl leading-tight max-w-4xl">
               Enterprise Lending Infrastructure Modules
             </h1>
-            <p className="mt-4 text-sm sm:text-base text-slate max-w-4xl leading-relaxed">
+            <p className="mt-4 text-sm sm:text-base text-slate max-w-3xl leading-relaxed">
               M&amp;F Technologies provides an integrated suite of 10 modular, institutional-grade lending technology systems. Deploy the entire end-to-end stack or integrate targeted microservices into your existing core banking architecture via secure REST and GraphQL APIs.
             </p>
 
-            {/* Architecture Highlights - Edge to Edge */}
-            <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+            {/* Architecture Highlights */}
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl">
               <div className="rounded-lg bg-white border border-[#9AA5B1]/20 p-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-graphite">
                   <Database className="h-4 w-4 text-[#1B222C]" />
@@ -72,19 +72,19 @@ export default function ServicesIndexPage() {
           </div>
         </section>
 
-        {/* Services Grid - Edge to Edge */}
-        <section className="w-full px-4 py-12 sm:px-8 lg:px-12 sm:py-20">
-          <div className="w-full space-y-12">
+        {/* Services Grid */}
+        <section className="w-full px-4 py-16 sm:px-8 lg:px-12 sm:py-24">
+          <div className="max-w-7xl mx-auto space-y-12">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-[#6B7684]">
                 Available Technology Modules
               </h2>
-              <p className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-graphite mt-2">
+              <p className="text-2xl sm:text-3xl font-display font-bold text-graphite mt-2">
                 Engineered for High-Volume Credit Operations
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {SERVICES.map((service, index) => (
                 <div
                   key={service.slug}
@@ -163,8 +163,8 @@ export default function ServicesIndexPage() {
             </div>
 
             {/* Architecture Ecosystem Section */}
-            <div className="w-full rounded-2xl border border-[#9AA5B1]/25 bg-[#F8FAFC] p-8 sm:p-12 space-y-8">
-              <div className="w-full space-y-3">
+            <div className="rounded-2xl border border-[#9AA5B1]/25 bg-[#F8FAFC] p-8 sm:p-12 space-y-8">
+              <div className="max-w-3xl space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#6B7684]">
                   Ecosystem Integration
                 </span>
@@ -207,8 +207,8 @@ export default function ServicesIndexPage() {
               </div>
             </div>
 
-            {/* Bottom CTA - Edge to Edge */}
-            <div className="rounded-2xl bg-[#1B222C] text-white p-8 sm:p-14 text-center space-y-4 w-full">
+            {/* Bottom CTA */}
+            <div className="rounded-xl bg-[#1B222C] text-white p-8 sm:p-12 text-center space-y-4 max-w-4xl mx-auto">
               <h3 className="text-xl sm:text-2xl font-bold font-display">
                 Ready to Upgrade Your Lending Infrastructure?
               </h3>

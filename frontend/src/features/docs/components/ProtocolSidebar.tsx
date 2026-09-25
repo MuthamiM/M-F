@@ -4,10 +4,9 @@ interface ProtocolSidebarProps {
   activeId: string;
   onSelect: (id: string) => void;
   onCloseMobile?: () => void;
-  isDarkMode?: boolean;
 }
 
-export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode = false }: ProtocolSidebarProps) {
+export function ProtocolSidebar({ activeId, onSelect, onCloseMobile }: ProtocolSidebarProps) {
   const handleItemClick = (id: string) => {
     onSelect(id);
     if (onCloseMobile) onCloseMobile();
@@ -48,9 +47,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
     <nav className="w-full text-sm font-sans space-y-7">
       {/* Guides Group */}
       <div className="space-y-2.5">
-        <h2 className={`text-[11px] font-bold uppercase tracking-wider px-3 font-display ${
-          isDarkMode ? "text-[#8B949E]" : "text-[#1B222C]"
-        }`}>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#1B222C] px-3 font-display">
           Guides
         </h2>
         <ul className="space-y-0.5">
@@ -63,11 +60,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
                   onClick={() => handleItemClick(item.id)}
                   className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-all cursor-pointer flex items-center justify-between ${
                     isMainActive
-                      ? isDarkMode
-                        ? "text-[#F0F6FC] font-bold bg-[#161B22] shadow-2xs border-l-2 border-[#58A6FF]"
-                        : "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
-                      : isDarkMode
-                      ? "text-[#8B949E] hover:text-[#F0F6FC] hover:bg-[#161B22]/70"
+                      ? "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
                       : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]/70"
                   }`}
                 >
@@ -76,9 +69,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
 
                 {/* Sub-items if Introduction is selected */}
                 {item.subItems && isMainActive && (
-                  <ul className={`pl-5 space-y-0.5 border-l ml-4 py-1 ${
-                    isDarkMode ? "border-[#30363D]" : "border-[#E4E7EB]"
-                  }`}>
+                  <ul className="pl-5 space-y-0.5 border-l border-[#E4E7EB] ml-4 py-1">
                     {item.subItems.map((sub) => (
                       <li key={sub.id}>
                         <button
@@ -86,11 +77,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
                           onClick={() => handleItemClick(sub.id)}
                           className={`w-full text-left py-1 text-xs transition-colors cursor-pointer ${
                             activeId === sub.id
-                              ? isDarkMode
-                                ? "text-[#58A6FF] font-bold"
-                                : "text-[#1B222C] font-bold"
-                              : isDarkMode
-                              ? "text-[#8B949E] hover:text-[#F0F6FC]"
+                              ? "text-[#1B222C] font-bold"
                               : "text-[#6B7684] hover:text-[#1B222C]"
                           }`}
                         >
@@ -108,9 +95,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
 
       {/* Resources Group */}
       <div className="space-y-2.5">
-        <h2 className={`text-[11px] font-bold uppercase tracking-wider px-3 font-display ${
-          isDarkMode ? "text-[#8B949E]" : "text-[#1B222C]"
-        }`}>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#1B222C] px-3 font-display">
           Resources
         </h2>
         <ul className="space-y-0.5">
@@ -123,11 +108,7 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
                   onClick={() => handleItemClick(res.id)}
                   className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-all cursor-pointer flex items-center justify-between group ${
                     isActive
-                      ? isDarkMode
-                        ? "text-[#F0F6FC] font-bold bg-[#161B22] shadow-2xs border-l-2 border-[#58A6FF]"
-                        : "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
-                      : isDarkMode
-                      ? "text-[#8B949E] hover:text-[#F0F6FC] hover:bg-[#161B22]/70"
+                      ? "text-[#1B222C] font-bold bg-[#F4F6F8] shadow-2xs border-l-2 border-[#1B222C]"
                       : "text-[#3E4C59] hover:text-[#1B222C] hover:bg-[#F4F6F8]/70"
                   }`}
                 >
@@ -136,15 +117,9 @@ export function ProtocolSidebar({ activeId, onSelect, onCloseMobile, isDarkMode 
                     <span
                       className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                         res.method === "POST"
-                          ? isDarkMode
-                            ? "bg-[#21262D] text-[#58A6FF] border border-[#30363D]"
-                            : "bg-[#E4E7EB] text-[#1B222C] border border-[#9AA5B1]/40"
+                          ? "bg-[#E4E7EB] text-[#1B222C] border border-[#9AA5B1]/40"
                           : res.method === "GET"
-                          ? isDarkMode
-                            ? "bg-[#161B22] text-[#3FB950] border border-[#30363D]"
-                            : "bg-[#F4F6F8] text-[#3E4C59] border border-[#9AA5B1]/30"
-                          : isDarkMode
-                          ? "bg-[#161B22] text-[#8B949E]"
+                          ? "bg-[#F4F6F8] text-[#3E4C59] border border-[#9AA5B1]/30"
                           : "bg-[#F4F6F8] text-[#6B7684]"
                       }`}
                     >

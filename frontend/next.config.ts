@@ -29,12 +29,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/",
-        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
-      },
-      {
-        source: "/docs",
-        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+        source: "/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
       },
     ];
   },

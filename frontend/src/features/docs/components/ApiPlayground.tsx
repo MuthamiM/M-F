@@ -60,7 +60,7 @@ export function ApiPlayground({ endpoint }: ApiPlaygroundProps) {
     if (endpoint.codeExamples) {
       snippet = endpoint.codeExamples[activeLang] || "";
       if (apiKey && activeLang === "curl") {
-        snippet = snippet.replace(/mf_live_sec_[a-zA-Z0-9.]+/, apiKey);
+        snippet = snippet.replace(/your_api_key/, apiKey);
       }
     } else {
       snippet = JSON.stringify(endpoint.sampleResponseSuccess, null, 2);

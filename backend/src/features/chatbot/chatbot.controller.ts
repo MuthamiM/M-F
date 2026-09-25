@@ -41,14 +41,23 @@ async function generateTicketNumber(prefix: "CB" | "LIVE" | "CHAT"): Promise<str
 function httpRequest(url: string, options: any, postData?: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
+    const headers: Record<string, string> = {
+      "User-Agent": "MF-Backend/1.0",
+      ...(options.headers || {}),
+    };
+
+    if (postData) {
+      headers["Content-Length"] = String(Buffer.byteLength(postData));
+    }
+
     const reqOptions: https.RequestOptions = {
       hostname: parsedUrl.hostname,
       port: parsedUrl.port || 443,
       path: parsedUrl.pathname + parsedUrl.search,
       method: options.method || "GET",
-      headers: options.headers || {},
+      headers,
       family: 4, // Force IPv4 to prevent undici IPv6 ETIMEDOUT on server
-      timeout: 15000,
+      timeout: 10000,
     };
 
     const req = https.request(reqOptions, (res) => {
@@ -143,42 +152,54 @@ function cleanText(text: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Groq API with groq/compound-mini                                  */
+/*  Groq API with qwen/qwen3.8-27b & openai/gpt-oss-120b              */
 /* ------------------------------------------------------------------ */
 async function callGroqAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
-  const apiKey = process.env.GROK_API_KEY || "";
-  if (!apiKey) throw new Error("GROK_API_KEY is not configured");
+  const apiKey = process.env.GROQ_API_KEY || process.env.GROK_API_KEY || "";
+  if (!apiKey) throw new Error("GROQ_API_KEY / GROK_API_KEY is not configured");
 
   const groqMessages = messages.map((m) => ({
     role: m.role === "agent" ? "assistant" : m.role,
     content: m.content,
   }));
 
-  const payload = JSON.stringify({
-    model: "groq/compound-mini",
-    messages: groqMessages,
-    temperature: 0.7,
-    max_tokens: 300,
-  });
+  const candidateModels = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"];
+  let lastErr: any = null;
 
-  const data = await httpRequest("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-  }, payload);
+  for (const model of candidateModels) {
+    try {
+      const payload = JSON.stringify({
+        model,
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 350,
+      });
 
-  if (data.error) {
-    throw new Error(`Groq API Error: ${data.error.message || JSON.stringify(data.error)}`);
+      const data = await httpRequest("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }, payload);
+
+      if (data.error) {
+        throw new Error(`Groq API Error: ${data.error.message || JSON.stringify(data.error)}`);
+      }
+
+      const raw = data.choices?.[0]?.message?.content || "";
+      if (raw) return cleanText(raw);
+    } catch (err: any) {
+      lastErr = err;
+      logger.warn(`Groq model ${model} failed: ${err.message}. Trying next Groq model...`);
+    }
   }
 
-  const raw = data.choices?.[0]?.message?.content || "";
-  return cleanText(raw);
+  throw lastErr || new Error("All Groq models failed");
 }
 
 /* ------------------------------------------------------------------ */
-/*  Gemini API Fallback with gemini-3.6-flash                          */
+/*  Gemini API Fallback with gemini-3.5-flash / gemini-3.6-flash       */
 /* ------------------------------------------------------------------ */
 async function callGeminiAPI(messages: Array<{ role: string; content: string }>): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || "";
@@ -196,22 +217,34 @@ async function callGeminiAPI(messages: Array<{ role: string; content: string }>)
     contents,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 300,
+      maxOutputTokens: 350,
     },
   });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
-  const data = await httpRequest(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  }, payload);
+  const candidateModels = ["gemini-3.5-flash", "gemini-3.6-flash"];
+  let lastErr: any = null;
 
-  if (data.error) {
-    throw new Error(`Gemini API Error: ${data.error.message || JSON.stringify(data.error)}`);
+  for (const model of candidateModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const data = await httpRequest(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }, payload);
+
+      if (data.error) {
+        throw new Error(`Gemini API Error: ${data.error.message || JSON.stringify(data.error)}`);
+      }
+
+      const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (raw) return cleanText(raw);
+    } catch (err: any) {
+      lastErr = err;
+      logger.warn(`Gemini model ${model} failed: ${err.message}. Trying next Gemini model...`);
+    }
   }
 
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  return cleanText(raw);
+  throw lastErr || new Error("All Gemini models failed");
 }
 
 /* ------------------------------------------------------------------ */
@@ -478,12 +511,9 @@ export async function sendMessageHandler(req: Request, res: Response) {
 
   if (!detectedName && message) {
     const msgText = cleanText(message);
-    const parts = msgText.split(/[,|\n-]/);
-    if (parts.length > 0 && !parts[0].includes("@") && parts[0].length < 40) {
-      const candidate = parts[0].replace(/my name is/i, "").replace(/i am/i, "").trim();
-      if (candidate.length >= 2 && !candidate.toLowerCase().includes("connect") && !candidate.toLowerCase().includes("yes")) {
-        detectedName = candidate;
-      }
+    const nameMatch = msgText.match(/(?:my name is|i am|this is)\s+([A-Za-z\s'-]{2,30})/i);
+    if (nameMatch) {
+      detectedName = nameMatch[1].trim();
     }
   }
 

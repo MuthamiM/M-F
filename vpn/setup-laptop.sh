@@ -8,13 +8,12 @@
 # from your VPS. Run this on your VPS first:
 #   sudo cat /etc/wireguard/laptop-client.conf
 # Then paste it when prompted, OR copy it here manually.
-# =====================================================
 set -e
 
-VPS_PUBLIC_IP="18.188.142.27"
 WG_PORT=51820
 WG_INTERFACE="wg0"
 CONFIG_FILE="/etc/wireguard/${WG_INTERFACE}.conf"
+VPS_PUBLIC_IP="${2:-${VPS_IP:-}}"
 
 echo "🔧 WireGuard VPN Client Setup (Laptop)"
 echo "========================================"

@@ -1,5 +1,6 @@
 #!/bin/bash
 # M&F Technologies Platform - VPS Setup & Configuration Script
+# Works on any Ubuntu VPS (Linode, Vultr, DigitalOcean, etc.)
 # Must be executed as root/sudo
 
 set -euo pipefail
@@ -14,7 +15,7 @@ echo "========================================================"
 echo " Starting M&F Technologies Deployment Setup on Ubuntu"
 echo "========================================================"
 
-# 1. CONFIGURE SWAP SPACE (Essential for low-memory t3.micro VPS)
+# 1. CONFIGURE SWAP SPACE (Essential for low-memory VPS instances e.g. 1-2GB plans)
 echo "[+] Configuring swap space to prevent compiler memory crashes..."
 if [ -f /swapfile ]; then
   echo "[*] Swap file already exists. Skipping allocation."
@@ -57,13 +58,16 @@ echo "[+] Configuring environment variables..."
 PROJECT_DIR="$(pwd)"
 ENV_FILE="$PROJECT_DIR/.env"
 
+# Auto-detect public IP on VPS
+DETECTED_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 icanhazip.com 2>/dev/null || ip route get 1.1.1.1 2>/dev/null | awk '{print $7}' || echo "")
+
 if [ -f "$ENV_FILE" ]; then
   echo "[*] Existing .env file found. Reading configuration."
   DOMAIN=$(grep '^DOMAIN=' "$ENV_FILE" | cut -d '=' -f2 || true)
   JWT_SECRET=$(grep '^JWT_SECRET=' "$ENV_FILE" | cut -d '=' -f2 || true)
   POSTGRES_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$ENV_FILE" | cut -d '=' -f2 || true)
 else
-  DOMAIN=${1:-"ec2-18-188-142-27.us-east-2.compute.amazonaws.com"}
+  DOMAIN=${1:-"mftechnologies.org"}
   JWT_SECRET=$(openssl rand -hex 32)
   POSTGRES_PASSWORD=$(openssl rand -hex 24)
   
@@ -85,10 +89,15 @@ fi
 echo "[+] Creating Nginx site configuration for domain: $DOMAIN..."
 NGINX_CONF="/etc/nginx/sites-available/mf-technologies"
 
+SERVER_NAMES="$DOMAIN www.$DOMAIN"
+if [ -n "$DETECTED_IP" ]; then
+  SERVER_NAMES="$SERVER_NAMES $DETECTED_IP"
+fi
+
 cat <<EOF > "$NGINX_CONF"
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN 18.188.142.27;
+    server_name $SERVER_NAMES;
 
     # Frontend proxy (Next.js server-side)
     location / {
@@ -130,8 +139,9 @@ systemctl reload nginx
 echo "[+] Nginx site configured and reloaded."
 
 # 7. GENERATE SSL CERTIFICATE VIA CERTBOT
-if [[ "$DOMAIN" == *".amazonaws.com" || "$DOMAIN" == "18.188.142.27" ]]; then
-  echo "[*] Using default AWS DNS or IP. Skipping Certbot SSL configuration."
+# Check if DOMAIN is a raw IP or default hostname that can't get Let's Encrypt
+if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || "$DOMAIN" == *".ip.linodeusercontent.com" || "$DOMAIN" == *"vultrusercontent.com" ]]; then
+  echo "[*] Using raw IP or provider default hostname. Skipping Certbot SSL configuration."
 else
   echo "[+] Obtaining SSL Certificate for $DOMAIN..."
   if [ "${NON_INTERACTIVE:-false}" = "true" ]; then

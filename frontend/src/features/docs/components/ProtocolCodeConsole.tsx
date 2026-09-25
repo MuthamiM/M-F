@@ -44,6 +44,7 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
   const handleRunRequest = async () => {
     setIsLoading(true);
     const start = Date.now();
+    const apiKey = "demo_api_key";
 
     let parsedBody: any = undefined;
     if (endpoint.method && endpoint.method !== "GET" && requestBodyText.trim()) {
@@ -83,7 +84,7 @@ export function ProtocolCodeConsole({ endpoint }: ProtocolCodeConsoleProps) {
         method: endpoint.method || "GET",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": "your_api_key",
+          "X-API-Key": apiKey,
         },
         body:
           endpoint.method && endpoint.method !== "GET" && parsedBody
