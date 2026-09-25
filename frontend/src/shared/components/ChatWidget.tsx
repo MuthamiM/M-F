@@ -700,13 +700,21 @@ export function ChatWidget() {
     setMessages([greetMsg]);
   }, [messages]);
 
-  const handleOpenChat = () => {
+  const handleOpenChat = useCallback(() => {
     touchActivity();
     setPromptState("dismissed");
     setIosBanner(null);
     setIsOpen(true);
     initChat();
-  };
+  }, [initChat]);
+
+  useEffect(() => {
+    const handleCustomOpen = () => {
+      handleOpenChat();
+    };
+    window.addEventListener("open-mf-chat", handleCustomOpen);
+    return () => window.removeEventListener("open-mf-chat", handleCustomOpen);
+  }, [handleOpenChat]);
 
   const handleMinimize = () => {
     touchActivity();

@@ -129,6 +129,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/faq" className="hover:text-graphite transition-colors block break-words font-medium text-graphite">
+                  FAQ &amp; Help
+                </Link>
+              </li>
+              <li>
                 <Link href="/docs" className="hover:text-graphite transition-colors block break-words">
                   REST &amp; GraphQL
                 </Link>

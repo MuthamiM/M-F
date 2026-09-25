@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { label: "Services", href: "/services", hash: "" },
   { label: "News", href: "/news", hash: "" },
   { label: "Clients", href: "/our-clients", hash: "" },
+  { label: "FAQ", href: "/faq", hash: "" },
   { label: "Careers", href: "/careers", hash: "" },
   { label: "Contact", href: "/contact", hash: "" },
 ];
@@ -83,6 +84,7 @@ export function Nav() {
       if (link.href === "/services") return pathname.startsWith("/services");
       if (link.href === "/news") return pathname.startsWith("/news");
       if (link.href === "/our-clients") return pathname === "/our-clients";
+      if (link.href === "/faq") return pathname === "/faq";
       if (link.href === "/careers") return pathname === "/careers";
       if (link.href === "/contact") return pathname === "/contact";
       if (pathname === "/" && link.hash) return activeHash === link.hash;

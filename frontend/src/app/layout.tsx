@@ -4,6 +4,7 @@ import "./globals.css";
 import type { Viewport } from "next";
 import { CookieBanner } from "@/shared/components/CookieBanner";
 import { ChatWidget } from "@/shared/components/ChatWidget";
+import { FloatingFaq } from "@/shared/components/FloatingFaq";
 import { ServiceWorkerRegister } from "@/shared/components/ServiceWorkerRegister";
 import { InstallBanner } from "@/shared/components/InstallBanner";
 
@@ -165,6 +166,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <CookieBanner />
         <ChatWidget />
+        <FloatingFaq />
         <ServiceWorkerRegister />
         <InstallBanner />
       </body>
