@@ -1,7 +1,7 @@
 // src/shared/components/FloatingFaq.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,7 @@ import {
   Star,
   Send,
   MessageSquarePlus,
+  GripVertical,
 } from "lucide-react";
 import { FAQ_ITEMS, FAQ_CATEGORIES } from "@/shared/data/faqData";
 
@@ -62,6 +63,12 @@ export function FloatingFaq() {
   const windowRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── DRAG STATE ── */
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartOffsetRef = useRef(0);
+
   // Hide on admin, docs, or api-reference routes to maintain dedicated workspaces
   const isHiddenRoute =
     pathname?.startsWith("/admin") ||
@@ -81,12 +88,13 @@ export function FloatingFaq() {
   const handleMouseLeave = () => {
     isHoveredRef.current = false;
     if (isPinned) return; // If clicked/pinned, do NOT autohide on mouse leave
+    if (isDraggingRef.current) return; // Don't autohide while dragging
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
     }
     // Autohide promptly once cursor moves away from trigger & window
     closeTimerRef.current = setTimeout(() => {
-      if (!isHoveredRef.current && !isPinned) {
+      if (!isHoveredRef.current && !isPinned && !isDraggingRef.current) {
         setIsOpen(false);
       }
     }, 180);
@@ -101,11 +109,41 @@ export function FloatingFaq() {
     isHoveredRef.current = false;
     setIsOpen(false);
     setIsPinned(false);
+    setDragOffsetX(0); // Reset drag position on close
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
   };
+
+  /* ── DRAG HANDLERS ── */
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartOffsetRef.current = dragOffsetX;
+    // Pin the window so it doesn't autohide while dragging
+    setIsPinned(true);
+    // Capture pointer to track movement even outside the element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [dragOffsetX]);
+
+  const handleDragMove = useCallback((e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const delta = e.clientX - dragStartXRef.current;
+    // Only allow dragging to the LEFT (negative offset), clamp at 0 (original position)
+    const newOffset = Math.min(0, dragStartOffsetRef.current + delta);
+    // Limit max leftward drag so panel stays at least 60px visible from right edge
+    const panelWidth = windowRef.current?.offsetWidth || 380;
+    const maxLeftward = -(window.innerWidth - panelWidth - 24); // keep 24px from left edge
+    setDragOffsetX(Math.max(maxLeftward, newOffset));
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  }, []);
 
   // Only auto-focus search if the user clicked/pinned the window (prevents focus trapping on simple hover)
   useEffect(() => {
@@ -326,11 +364,21 @@ export function FloatingFaq() {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onClick={handleWindowClick}
-            className="fixed right-2 sm:right-6 top-1/2 -translate-y-1/2 z-[100000] w-[350px] sm:w-[380px] max-w-[calc(100vw-16px)] h-[520px] max-h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1B222C] font-sans before:absolute before:left-full before:top-0 before:bottom-0 before:w-8 before:content-['']"
+            style={{ transform: `translateY(-50%) translateX(${dragOffsetX}px)` }}
+            className="fixed right-2 sm:right-6 top-1/2 z-[100000] w-[350px] sm:w-[380px] max-w-[calc(100vw-16px)] h-[520px] max-h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1B222C] font-sans before:absolute before:left-full before:top-0 before:bottom-0 before:w-8 before:content-['']"
           >
-            {/* Header (Exact same font, colors, and MfLogo as ChatWidget) */}
-            <div className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0 select-none">
+            {/* Header — acts as drag handle (hold & drag left) */}
+            <div
+              className="bg-[#1B222C] text-white px-3.5 py-3 flex items-center justify-between shrink-0 select-none"
+              style={{ cursor: isDraggingRef.current ? "grabbing" : "grab", touchAction: "none" }}
+              onPointerDown={handleDragStart}
+              onPointerMove={handleDragMove}
+              onPointerUp={handleDragEnd}
+              onPointerCancel={handleDragEnd}
+            >
               <div className="flex items-center gap-2">
+                {/* Drag grip indicator */}
+                <GripVertical className="h-3.5 w-3.5 text-[#9AA5B1]/60 shrink-0 -ml-1" />
                 <MfLogo size={26} />
                 <div>
                   <h3 id="faq-window-title" className="text-xs font-bold tracking-tight">
@@ -344,7 +392,8 @@ export function FloatingFaq() {
 
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={(e) => { e.stopPropagation(); handleClose(); }}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="text-[#9AA5B1] hover:text-white transition-colors rounded-lg p-1 cursor-pointer"
                 title="Close"
                 aria-label="Close"
