@@ -17,6 +17,7 @@ import { trackingRouter } from "./features/tracking/tracking.routes";
 import { chatbotRouter } from "./features/chatbot/chatbot.routes";
 import { v1Router } from "./features/api-v1/v1.routes";
 import { careersRouter } from "./features/careers/careers.routes";
+import { feedbackRouter } from "./features/feedback/feedback.routes";
 
 export function createApp() {
   const app = express();
@@ -80,6 +81,7 @@ export function createApp() {
   app.use("/api/v1", v1Router);
   app.use("/v1", v1Router);
   app.use("/api/careers", careersRouter);
+  app.use("/api/feedback", feedbackRouter);
 
   // ── Error handler (must be last) ──────────────────────────────────────
   app.use(errorHandler);
