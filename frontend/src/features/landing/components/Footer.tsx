@@ -129,15 +129,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new CustomEvent("open_faq_window", { detail: { tab: "questions" } }))}
-                  className="hover:text-graphite transition-colors block text-left break-words font-medium text-graphite cursor-pointer"
-                >
-                  FAQ &amp; Help
-                </button>
-              </li>
-              <li>
                 <Link href="/docs" className="hover:text-graphite transition-colors block break-words">
                   REST &amp; GraphQL
                 </Link>
@@ -219,6 +210,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/faq"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent("open_faq_window", { detail: { tab: "questions" } }));
+                  }}
+                  className="hover:text-graphite transition-colors block break-words font-medium text-graphite"
+                >
+                  FAQ &amp; Help
+                </Link>
+              </li>
+              <li>
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent("open_faq_window", { detail: { tab: "feedback" } }))}
@@ -264,14 +267,17 @@ export function Footer() {
             <Link href="/terms" className="hover:text-graphite transition-colors">
               Terms
             </Link>
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent("open_faq_window"))}
-              className="hover:text-graphite transition-colors cursor-pointer inline-flex items-center gap-1"
+            <Link
+              href="/faq"
+              onClick={(e) => {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent("open_faq_window"));
+              }}
+              className="hover:text-graphite transition-colors cursor-pointer inline-flex items-center gap-1 font-medium"
             >
               <MessageSquarePlus className="h-3 w-3 text-slate-400 shrink-0" />
               <span>FAQ &amp; Feedback</span>
-            </button>
+            </Link>
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent("open_cookie_preferences"))}
